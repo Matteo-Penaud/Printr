@@ -235,6 +235,12 @@ img { max-width: 100%; display: block; }
   background: var(--surface); outline: none;
   transition: border-color .15s, box-shadow .15s;
 }
+/* Safari sur iPhone donne aux champs de date une largeur propre qui ignore `width` : sans ça,
+   « … ou date de naissance » dépasse du bloc. */
+.input[type="date"], .input[type="time"], .input[type="datetime-local"] {
+  display: block; min-width: 0; max-width: 100%; -webkit-appearance: none; appearance: none; text-align: left;
+}
+.input::-webkit-date-and-time-value { text-align: left; }
 textarea.input { resize: vertical; min-height: 96px; line-height: 1.5; }
 .input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
 select.input { appearance: none; padding-right: 38px;
