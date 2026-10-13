@@ -244,7 +244,7 @@ mêmes résultats, sans nouvel appel. `--refresh` force une nouvelle génératio
   <img src="docs/shots/mobile-message.png" alt="Petit mot avec une photo" width="250">
 </p>
 
-- **Composer** : ajouter, régler et réordonner des blocs, avec l'aperçu du ticket en direct.
+- **Composer** : ajouter des blocs (à la fin ou entre deux autres), les régler et les réordonner en les faisant glisser par leur poignée, avec l'aperçu du ticket en direct.
   Les blocs Claude (horoscope, mot du jour) n'appellent pas l'API en aperçu : ils ne coûtent
   qu'à l'impression.
 - **Mes tickets** : les tickets enregistrés (presets), à imprimer en un geste, à partager avec

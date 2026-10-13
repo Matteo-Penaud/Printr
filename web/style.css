@@ -321,11 +321,35 @@ select.input { appearance: none; padding-right: 38px;
 .preview-col { display: none; position: sticky; top: 84px; }
 @media (min-width: 1100px) { .preview-col { display: block; } }
 
-.blocklist { display: flex; flex-direction: column; gap: 10px; }
+.blocklist { position: relative; display: flex; flex-direction: column; }
+.blocklist > .block + .block, .blocklist > .add-block { margin-top: 10px; }
 .block {
-  overflow: hidden; transition: box-shadow .2s, transform .2s, border-color .2s;
+  overflow: hidden; transition: box-shadow .2s, border-color .2s;
   animation: pop .22s ease-out;
 }
+.block.shown { animation: none; }
+/* Bloc saisi par sa poignée : il flotte au-dessus des autres et suit le pointeur. */
+.block.dragging { position: relative; z-index: 25; transition: none; box-shadow: var(--shadow-2), 0 18px 40px -18px rgba(0, 0, 0, .35); border-color: var(--accent); }
+.blocklist.sorting { user-select: none; -webkit-user-select: none; }
+.blocklist.sorting .block-head { cursor: grabbing; }
+.grip {
+  display: grid; place-items: center; flex-shrink: 0; width: 26px; height: 40px; margin: 0 -6px 0 -6px;
+  border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: grab;
+  touch-action: none; -webkit-touch-callout: none;
+}
+.grip:hover, .grip:focus-visible { color: var(--ink); background: var(--surface-2); }
+.blocklist.sorting .grip { cursor: grabbing; }
+/* « + » entre deux blocs : insère un bloc à cet endroit. */
+.inserter { position: relative; height: 10px; z-index: 1; }
+.inserter button {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+  display: grid; place-items: center; width: 24px; height: 24px; padding: 0;
+  border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); color: var(--muted);
+  cursor: pointer; opacity: .55; transition: opacity .15s, color .15s, border-color .15s, scale .15s;
+}
+.inserter button::before { content: ""; position: absolute; inset: -8px -20px; }  /* zone de toucher plus large */
+.inserter button:hover, .inserter button:focus-visible { opacity: 1; color: var(--accent); border-color: var(--accent); scale: 1.12; }
+.blocklist.sorting .inserter button { opacity: 0; pointer-events: none; }
 .block.open { box-shadow: var(--shadow-2); border-color: var(--line-strong); }
 .block.error { border-color: color-mix(in srgb, var(--danger) 50%, var(--line)); }
 @keyframes pop { from { opacity: 0; transform: translateY(6px) scale(.99); } }

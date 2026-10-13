@@ -1,7 +1,7 @@
 // Printr — interface web : composer, imprimer et planifier des tickets.
 // Preact + htm, sans étape de compilation.
 
-import { html, render, useState, useEffect, useRef, useMemo, useCallback } from '/vendor/preact-htm.mjs';
+import { html, render, useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from '/vendor/preact-htm.mjs';
 
 // ============================================================================
 // Outils
@@ -114,6 +114,7 @@ const ICONS = {
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   up: '<path d="m6 15 6-6 6 6"/>',
   down: '<path d="m6 9 6 6 6-6"/>',
+  grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
   copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
   x: '<path d="M18 6 6 18M6 6l12 12"/>',
@@ -1110,18 +1111,27 @@ function Catalog({ onPick, onClose }) {
   </${Sheet}>`;
 }
 
-function BlockCard({ item, index, count, error, onChange, onToggle, onMove, onCopy, onRemove }) {
+function BlockCard({ item, index, count, error, dragging, onChange, onToggle, onMove, onGrab, onCopy, onRemove }) {
   const def = BLOCK[item.data.type] || { emoji: '▫️', label: item.data.type };
-  return html`<div class="card block ${item.open ? 'open' : ''} ${error ? 'error' : ''}">
+  // L'apparition n'est animée qu'une fois : un bloc déplacé dans la liste ne doit pas « reclignoter ».
+  const [shown, setShown] = useState(false);
+  const keys = (e) => {
+    const d = { ArrowUp: -1, ArrowDown: 1 }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    if (index + d >= 0 && index + d < count) onMove(d);
+  };
+  return html`<div class="card block ${item.open ? 'open' : ''} ${error ? 'error' : ''} ${shown ? 'shown' : ''} ${dragging ? 'dragging' : ''}"
+    data-uid=${item.uid} onAnimationEnd=${(e) => e.target === e.currentTarget && setShown(true)}>
     <div class="block-head" onClick=${onToggle}>
+      <button class="grip" aria-label="Déplacer (glisser, ou flèches haut et bas)" title="Glisser pour déplacer"
+        onClick=${(e) => e.stopPropagation()} onPointerDown=${onGrab} onKeyDown=${keys}><${Icon} name="grip" /></button>
       <div class="block-emoji">${def.emoji}</div>
       <div class="grow">
         <div class="block-title">${def.label}${def.ai ? html` <span class="chip warn" style="height:20px;font-size:11px;margin-left:4px">Claude</span>` : ''}</div>
         <div class="block-summary">${blockSummary(item.data)}</div>
       </div>
       <div class="block-tools" onClick=${(e) => e.stopPropagation()}>
-        <button class="iconbtn" aria-label="Monter" disabled=${index === 0} onClick=${() => onMove(-1)}><${Icon} name="up" /></button>
-        <button class="iconbtn" aria-label="Descendre" disabled=${index === count - 1} onClick=${() => onMove(1)}><${Icon} name="down" /></button>
         <button class="iconbtn" aria-label="Dupliquer" onClick=${onCopy}><${Icon} name="copy" /></button>
         <button class="iconbtn danger" aria-label="Supprimer" onClick=${onRemove}><${Icon} name="trash" /></button>
       </div>
@@ -1129,6 +1139,120 @@ function BlockCard({ item, index, count, error, onChange, onToggle, onMove, onCo
     ${error && html`<div class="block-error">${error}</div>`}
     ${item.open && html`<div class="block-body"><${BlockFields} data=${item.data} onChange=${onChange} /></div>`}
   </div>`;
+}
+
+// Glisser-déposer des blocs par leur poignée, au doigt comme à la souris. Le bloc suit le pointeur ;
+// dès que son bord dépasse le milieu d'un voisin, les deux échangent leur place dans la liste.
+// Près du haut ou du bas de l'écran, la page défile toute seule.
+function useDragSort(setBlocks) {
+  const list = useRef(null);
+  const drag = useRef(null);
+  const [dragging, setDragging] = useState(null);
+  const cards = () => [...(list.current?.children || [])].filter((c) => c.dataset.uid);
+  const card = (id) => cards().find((c) => c.dataset.uid === id);
+
+  // Où le pointeur emmène le bloc (en coordonnées de la liste, pour survivre au défilement).
+  const target = (d) => d.top + (d.y + scrollY) - d.y0;
+  const follow = () => {
+    const d = drag.current;
+    const el = d && card(d.uid);
+    if (el) el.style.transform = `translateY(${target(d) - el.offsetTop}px)`;
+  };
+  const reorder = (uid, to, neighbor) => {
+    const d = drag.current, el = neighbor && card(neighbor);
+    if (d) Object.assign(d, { pending: true, flip: el && { uid: neighbor, top: el.offsetTop } });
+    setBlocks((b) => {
+      const n = [...b];
+      const [x] = n.splice(n.findIndex((y) => y.uid === uid), 1);
+      n.splice(to, 0, x);
+      return n;
+    });
+  };
+  const check = () => {
+    const d = drag.current;
+    if (!d || d.pending) return follow();
+    const all = cards();
+    const el = all.find((c) => c.dataset.uid === d.uid);
+    const i = all.indexOf(el);
+    const top = target(d), bottom = top + el.offsetHeight;
+    const prev = all[i - 1], next = all[i + 1];
+    if (next && bottom > next.offsetTop + next.offsetHeight / 2) reorder(d.uid, i + 1, next.dataset.uid);
+    else if (prev && top < prev.offsetTop + prev.offsetHeight / 2) reorder(d.uid, i - 1, prev.dataset.uid);
+    follow();
+  };
+
+  // Après chaque échange : le bloc déplacé reste sous le pointeur, le voisin glisse à sa place.
+  const settle = () => {
+    const d = drag.current;
+    if (!d) return;
+    d.pending = false;
+    const f = d.flip;
+    d.flip = null;
+    const el = f && card(f.uid);
+    if (el) {
+      el.style.transition = 'none';
+      el.style.transform = `translateY(${f.top - el.offsetTop}px)`;
+      el.getBoundingClientRect();
+      el.style.transition = 'transform .18s ease';
+      el.style.transform = '';
+    }
+    check();
+  };
+
+  const scroll = () => {
+    const d = drag.current;
+    if (!d) return;
+    const edge = 90, bottomEdge = innerHeight - (innerWidth < 900 ? 170 : 110);
+    const speed = d.y < edge ? -(edge - d.y) / 5 : d.y > bottomEdge ? (d.y - bottomEdge) / 5 : 0;
+    if (speed) { scrollBy(0, Math.max(-18, Math.min(18, speed))); check(); }
+    d.frame = requestAnimationFrame(scroll);
+  };
+
+  const end = () => {
+    const d = drag.current;
+    if (!d) return;
+    drag.current = null;
+    cancelAnimationFrame(d.frame);
+    removeEventListener('pointermove', d.onMove);
+    removeEventListener('pointerup', end);
+    removeEventListener('pointercancel', end);
+    const el = card(d.uid);
+    if (el) {
+      el.style.transition = 'transform .18s ease';
+      el.style.transform = '';
+      setTimeout(() => (el.style.transition = ''), 200);
+    }
+    setDragging(null);
+  };
+
+  const grab = (uid) => (e) => {
+    if (e.button !== 0 || drag.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const el = card(uid);
+    const d = { uid, top: el.offsetTop, y0: e.clientY + scrollY, y: e.clientY, pending: false };
+    d.onMove = (ev) => { if (ev.pointerId === e.pointerId) { d.y = ev.clientY; check(); } };
+    drag.current = d;
+    addEventListener('pointermove', d.onMove);
+    addEventListener('pointerup', end);
+    addEventListener('pointercancel', end);
+    d.frame = requestAnimationFrame(scroll);
+    setDragging(uid);
+    // Blocs repliés pendant le déplacement : une liste courte se parcourt mieux, surtout au doigt.
+    if (cards().some((c) => c.classList.contains('open'))) {
+      d.pending = true;
+      setBlocks((b) => b.map((x) => (x.open ? { ...x, open: false } : x)));
+    }
+  };
+
+  // Clavier : un cran vers le haut ou le bas, et la poignée garde le focus.
+  const step = (uid, i, d) => {
+    reorder(uid, i + d);
+    requestAnimationFrame(() => card(uid)?.querySelector('.grip')?.focus());
+  };
+
+  useEffect(() => end, []);
+  return { list, dragging, grab, step, settle };
 }
 
 const ICON_CHOICES = ['🧾', '☀️', '🌙', '🔮', '💌', '❤️', '📰', '🧩', '💪', '🌤️', '✅', '🎉', '☕', '🏠', '🎂', '🌸'];
@@ -1205,7 +1329,8 @@ function SaveSheet({ state, onSave, onClose, focusSchedule }) {
 
 function Composer({ initial, onSaved }) {
   const [state, setState] = useState(initial);
-  const [catalog, setCatalog] = useState(false);
+  // Catalogue ouvert : `{ at }` = position d'insertion (à la fin si absente).
+  const [catalog, setCatalog] = useState(null);
   const [saveSheet, setSaveSheet] = useState(null);
   const [mobilePreview, setMobilePreview] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -1218,8 +1343,24 @@ function Composer({ initial, onSaved }) {
   useEffect(() => { if (!state.id) store.set('printr.draft', state); }, [state]);
 
   const setBlocks = (fn) => setState((s) => ({ ...s, blocks: fn(s.blocks) }));
-  const add = (type) => { setBlocks((b) => [...b.map((x) => ({ ...x, open: false })), newBlock(type)]); setCatalog(false); };
-  const move = (i, d) => setBlocks((b) => { const n = [...b]; [n[i], n[i + d]] = [n[i + d], n[i]]; return n; });
+  const sort = useDragSort(setBlocks);
+  const added = useRef(null);
+  const add = (type, at) => {
+    const block = newBlock(type);
+    added.current = block.uid;
+    setBlocks((b) => {
+      const n = b.map((x) => ({ ...x, open: false }));
+      n.splice(at ?? n.length, 0, block);
+      return n;
+    });
+    setCatalog(null);
+  };
+  useLayoutEffect(() => {
+    sort.settle();
+    const el = added.current && sort.list.current?.querySelector(`[data-uid="${added.current}"]`);
+    added.current = null;
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [state.blocks]);
   const errors = preview?.reports?.map((r) => r.error) || [];
 
   const print = async () => {
@@ -1253,18 +1394,20 @@ function Composer({ initial, onSaved }) {
             <div class="muted" style="font-size:13px">${state.schedules.filter((s) => s.enabled).map(scheduleLabel).join(' · ') || 'Pas de planification'}</div></div>
           <button class="btn secondary small" onClick=${() => setSaveSheet({ focusSchedule: true })}><${Icon} name="sliders" size=${16} /> Réglages</button>
         </div>`}
-        <div class="blocklist">
+        <div class="blocklist ${sort.dragging ? 'sorting' : ''}" ref=${sort.list}>
           ${state.blocks.length === 0 && html`<div class="empty" style="padding:30px 18px"><div class="big-emoji">✨</div>
             <h3>Compose ton ticket</h3><p class="muted" style="margin:0 0 14px">Quelques idées pour commencer :</p>
             <div class="row wrap" style="justify-content:center">${['date', 'weather', 'horoscope', 'riddle', 'workout', 'news'].map((t) =>
               html`<button class="btn secondary small" onClick=${() => add(t)}>${BLOCK[t].emoji} ${BLOCK[t].label}</button>`)}</div></div>`}
-          ${state.blocks.map((item, i) => html`<${BlockCard} key=${item.uid} item=${item} index=${i} count=${state.blocks.length} error=${errors[i]}
+          ${state.blocks.map((item, i) => html`${i > 0 && html`<div class="inserter" key=${`+${item.uid}`}>
+              <button aria-label="Insérer un bloc ici" title="Insérer un bloc ici" onClick=${() => setCatalog({ at: i })}><${Icon} name="plus" size=${14} /></button></div>`}
+            <${BlockCard} key=${item.uid} item=${item} index=${i} count=${state.blocks.length} error=${errors[i]} dragging=${sort.dragging === item.uid}
             onToggle=${() => setBlocks((b) => b.map((x) => (x.uid === item.uid ? { ...x, open: !x.open } : x)))}
             onChange=${(data) => setBlocks((b) => b.map((x) => (x.uid === item.uid ? { ...x, data } : x)))}
-            onMove=${(d) => move(i, d)}
+            onMove=${(d) => sort.step(item.uid, i, d)} onGrab=${sort.grab(item.uid)}
             onCopy=${() => setBlocks((b) => [...b.slice(0, i + 1), { uid: uid(), open: true, data: clone(item.data) }, ...b.slice(i + 1)])}
             onRemove=${() => setBlocks((b) => b.filter((x) => x.uid !== item.uid))} />`)}
-          <button class="add-block" onClick=${() => setCatalog(true)}><${Icon} name="plus" /> Ajouter un bloc</button>
+          <button class="add-block" onClick=${() => setCatalog({})}><${Icon} name="plus" /> Ajouter un bloc</button>
         </div>
         <div class="card ticket-settings">
           <${Switch} label="Couper le papier à la fin" checked=${state.cut} onChange=${(cut) => setState((s) => ({ ...s, cut }))} />
@@ -1279,7 +1422,7 @@ function Composer({ initial, onSaved }) {
       </div>
       <aside class="preview-col"><${Paper} preview=${preview} loading=${loading} /><${PaperMeta} preview=${preview} /></aside>
     </div>
-    ${catalog && html`<${Catalog} onPick=${add} onClose=${() => setCatalog(false)} />`}
+    ${catalog && html`<${Catalog} onPick=${(type) => add(type, catalog.at)} onClose=${() => setCatalog(null)} />`}
     ${saveSheet && html`<${SaveSheet} state=${state} focusSchedule=${saveSheet.focusSchedule} onSave=${persist} onClose=${() => setSaveSheet(null)} />`}
     ${mobilePreview && html`<${Sheet} title="Aperçu" onClose=${() => setMobilePreview(false)} footer=${html`
       <button class="btn primary grow" disabled=${printing} onClick=${print}>${printing ? html`<${Spinner} />` : html`<${Icon} name="printer" />`} Imprimer</button>`}>
