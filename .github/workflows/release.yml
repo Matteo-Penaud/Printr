@@ -1,0 +1,98 @@
+name: Release
+
+# Compile printr pour les Raspberry Pi et les PC Linux, et attache les archives à la release
+# GitHub de l'étiquette (créée au besoin, avec la section du CHANGELOG comme notes).
+#   - à chaque étiquette vX.Y.Z poussée ;
+#   - à la main pour une ancienne étiquette : gh workflow run release.yml -f tag=v1.4.0
+# Chaque archive contient le binaire et les fichiers d'installation : décompresser, puis
+# `sudo bash install.sh`. SHA256SUMS permet de vérifier ce qu'on a téléchargé.
+on:
+  push:
+    tags: ["v*.*.*"]
+    branches: [releases-binaires]  # ESSAI : compilation seule, à retirer avant la fusion
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Étiquette à compiler (ex. v1.4.0)"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    name: Compilation ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - aarch64-unknown-linux-gnu     # Pi 3, 4, 5, Zero 2 W (64 bits)
+          - armv7-unknown-linux-gnueabihf # Pi 2, Pi 3 en 32 bits
+          - arm-unknown-linux-gnueabihf   # Pi Zero W, Pi 1 (ARMv6)
+          - x86_64-unknown-linux-gnu      # PC, serveur
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      # cross compile dans une image à glibc ancienne : le binaire tourne sur un Raspberry Pi OS
+      # de quelques années, comme avec scripts/deploy.sh.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+      - run: cross build --release --locked --target ${{ matrix.target }}
+      - name: Archive
+        run: |
+          name="printr-$TAG-${{ matrix.target }}"
+          mkdir -p "dist/$name"
+          cp "target/${{ matrix.target }}/release/printr" "dist/$name/"
+          cp deploy/* "dist/$name/"
+          for f in README.md README.fr.md NOTICE LICENSE CHANGELOG.md; do [ -f "$f" ] && cp "$f" "dist/$name/"; done
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*.tar.gz
+
+  release:
+    name: Publication
+    needs: build
+    if: startsWith(inputs.tag || github.ref_name, 'v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Sommes de contrôle
+        run: cd dist && sha256sum *.tar.gz > SHA256SUMS && cat SHA256SUMS
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            # Notes : la section de la version dans le CHANGELOG.
+            version="${TAG#v}"
+            awk -v v="$version" '
+              $0 ~ "^## \\[" v "\\]" { on = 1; next }
+              on && /^## \[/ { exit }
+              on && /^\[[^]]+\]: / { exit }
+              on { print }
+            ' CHANGELOG.md > notes.md
+            gh release create "$TAG" --verify-tag --title "Printr $version" --notes-file notes.md
+          fi
+          gh release upload "$TAG" dist/*.tar.gz dist/SHA256SUMS --clobber
