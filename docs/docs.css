@@ -97,7 +97,9 @@ html[lang="fr"] .bilingual .en, html[lang="en"] .bilingual .fr { display: none !
 .toggle:hover { color: var(--fg); border-color: var(--accent); }
 
 /* Une fiche : le texte à gauche, le ticket à droite ; l'un sous l'autre sur téléphone. */
-.bloc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 28px; align-items: start;
+/* Sur grand écran, le ticket à sa taille réelle (512 px) : net, sans flou ni crénelage. */
+.bilingual article.doc { max-width: none; }
+.bloc { display: grid; grid-template-columns: minmax(0, 1fr) 532px; gap: 28px; align-items: start;
         padding: 26px 0; border-bottom: 1px solid var(--line); }
 .bloc:last-of-type { border-bottom: 0; }
 .bloc h3 { margin: 0 0 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -113,9 +115,15 @@ html[lang="fr"] .bilingual .en, html[lang="en"] .bilingual .fr { display: none !
                box-shadow: 0 14px 34px -16px rgba(70, 40, 15, .45); transition: transform .2s; }
 .bloc-ticket:hover { transform: translateY(-3px); }
 .bloc-ticket img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
-@media (max-width: 700px) {
+/* Moins large : le ticket passe sous le texte, à sa taille réelle tant qu'il tient. */
+@media (max-width: 1100px) {
   .bloc { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .bloc-ticket { max-width: 320px; margin: 0 auto; }
+  .bloc-ticket { max-width: 532px; }
+}
+/* Téléphone : réduit, donc lissé (un rendu pixelisé réduit devient illisible). */
+@media (max-width: 600px) {
+  .bloc-ticket { padding: 6px 6px 12px; }
+  .bloc-ticket img { image-rendering: auto; }
 }
 
 /* Téléphone : la barre de navigation tient sur une ligne (GitHub reste dans le pied de page). */
