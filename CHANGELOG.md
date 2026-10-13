@@ -5,6 +5,9 @@ each one is a `vX.Y.Z` tag on GitHub, which the server checks to tell the admin 
 
 ## [Unreleased]
 
+### Added
+- Apache License 2.0 (`LICENSE`), and a NOTICE crediting Printr's author.
+
 ### Fixed
 - English website: the example tickets on the home page and in the guide are now the English ones.
 - The link preview image and text (Open Graph) are in English.

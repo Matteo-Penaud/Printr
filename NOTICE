@@ -1,5 +1,14 @@
-Printr inclut la bibliothèque CrossWords (bloc « Mots fléchés »), distribuée sous licence
-Apache 2.0. Conformément à sa licence, voici son fichier NOTICE :
+Printr
+Copyright 2026 Pierre (https://github.com/XNinety9)
+
+This software is licensed under the Apache License 2.0 (LICENSE file).
+Any redistribution, modified or not, must keep this NOTICE file or reproduce
+its content, as required by section 4 (d) of the license.
+
+----
+
+Printr includes the CrossWords library (arrow words block), licensed under the Apache
+License 2.0. As its license requires, here is its NOTICE file:
 
 CrossWords
 Copyright 2026 Pierre (https://github.com/XNinety9)
