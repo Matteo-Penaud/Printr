@@ -9,7 +9,7 @@ use serde_json::json;
 use super::Ctx;
 use crate::claude::Claude;
 use crate::doc::{Doc, Style};
-use crate::fr;
+use crate::i18n;
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -30,13 +30,29 @@ pub enum Tone {
 impl Tone {
     pub fn label(self) -> &'static str {
         match self {
-            Tone::Serious => "sérieux",
-            Tone::Absurd => "farfelu",
-            Tone::Teasing => "vachard",
-            Tone::Insulting => "insultant",
+            Tone::Serious => i18n::t("sérieux", "serious"),
+            Tone::Absurd => i18n::t("farfelu", "absurd"),
+            Tone::Teasing => i18n::t("vachard", "teasing"),
+            Tone::Insulting => i18n::t("insultant", "insulting"),
         }
     }
 }
+
+/// Nom et période en anglais, dans l'ordre de `SIGNS`.
+const SIGNS_EN: [(&str, &str); 12] = [
+    ("Aries", "Mar 21 - Apr 19"),
+    ("Taurus", "Apr 20 - May 20"),
+    ("Gemini", "May 21 - Jun 20"),
+    ("Cancer", "Jun 21 - Jul 22"),
+    ("Leo", "Jul 23 - Aug 22"),
+    ("Virgo", "Aug 23 - Sep 22"),
+    ("Libra", "Sep 23 - Oct 22"),
+    ("Scorpio", "Oct 23 - Nov 21"),
+    ("Sagittarius", "Nov 22 - Dec 21"),
+    ("Capricorn", "Dec 22 - Jan 19"),
+    ("Aquarius", "Jan 20 - Feb 18"),
+    ("Pisces", "Feb 19 - Mar 20"),
+];
 
 /// (nom affiché, période, alias acceptés sans accents)
 const SIGNS: [(&str, &str, &[&str]); 12] = [
@@ -70,9 +86,10 @@ fn strip_accents(s: &str) -> String {
 
 fn find_sign(sign: &str) -> Result<(&'static str, &'static str)> {
     let key = strip_accents(sign.trim());
-    match SIGNS.iter().find(|(_, _, aliases)| aliases.contains(&key.as_str())) {
-        Some((name, period, _)) => Ok((name, period)),
-        None => bail!("signe inconnu : {sign}"),
+    match SIGNS.iter().position(|(_, _, aliases)| aliases.contains(&key.as_str())) {
+        Some(i) if i18n::en() => Ok(SIGNS_EN[i]),
+        Some(i) => Ok((SIGNS[i].0, SIGNS[i].1)),
+        None => bail!("{}", tr!("signe inconnu : {sign}", "unknown sign: {sign}")),
     }
 }
 
@@ -98,6 +115,24 @@ const INSULTING_THEMES: &[&str] = &[
     "les clés perdues", "les séries regardées jusqu'à 3 h", "les messages laissés sans réponse",
     "les bonnes résolutions", "le réveil qui sonne cinq fois", "le bricolage", "les régimes",
 ];
+const SERIOUS_THEMES_EN: &[&str] = &[
+    "communication", "getting organized", "creativity", "money", "family", "rest", "friendship",
+    "long-term plans", "self-confidence", "the unexpected", "patience", "meeting new people",
+    "tidying up", "learning something new",
+];
+const ABSURD_THEMES_EN: &[&str] = &[
+    "cooking", "public transport", "clouds", "outer space", "gardening", "classical music",
+    "the Middle Ages", "bathroom objects", "the sea", "supermarkets", "pirates", "woodland animals",
+    "the weather", "winter sports", "the circus", "cheese", "dinosaurs", "plumbing", "board games",
+    "haute couture",
+];
+const INSULTING_THEMES_EN: &[&str] = &[
+    "being late", "procrastination", "the couch", "forgotten groceries", "the pile of dirty dishes",
+    "dying houseplants", "the workout started on Monday", "lame excuses", "social media",
+    "kitchen disasters", "laundry lying around", "driving", "badly planned vacations", "lost keys",
+    "bingeing shows until 3 a.m.", "unanswered messages", "New Year's resolutions",
+    "snoozing the alarm five times", "DIY projects", "diets",
+];
 
 #[derive(Deserialize, Serialize)]
 struct Horoscope {
@@ -120,21 +155,23 @@ pub fn build(ctx: &Ctx, sign: &str, tone: Tone) -> Result<Doc> {
     let (name, period) = find_sign(sign)?;
     let date = ctx.today;
     let cache = ctx.cache.as_ref();
-    let key = format!("{date}-horoscope-v{PROMPT_VERSION}-{name}-{tone:?}");
+    let key = format!("{date}-horoscope-v{PROMPT_VERSION}-{name}-{tone:?}-{}", i18n::lang().code());
     let cached: Option<Horoscope> =
         cache.filter(|_| !ctx.refresh).and_then(|c| c.get(&key)).filter(Horoscope::is_complete);
     let from_cache = cached.is_some();
     let h = match cached {
         Some(h) => h,
-        None if ctx.preview => return Ok(super::ai_placeholder(&format!("Horoscope · {name}"), "L'horoscope")),
+        None if ctx.preview => {
+            return Ok(super::ai_placeholder(&format!("Horoscope · {name}"), i18n::t("L'horoscope", "The horoscope")));
+        }
         None => {
-            let claude = ctx.claude.as_ref().context("ANTHROPIC_API_KEY manquante")?;
+            let claude = ctx.claude.as_ref().context(i18n::t("ANTHROPIC_API_KEY manquante", "ANTHROPIC_API_KEY is missing"))?;
             // Une réponse incomplète est rare : on retente une fois avant d'abandonner.
             let h = match generate(claude, date, name, tone)? {
                 h if h.is_complete() => h,
                 _ => generate(claude, date, name, tone)?,
             };
-            anyhow::ensure!(h.is_complete(), "réponse de Claude incomplète");
+            anyhow::ensure!(h.is_complete(), i18n::t("réponse de Claude incomplète", "incomplete answer from Claude"));
             if let Some(cache) = cache {
                 cache.put(&key, &h);
             }
@@ -148,17 +185,25 @@ pub fn build(ctx: &Ctx, sign: &str, tone: Tone) -> Result<Doc> {
     doc.text(period, Style::default().small().center());
     doc.feed(1);
     doc.text(&h.general, Style::default());
-    for (label, text) in [("Amour", &h.amour), ("Activités", &h.activites), ("Forme", &h.forme)] {
+    let sections = [
+        (i18n::t("Amour", "Love"), &h.amour),
+        (i18n::t("Activités", "Activities"), &h.activites),
+        (i18n::t("Forme", "Health"), &h.forme),
+    ];
+    for (label, text) in sections {
         doc.feed(1);
         doc.text(label, Style::default().bold().underline());
         doc.text(text, Style::default());
     }
     doc.feed(1);
-    doc.hanging("Porte-bonheur : ", &h.porte_bonheur, Style::default().bold());
+    doc.hanging(i18n::t("Porte-bonheur : ", "Lucky charm: "), &h.porte_bonheur, Style::default().bold());
     Ok(doc)
 }
 
 fn generate(claude: &Claude, date: NaiveDate, name: &str, tone: Tone) -> Result<Horoscope> {
+    if i18n::en() {
+        return generate_en(claude, date, name, tone);
+    }
     let themes = match tone {
         Tone::Serious => SERIOUS_THEMES,
         Tone::Absurd => ABSURD_THEMES,
@@ -210,9 +255,67 @@ fn generate(claude: &Claude, date: NaiveDate, name: &str, tone: Tone) -> Result<
          - amour, activites, forme : 1 à 2 phrases chacun ; « activites » parle des occupations \
          du jour (travail, études, tâches ou loisirs), sans supposer de métier.\n\
          - porte_bonheur : un objet, une couleur ou un nombre, en quelques mots.",
-        fr::long_date(date)
+        i18n::long_date(date)
     );
-    let schema = json!({
+    claude.generate(&system, &prompt, schema(), "low")
+}
+
+/// Les consignes en anglais : même structure, mêmes garde-fous, insultes anglaises.
+fn generate_en(claude: &Claude, date: NaiveDate, name: &str, tone: Tone) -> Result<Horoscope> {
+    let themes = match tone {
+        Tone::Serious => SERIOUS_THEMES_EN,
+        Tone::Absurd => ABSURD_THEMES_EN,
+        Tone::Teasing | Tone::Insulting => INSULTING_THEMES_EN,
+    };
+    let theme = themes.choose(&mut rand::rng()).copied().unwrap_or("everyday life");
+    let tone_instruction = match tone {
+        Tone::Serious => {
+            "Tone: serious and believable, like a magazine horoscope, with concrete, nuanced advice."
+        }
+        Tone::Absurd => {
+            "Tone: completely absurd and whimsical: unlikely, funny predictions (animals, everyday \
+             objects, surreal situations), always kind, never worrying."
+        }
+        Tone::Insulting => {
+            "Tone: openly insulting, a merciless roast. Insult the reader generously, with varied, \
+             colorful English insults (lazybones, numpty, muppet, couch potato, absolute walnut…, \
+             and invent more); swearing is allowed (crap, damn, hell). Comic verbal violence: nasty \
+             hyperbole, theatrical contempt, damning observations about their life and choices. \
+             Every section must contain at least one insult. Strict limits: no real threats, \
+             nothing that encourages self-harm, and insults target behavior (laziness, lateness, \
+             incompetence, procrastination…), never looks, origin, gender, religion, health, \
+             disability or orientation. The lucky charm is an insult too."
+        }
+        Tone::Teasing => {
+            "Tone: teasing, a roast between friends who like each other: you mock the reader with \
+             total bad faith and comic exaggeration (laziness, lateness, procrastination, little \
+             daily habits…). Cheeky and funny, but never truly hurtful: no swearing, and nothing \
+             about looks, origin, gender, religion, health or orientation. The lucky charm is \
+             teasing too."
+        }
+    };
+    let system = format!(
+        "You write today's horoscope in English for a ticket printed on a small thermal printer. \
+         Plain text only: no emoji, no markdown. Fill in every field of the JSON. The reader could \
+         be anyone, whatever their age, job or lifestyle (student, retiree, craftsperson, parent, \
+         employee…): assume no particular job, no office, computer, meetings or coworkers. Draw on \
+         everyday life that everyone shares. {tone_instruction}"
+    );
+    let prompt = format!(
+        "Horoscope for {} for the sign {name}. Today's theme for inspiration: {theme}; avoid \
+         clichés and surprise me.\n\
+         - general: 2 to 3 sentences about the day.\n\
+         - amour (love), activites (activities), forme (health): 1 to 2 sentences each; \
+         « activites » is about the day's occupations (work, studies, chores or hobbies), \
+         without assuming a job.\n\
+         - porte_bonheur (lucky charm): an object, a color or a number, in a few words.",
+        i18n::long_date(date)
+    );
+    claude.generate(&system, &prompt, schema(), "low")
+}
+
+fn schema() -> serde_json::Value {
+    json!({
         "type": "object",
         "properties": {
             "general": { "type": "string" },
@@ -223,8 +326,7 @@ fn generate(claude: &Claude, date: NaiveDate, name: &str, tone: Tone) -> Result<
         },
         "required": ["general", "amour", "activites", "forme", "porte_bonheur"],
         "additionalProperties": false,
-    });
-    claude.generate(&system, &prompt, schema, "low")
+    })
 }
 
 #[cfg(test)]
@@ -237,5 +339,9 @@ mod tests {
         assert_eq!(find_sign("BELIER").unwrap().0, "Bélier");
         assert_eq!(find_sign("scorpio").unwrap().0, "Scorpion");
         assert!(find_sign("ophiuchus").is_err());
+        i18n::with_lang(i18n::Lang::En, || {
+            assert_eq!(find_sign("Gémeaux").unwrap(), ("Gemini", "May 21 - Jun 20"));
+            assert_eq!(Tone::Teasing.label(), "teasing");
+        });
     }
 }

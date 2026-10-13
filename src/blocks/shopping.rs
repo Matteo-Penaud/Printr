@@ -10,7 +10,10 @@ fn render(title: &str, items: &[ShoppingItem]) -> Doc {
     let mut doc = Doc::new();
     doc.header(title);
     if items.is_empty() {
-        doc.text("La liste est vide : rien à acheter !", Style::default().small().center());
+        doc.text(
+            crate::i18n::t("La liste est vide : rien à acheter !", "The list is empty: nothing to buy!"),
+            Style::default().small().center(),
+        );
         return doc;
     }
     for item in items {
@@ -24,14 +27,19 @@ fn render(title: &str, items: &[ShoppingItem]) -> Doc {
         }
     }
     let count = items.len();
-    let plural = if count > 1 { "s" } else { "" };
-    doc.text(&format!("{count} article{plural}, ajouté{plural} par {}", people.join(", ")), Style::default().small().center());
+    let who = people.join(", ");
+    let line = if count > 1 {
+        tr!("{count} articles, ajoutés par {who}", "{count} items, added by {who}")
+    } else {
+        tr!("{count} article, ajouté par {who}", "{count} item, added by {who}")
+    };
+    doc.text(&line, Style::default().small().center());
     doc
 }
 
 pub fn build(title: Option<&str>) -> Result<Doc> {
     let items = store::read_data()?.shopping;
-    Ok(render(title.unwrap_or("Liste de courses"), &items))
+    Ok(render(title.unwrap_or(crate::i18n::t("Liste de courses", "Shopping list")), &items))
 }
 
 #[cfg(test)]

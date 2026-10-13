@@ -91,11 +91,14 @@ pub fn build(width: u8, height: u8, seed: Option<u64>) -> Doc {
     let seed = seed.unwrap_or_else(|| rand::rng().random_range(1..100_000));
 
     let mut doc = Doc::new();
-    doc.header("Labyrinthe");
-    doc.text("Entrée en haut, sortie en bas", Style::default().small().center());
+    doc.header(crate::i18n::t("Labyrinthe", "Maze"));
+    doc.text(
+        crate::i18n::t("Entrée en haut, sortie en bas", "Entrance at top, exit at bottom"),
+        Style::default().small().center(),
+    );
     doc.feed(1);
     doc.image(render(&generate(w, h, seed)));
-    doc.text(&format!("n° {seed}"), Style::default().small().align(Align::Right));
+    doc.text(&tr!("n° {seed}", "No. {seed}"), Style::default().small().align(Align::Right));
     doc
 }
 

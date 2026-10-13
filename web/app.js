@@ -3,6 +3,11 @@
 
 import { html, render, useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from '/vendor/preact-htm.mjs';
 
+// Langue de l'installation (PRINTR_LANG côté serveur), lue dans <html lang> : T('Bonjour', 'Hello').
+const EN = document.documentElement.lang === 'en';
+const LOCALE = EN ? 'en-US' : 'fr-FR';
+const T = (fr, en) => (EN ? en : fr);
+
 // ============================================================================
 // Outils
 // ============================================================================
@@ -26,12 +31,12 @@ async function api(method, path, body) {
   try {
     res = await fetch(path, opts);
   } catch {
-    throw new Error('Impossible de joindre Printr. Vérifie la connexion.');
+    throw new Error(T('Impossible de joindre Printr. Vérifie la connexion.', "Can't reach Printr. Check your connection."));
   }
   let data = null;
   try { data = await res.json(); } catch { /* corps vide */ }
   if (res.status === 401 && path !== '/api/login') bus.emit('unauthorized');
-  if (!res.ok) throw new Error(data?.error ? capitalize(data.error) : `Erreur ${res.status}`);
+  if (!res.ok) throw new Error(data?.error ? capitalize(data.error) : T(`Erreur ${res.status}`, `Error ${res.status}`));
   return data;
 }
 
@@ -73,7 +78,7 @@ async function loadPhoto(file) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Image illisible'));
+      img.onerror = () => reject(new Error(T('Image illisible', 'Unreadable image')));
       img.src = URL.createObjectURL(file);
     });
   }
@@ -134,7 +139,7 @@ const Icon = ({ name, size = 20 }) => html`<svg class="icon" width=${size} heigh
   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
   dangerouslySetInnerHTML=${{ __html: ICONS[name] || '' }} />`;
 
-const Spinner = () => html`<span class="spinner" role="status" aria-label="Chargement"></span>`;
+const Spinner = () => html`<span class="spinner" role="status" aria-label=${T('Chargement', 'Loading')}></span>`;
 
 const Avatar = ({ user, size = '' }) => html`<span class="avatar ${size}" style=${{ background: user?.color || '#999' }}
   title=${user?.name}>${(user?.name || '?')[0].toUpperCase()}</span>`;
@@ -144,343 +149,370 @@ const Avatar = ({ user, size = '' }) => html`<span class="avatar ${size}" style=
 // ============================================================================
 
 const SIGNS = [
-  ['belier', 'Bélier ♈'], ['taureau', 'Taureau ♉'], ['gemeaux', 'Gémeaux ♊'], ['cancer', 'Cancer ♋'],
-  ['lion', 'Lion ♌'], ['vierge', 'Vierge ♍'], ['balance', 'Balance ♎'], ['scorpion', 'Scorpion ♏'],
-  ['sagittaire', 'Sagittaire ♐'], ['capricorne', 'Capricorne ♑'], ['verseau', 'Verseau ♒'], ['poissons', 'Poissons ♓'],
+  ['belier', T('Bélier ♈', 'Aries ♈')], ['taureau', T('Taureau ♉', 'Taurus ♉')], ['gemeaux', T('Gémeaux ♊', 'Gemini ♊')], ['cancer', T('Cancer ♋', 'Cancer ♋')],
+  ['lion', T('Lion ♌', 'Leo ♌')], ['vierge', T('Vierge ♍', 'Virgo ♍')], ['balance', T('Balance ♎', 'Libra ♎')], ['scorpion', T('Scorpion ♏', 'Scorpio ♏')],
+  ['sagittaire', T('Sagittaire ♐', 'Sagittarius ♐')], ['capricorne', T('Capricorne ♑', 'Capricorn ♑')], ['verseau', T('Verseau ♒', 'Aquarius ♒')], ['poissons', T('Poissons ♓', 'Pisces ♓')],
 ];
-const TONES = [['serieux', 'Sérieux'], ['farfelu', 'Farfelu'], ['vachard', 'Vachard'], ['insultant', 'Insultant']];
-const LEVELS = [['facile', 'Facile'], ['moyen', 'Moyen'], ['difficile', 'Difficile']];
-const WORD_THEMES = [['', 'Au hasard'], ['animaux', 'Animaux'], ['fruits_legumes', 'Fruits et légumes'], ['cuisine', 'Cuisine'], ['nature', 'Nature'], ['sport', 'Sport'], ['metiers', 'Métiers'], ['maison', 'Maison'], ['voyage', 'Voyage'], ['musique', 'Musique'], ['ecole', 'École'], ['developpement', 'Développement'], ['devops', 'DevOps'], ['reseaux', 'Réseaux'], ['ia', 'Intelligence artificielle']];
+const TONES = [['serieux', T('Sérieux', 'Serious')], ['farfelu', T('Farfelu', 'Silly')], ['vachard', T('Vachard', 'Snarky')], ['insultant', T('Insultant', 'Insulting')]];
+const LEVELS = [['facile', T('Facile', 'Easy')], ['moyen', T('Moyen', 'Medium')], ['difficile', T('Difficile', 'Hard')]];
+const WORD_THEMES = [
+  ['', T('Au hasard', 'Random')], ['animaux', T('Animaux', 'Animals')], ['fruits_legumes', T('Fruits et légumes', 'Fruit and vegetables')],
+  ['cuisine', T('Cuisine', 'Cooking')], ['nature', T('Nature', 'Nature')], ['sport', T('Sport', 'Sport')], ['metiers', T('Métiers', 'Jobs')],
+  ['maison', T('Maison', 'Home')], ['voyage', T('Voyage', 'Travel')], ['musique', T('Musique', 'Music')], ['ecole', T('École', 'School')],
+  ['developpement', T('Développement', 'Development')], ['devops', 'DevOps'], ['reseaux', T('Réseaux', 'Networking')],
+  ['ia', T('Intelligence artificielle', 'Artificial intelligence')],
+];
 const PICTOS = [['coeur', '❤️'], ['etoile', '⭐'], ['soleil', '☀️'], ['fleur', '🌸'], ['sourire', '😊']];
 const label = (options, value) => options.find(([v]) => v === value)?.[1] ?? value;
 const inDays = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
 
-const G = { layout: 'Mise en page', daily: 'Au quotidien', fun: 'Jeux & défis', gift: 'Petites attentions', info: 'Infos', org: 'Organisation' };
+const G = {
+  layout: T('Mise en page', 'Layout'), daily: T('Au quotidien', 'Everyday'), fun: T('Jeux & défis', 'Games & challenges'),
+  gift: T('Petites attentions', 'Little gifts'), info: T('Infos', 'Info'), org: T('Organisation', 'Organization'),
+};
 const FAMILY_THEMES = WORD_THEMES.filter(([v]) => !['developpement', 'devops', 'reseaux', 'ia'].includes(v));
-const WEEKDAYS = [['lundi', 'Lundi'], ['mardi', 'Mardi'], ['mercredi', 'Mercredi'], ['jeudi', 'Jeudi'], ['vendredi', 'Vendredi'], ['samedi', 'Samedi'], ['dimanche', 'Dimanche']];
-const EVERY = [[1, 'Chaque semaine'], [2, 'Une semaine sur deux'], [3, 'Toutes les 3 semaines'], [4, 'Toutes les 4 semaines']];
+const WEEKDAYS = [
+  ['lundi', T('Lundi', 'Monday')], ['mardi', T('Mardi', 'Tuesday')], ['mercredi', T('Mercredi', 'Wednesday')], ['jeudi', T('Jeudi', 'Thursday')],
+  ['vendredi', T('Vendredi', 'Friday')], ['samedi', T('Samedi', 'Saturday')], ['dimanche', T('Dimanche', 'Sunday')],
+];
+const EVERY = [
+  [1, T('Chaque semaine', 'Every week')], [2, T('Une semaine sur deux', 'Every other week')],
+  [3, T('Toutes les 3 semaines', 'Every 3 weeks')], [4, T('Toutes les 4 semaines', 'Every 4 weeks')],
+];
 
 const BLOCKS = [
   {
-    type: 'title', label: 'Titre', emoji: '🔠', group: G.layout, desc: 'Un grand titre centré',
-    defaults: { text: 'Bonjour !', size: 2 },
+    type: 'title', label: T('Titre', 'Title'), emoji: '🔠', group: G.layout, desc: T('Un grand titre centré', 'A big centered title'),
+    defaults: { text: T('Bonjour !', 'Hello!'), size: 2 },
     fields: [
-      { key: 'text', label: 'Texte', kind: 'text' },
-      { key: 'size', label: 'Taille', kind: 'segmented', options: [[1, 'S'], [2, 'M'], [3, 'L'], [4, 'XL']] },
+      { key: 'text', label: T('Texte', 'Text'), kind: 'text' },
+      { key: 'size', label: T('Taille', 'Size'), kind: 'segmented', options: [[1, 'S'], [2, 'M'], [3, 'L'], [4, 'XL']] },
     ],
     summary: (b) => b.text,
   },
   {
-    type: 'text', label: 'Texte', emoji: '📝', group: G.layout, desc: 'Un paragraphe libre',
+    type: 'text', label: T('Texte', 'Text'), emoji: '📝', group: G.layout, desc: T('Un paragraphe libre', 'A free paragraph'),
     defaults: { text: '', align: 'left' },
     fields: [
-      { key: 'text', label: 'Texte', kind: 'textarea', placeholder: 'Écris ce que tu veux…' },
-      { key: 'align', label: 'Alignement', kind: 'segmented', options: [['left', 'Gauche'], ['center', 'Centré'], ['right', 'Droite']] },
-      { key: 'size', label: 'Taille', kind: 'segmented', options: [[1, 'Normale'], [2, 'Grande'], [3, 'Énorme']] },
-      { key: 'bold', label: 'Gras', kind: 'toggle' },
-      { key: 'underline', label: 'Souligné', kind: 'toggle' },
-      { key: 'reverse', label: 'Inversé (blanc sur noir)', kind: 'toggle' },
-      { key: 'small', label: 'Petite police', kind: 'toggle' },
+      { key: 'text', label: T('Texte', 'Text'), kind: 'textarea', placeholder: T('Écris ce que tu veux…', 'Write whatever you like…') },
+      { key: 'align', label: T('Alignement', 'Alignment'), kind: 'segmented', options: [['left', T('Gauche', 'Left')], ['center', T('Centré', 'Centered')], ['right', T('Droite', 'Right')]] },
+      { key: 'size', label: T('Taille', 'Size'), kind: 'segmented', options: [[1, T('Normale', 'Normal')], [2, T('Grande', 'Large')], [3, T('Énorme', 'Huge')]] },
+      { key: 'bold', label: T('Gras', 'Bold'), kind: 'toggle' },
+      { key: 'underline', label: T('Souligné', 'Underline'), kind: 'toggle' },
+      { key: 'reverse', label: T('Inversé (blanc sur noir)', 'Inverted (white on black)'), kind: 'toggle' },
+      { key: 'small', label: T('Petite police', 'Small font'), kind: 'toggle' },
     ],
-    summary: (b) => b.text || 'Vide',
+    summary: (b) => b.text || T('Vide', 'Empty'),
   },
-  { type: 'date', label: 'Date', emoji: '📅', group: G.layout, desc: 'La date du jour, en toutes lettres', defaults: {}, fields: [] },
+  { type: 'date', label: T('Date', 'Date'), emoji: '📅', group: G.layout, desc: T('La date du jour, en toutes lettres', "Today's date, written out"), defaults: {}, fields: [] },
   {
-    type: 'separator', label: 'Séparateur', emoji: '➖', group: G.layout, desc: 'Une ligne de séparation',
+    type: 'separator', label: T('Séparateur', 'Separator'), emoji: '➖', group: G.layout, desc: T('Une ligne de séparation', 'A dividing line'),
     defaults: { style: '-' },
-    fields: [{ key: 'style', label: 'Style', kind: 'segmented', options: [['-', '—'], ['=', '='], ['═', '═'], ['─', '─'], ['·', '·'], ['*', '*'], ['~', '~']] }],
+    fields: [{ key: 'style', label: T('Style', 'Style'), kind: 'segmented', options: [['-', '—'], ['=', '='], ['═', '═'], ['─', '─'], ['·', '·'], ['*', '*'], ['~', '~']] }],
   },
   {
-    type: 'feed', label: 'Espace', emoji: '↕️', group: G.layout, desc: "De l'air entre deux blocs",
+    type: 'feed', label: T('Espace', 'Space'), emoji: '↕️', group: G.layout, desc: T("De l'air entre deux blocs", 'Some air between two blocks'),
     defaults: { lines: 1 },
-    fields: [{ key: 'lines', label: 'Lignes vides', kind: 'number', min: 1, max: 10 }],
-    summary: (b) => `${b.lines} ligne${b.lines > 1 ? 's' : ''}`,
+    fields: [{ key: 'lines', label: T('Lignes vides', 'Empty lines'), kind: 'number', min: 1, max: 10 }],
+    summary: (b) => T(`${b.lines} ligne${b.lines > 1 ? 's' : ''}`, `${b.lines} line${b.lines > 1 ? 's' : ''}`),
   },
   {
-    type: 'image', label: 'Image', emoji: '🖼️', group: G.layout, desc: 'Une photo, imprimée en noir et blanc',
+    type: 'image', label: T('Image', 'Image'), emoji: '🖼️', group: G.layout, desc: T('Une photo, imprimée en noir et blanc', 'A photo, printed in black and white'),
     defaults: { dither: true },
     fields: [
-      { key: 'upload', label: 'Photo', kind: 'image' },
-      { key: 'url', label: "… ou adresse web d'une image", kind: 'text', placeholder: 'https://…' },
-      { key: 'dither', label: 'Tramage', kind: 'toggle', help: 'Idéal pour les photos. Désactive-le pour un logo ou un dessin.' },
+      { key: 'upload', label: T('Photo', 'Photo'), kind: 'image' },
+      { key: 'url', label: T("… ou adresse web d'une image", '… or the web address of an image'), kind: 'text', placeholder: 'https://…' },
+      { key: 'dither', label: T('Tramage', 'Dithering'), kind: 'toggle', help: T('Idéal pour les photos. Désactive-le pour un logo ou un dessin.', 'Ideal for photos. Turn it off for a logo or a drawing.') },
     ],
     normalize: (d) => { if (d.upload) delete d.url; return d; },
-    summary: (b) => (b.upload ? 'Photo' : b.url ? 'Image du web' : 'Aucune image'),
+    summary: (b) => (b.upload ? T('Photo', 'Photo') : b.url ? T('Image du web', 'Web image') : T('Aucune image', 'No image')),
   },
   {
-    type: 'qr', label: 'QR code', emoji: '🔳', group: G.layout, desc: 'Un lien à scanner',
+    type: 'qr', label: 'QR code', emoji: '🔳', group: G.layout, desc: T('Un lien à scanner', 'A link to scan'),
     defaults: { data: '', size: 6 },
     fields: [
-      { key: 'data', label: 'Lien ou texte', kind: 'text', placeholder: 'https://…' },
-      { key: 'caption', label: 'Légende', kind: 'text', placeholder: 'Optionnelle' },
-      { key: 'size', label: 'Taille', kind: 'number', min: 2, max: 12 },
+      { key: 'data', label: T('Lien ou texte', 'Link or text'), kind: 'text', placeholder: 'https://…' },
+      { key: 'caption', label: T('Légende', 'Caption'), kind: 'text', placeholder: T('Optionnelle', 'Optional') },
+      { key: 'size', label: T('Taille', 'Size'), kind: 'number', min: 2, max: 12 },
     ],
-    summary: (b) => b.data || 'Vide',
+    summary: (b) => b.data || T('Vide', 'Empty'),
   },
   {
-    type: 'picto', label: 'Pictogramme', emoji: '💖', group: G.layout, desc: 'Cœur, étoile, soleil, fleur…',
+    type: 'picto', label: T('Pictogramme', 'Pictogram'), emoji: '💖', group: G.layout, desc: T('Cœur, étoile, soleil, fleur…', 'Heart, star, sun, flower…'),
     defaults: { shape: 'coeur', size: 'moyen', count: 1 },
     fields: [
-      { key: 'shape', label: 'Forme', kind: 'icons', options: PICTOS },
-      { key: 'size', label: 'Taille', kind: 'segmented', options: [['petit', 'Petit'], ['moyen', 'Moyen'], ['grand', 'Grand']] },
-      { key: 'count', label: 'Combien ?', kind: 'number', min: 1, max: 7 },
+      { key: 'shape', label: T('Forme', 'Shape'), kind: 'icons', options: PICTOS },
+      { key: 'size', label: T('Taille', 'Size'), kind: 'segmented', options: [['petit', T('Petit', 'Small')], ['moyen', T('Moyen', 'Medium')], ['grand', T('Grand', 'Large')]] },
+      { key: 'count', label: T('Combien ?', 'How many?'), kind: 'number', min: 1, max: 7 },
     ],
     summary: (b) => `${label(PICTOS, b.shape)} × ${b.count}`,
   },
   {
-    type: 'weather', label: 'Météo', emoji: '🌤️', group: G.daily, desc: 'Le temps du jour et des suivants',
+    type: 'weather', label: T('Météo', 'Weather'), emoji: '🌤️', group: G.daily, desc: T('Le temps du jour et des suivants', "Today's weather and the days ahead"),
     defaults: { location: 'Lyon', days: 1 },
     fields: [
-      { key: 'location', label: 'Ville', kind: 'text', placeholder: 'Lyon, ou « 45.76,4.83 »' },
-      { key: 'days', label: 'Prévisions', kind: 'segmented', options: [[1, "Aujourd'hui"], [3, '3 jours'], [5, '5 jours'], [7, '7 jours']] },
+      { key: 'location', label: T('Ville', 'City'), kind: 'text', placeholder: T('Lyon, ou « 45.76,4.83 »', 'Lyon, or "45.76,4.83"') },
+      { key: 'days', label: T('Prévisions', 'Forecast'), kind: 'segmented', options: [[1, T("Aujourd'hui", 'Today')], [3, T('3 jours', '3 days')], [5, T('5 jours', '5 days')], [7, T('7 jours', '7 days')]] },
     ],
     summary: (b) => b.location,
   },
   {
-    type: 'barnum', label: 'Horoscope', emoji: '🌟', group: G.daily, desc: 'Le vrai ciel du jour, hors ligne et gratuit',
+    type: 'barnum', label: T('Horoscope', 'Horoscope'), emoji: '🌟', group: G.daily, desc: T('Le vrai ciel du jour, hors ligne et gratuit', 'The real sky of the day, offline (in French)'),
     defaults: { sign: 'lion', sky: false },
     fields: [
-      { key: 'sign', label: 'Signe', kind: 'select', options: SIGNS },
-      { key: 'birth_date', label: '… ou date de naissance', kind: 'date', help: 'Si elle est indiquée, Barnum en déduit le signe.' },
-      { key: 'sky', label: 'Afficher le ciel du jour', kind: 'toggle', help: 'La position des planètes, et celles qui sont rétrogrades.' },
+      { key: 'sign', label: T('Signe', 'Sign'), kind: 'select', options: SIGNS },
+      { key: 'birth_date', label: T('… ou date de naissance', '… or birth date'), kind: 'date', help: T('Si elle est indiquée, Barnum en déduit le signe.', 'If it is given, Barnum works out the sign from it.') },
+      { key: 'sky', label: T("Afficher le ciel du jour", "Show today's sky"), kind: 'toggle', help: T('La position des planètes, et celles qui sont rétrogrades.', 'The position of the planets, and which ones are retrograde.') },
     ],
-    summary: (b) => (b.birth_date ? `Né le ${b.birth_date}` : label(SIGNS, b.sign)),
+    summary: (b) => (b.birth_date ? T(`Né le ${b.birth_date}`, `Born on ${b.birth_date}`) : label(SIGNS, b.sign)),
   },
   {
-    type: 'horoscope', label: 'Horoscope Claude', emoji: '🔮', group: G.daily, desc: 'Sérieux, farfelu… ou insultant', ai: true,
+    type: 'horoscope', label: T('Horoscope Claude', 'Claude horoscope'), emoji: '🔮', group: G.daily, desc: T('Sérieux, farfelu… ou insultant', 'Serious, silly… or insulting'), ai: true,
     defaults: { sign: 'lion', tone: 'serieux' },
     fields: [
-      { key: 'sign', label: 'Signe', kind: 'select', options: SIGNS },
-      { key: 'tone', label: 'Ton', kind: 'segmented', options: TONES },
+      { key: 'sign', label: T('Signe', 'Sign'), kind: 'select', options: SIGNS },
+      { key: 'tone', label: T('Ton', 'Tone'), kind: 'segmented', options: TONES },
     ],
     summary: (b) => `${label(SIGNS, b.sign)} · ${label(TONES, b.tone)}`,
   },
-  { type: 'word_of_the_day', label: 'Mot du jour', emoji: '📖', group: G.daily, desc: 'Un mot rare et sa définition', ai: true, defaults: {}, fields: [] },
-  { type: 'saint', label: 'Saint du jour', emoji: '😇', group: G.daily, desc: 'La fête du jour', defaults: {}, fields: [] },
-  { type: 'quote', label: 'Citation', emoji: '💬', group: G.daily, desc: 'Une citation française célèbre', defaults: {}, fields: [] },
-  { type: 'moon', label: 'Lune', emoji: '🌙', group: G.daily, desc: 'Phase et prochaines lunes', defaults: {}, fields: [] },
+  { type: 'word_of_the_day', label: T('Mot du jour', 'Word of the day'), emoji: '📖', group: G.daily, desc: T('Un mot rare et sa définition', 'A rare word and its definition'), ai: true, defaults: {}, fields: [] },
+  { type: 'saint', label: T('Saint du jour', 'Name day'), emoji: '😇', group: G.daily, desc: T('La fête du jour', 'The French name-day calendar'), defaults: {}, fields: [] },
+  { type: 'quote', label: T('Citation', 'Quote'), emoji: '💬', group: G.daily, desc: T('Une citation française célèbre', 'A famous quote'), defaults: {}, fields: [] },
+  { type: 'moon', label: T('Lune', 'Moon'), emoji: '🌙', group: G.daily, desc: T('Phase et prochaines lunes', 'Phase and upcoming moons'), defaults: {}, fields: [] },
   {
-    type: 'sun', label: 'Soleil', emoji: '🌅', group: G.daily, desc: 'Lever, coucher, durée du jour',
+    type: 'sun', label: T('Soleil', 'Sun'), emoji: '🌅', group: G.daily, desc: T('Lever, coucher, durée du jour', 'Sunrise, sunset, length of day'),
     defaults: { location: 'Lyon' },
-    fields: [{ key: 'location', label: 'Ville', kind: 'text' }],
+    fields: [{ key: 'location', label: T('Ville', 'City'), kind: 'text' }],
     summary: (b) => b.location,
   },
   {
-    type: 'air_quality', label: "Qualité de l'air", emoji: '🍃', group: G.daily, desc: 'Pollution et pollens',
+    type: 'air_quality', label: T("Qualité de l'air", 'Air quality'), emoji: '🍃', group: G.daily, desc: T('Pollution et pollens', 'Pollution and pollen'),
     defaults: { location: 'Lyon' },
-    fields: [{ key: 'location', label: 'Ville', kind: 'text' }],
+    fields: [{ key: 'location', label: T('Ville', 'City'), kind: 'text' }],
     summary: (b) => b.location,
   },
   {
-    type: 'holidays', label: 'Jours fériés', emoji: '🏖️', group: G.daily, desc: 'Les prochains jours fériés',
+    type: 'holidays', label: T('Jours fériés', 'Public holidays'), emoji: '🏖️', group: G.daily, desc: T('Les prochains jours fériés', 'The next public holidays'),
     defaults: { zone: 'metropole', count: 1 },
     fields: [
-      { key: 'zone', label: 'Zone', kind: 'segmented', options: [['metropole', 'Métropole'], ['alsace-moselle', 'Alsace-Moselle']] },
-      { key: 'count', label: 'Combien ?', kind: 'number', min: 1, max: 12 },
+      { key: 'zone', label: T('Zone', 'Zone'), kind: 'segmented', options: [['metropole', T('Métropole', 'Mainland France')], ['alsace-moselle', 'Alsace-Moselle']] },
+      { key: 'count', label: T('Combien ?', 'How many?'), kind: 'number', min: 1, max: 12 },
     ],
   },
   {
-    type: 'countdown', label: 'Compte à rebours', emoji: '⏳', group: G.daily, desc: '« J-12 avant les vacances »',
-    defaults: { label: 'Vacances', date: inDays(30) },
+    type: 'countdown', label: T('Compte à rebours', 'Countdown'), emoji: '⏳', group: G.daily, desc: T('« J-12 avant les vacances »', '“12 days until the holidays”'),
+    defaults: { label: T('Vacances', 'Holidays'), date: inDays(30) },
     fields: [
-      { key: 'label', label: 'Événement', kind: 'text' },
-      { key: 'date', label: 'Date', kind: 'date' },
+      { key: 'label', label: T('Événement', 'Event'), kind: 'text' },
+      { key: 'date', label: T('Date', 'Date'), kind: 'date' },
     ],
     summary: (b) => `${b.label} · ${b.date}`,
   },
   {
-    type: 'riddle', label: 'Énigme', emoji: '🧩', group: G.fun, desc: '125 énigmes, réponse à l’envers',
+    type: 'riddle', label: T('Énigme', 'Riddle'), emoji: '🧩', group: G.fun, desc: T('125 énigmes, réponse à l’envers', 'Riddles, charades, logic, the answer upside down'),
     defaults: { answer: 'envers' },
     fields: [
-      { key: 'kind', label: 'Famille', kind: 'select', options: [['', 'Toutes'], ['devinette', 'Devinettes'], ['charade', 'Charades'], ['logique', 'Logique'], ['calcul', 'Calcul']] },
-      { key: 'answer', label: 'Réponse', kind: 'select', options: [['envers', "À l'envers, en bas"], ['lendemain', 'Le lendemain'], ['dessous', 'Juste en dessous'], ['aucune', 'Pas de réponse']] },
+      { key: 'kind', label: T('Famille', 'Type'), kind: 'select', options: [['', T('Toutes', 'All')], ['devinette', T('Devinettes', 'Classic riddles')], ['charade', T('Charades', 'Charades')], ['logique', T('Logique', 'Logic')], ['calcul', T('Calcul', 'Maths')]] },
+      { key: 'answer', label: T('Réponse', 'Answer'), kind: 'select', options: [['envers', T("À l'envers, en bas", 'Upside down, at the bottom')], ['lendemain', T('Le lendemain', 'The next day')], ['dessous', T('Juste en dessous', 'Right below')], ['aucune', T('Pas de réponse', 'No answer')]] },
     ],
   },
   {
-    type: 'workout', label: 'Défi sportif', emoji: '💪', group: G.fun, desc: 'Sans équipement, trois niveaux',
+    type: 'workout', label: T('Défi sportif', 'Workout challenge'), emoji: '💪', group: G.fun, desc: T('Sans équipement, trois niveaux', 'No equipment, three levels'),
     defaults: { level: 'moyen' },
-    fields: [{ key: 'level', label: 'Niveau', kind: 'segmented', options: LEVELS }],
+    fields: [{ key: 'level', label: T('Niveau', 'Level'), kind: 'segmented', options: LEVELS }],
     summary: (b) => label(LEVELS, b.level),
   },
   {
-    type: 'sudoku', label: 'Sudoku', emoji: '🔢', group: G.fun, desc: 'Une grille à remplir au stylo',
+    type: 'sudoku', label: 'Sudoku', emoji: '🔢', group: G.fun, desc: T('Une grille à remplir au stylo', 'A grid to fill in with a pen'),
     defaults: { difficulty: 'moyen' },
     fields: [
-      { key: 'difficulty', label: 'Difficulté', kind: 'segmented', options: LEVELS },
-      { key: 'seed', label: 'Numéro de grille', kind: 'number', optional: true, help: 'Laisse vide pour une nouvelle grille.' },
-      { key: 'solution', label: 'Imprimer la solution de cette grille', kind: 'toggle' },
+      { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
+      { key: 'seed', label: T('Numéro de grille', 'Grid number'), kind: 'number', optional: true, help: T('Laisse vide pour une nouvelle grille.', 'Leave empty for a new grid.') },
+      { key: 'solution', label: T('Imprimer la solution de cette grille', "Print this grid's solution"), kind: 'toggle' },
     ],
     summary: (b) => label(LEVELS, b.difficulty),
   },
   {
-    type: 'word_search', label: 'Mots mêlés', emoji: '🔤', group: G.fun, desc: 'Des mots cachés dans une grille de lettres',
+    type: 'word_search', label: T('Mots mêlés', 'Word search'), emoji: '🔤', group: G.fun, desc: T('Des mots cachés dans une grille de lettres', 'Hidden words in a grid of letters'),
     defaults: { difficulty: 'moyen', theme: '', words: [] },
     fields: [
-      { key: 'difficulty', label: 'Difficulté', kind: 'segmented', options: LEVELS },
-      { key: 'theme', label: 'Thème', kind: 'select', options: WORD_THEMES },
-      { key: 'words', label: 'Mes mots (remplacent le thème)', kind: 'list', placeholder: 'grand-mère…', add: 'Ajouter un mot' },
-      { key: 'seed', label: 'Numéro de grille', kind: 'number', optional: true, help: 'Laisse vide pour une nouvelle grille.' },
-      { key: 'solution', label: 'Imprimer la solution de cette grille', kind: 'toggle' },
+      { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
+      { key: 'theme', label: T('Thème', 'Theme'), kind: 'select', options: WORD_THEMES },
+      { key: 'words', label: T('Mes mots (remplacent le thème)', 'My words (replace the theme)'), kind: 'list', placeholder: T('grand-mère…', 'grandmother…'), add: T('Ajouter un mot', 'Add a word') },
+      { key: 'seed', label: T('Numéro de grille', 'Grid number'), kind: 'number', optional: true, help: T('Laisse vide pour une nouvelle grille.', 'Leave empty for a new grid.') },
+      { key: 'solution', label: T('Imprimer la solution de cette grille', "Print this grid's solution"), kind: 'toggle' },
     ],
-    summary: (b) => [(b.words || []).length ? 'mes mots' : label(WORD_THEMES, b.theme || ''), label(LEVELS, b.difficulty)].join(' · '),
+    summary: (b) => [(b.words || []).length ? T('mes mots', 'my words') : label(WORD_THEMES, b.theme || ''), label(LEVELS, b.difficulty)].join(' · '),
   },
   {
-    type: 'train_tracks', label: 'Voie ferrée', emoji: '🚂', group: G.fun, desc: 'Relier A à B en une seule voie',
+    type: 'train_tracks', label: T('Voie ferrée', 'Railway track'), emoji: '🚂', group: G.fun, desc: T('Relier A à B en une seule voie', 'Connect A to B with a single track'),
     defaults: { difficulty: 'moyen' },
     fields: [
-      { key: 'difficulty', label: 'Difficulté', kind: 'segmented', options: LEVELS },
-      { key: 'seed', label: 'Numéro de grille', kind: 'number', optional: true, help: 'Laisse vide pour une nouvelle grille.' },
-      { key: 'solution', label: 'Imprimer la solution de cette grille', kind: 'toggle' },
+      { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
+      { key: 'seed', label: T('Numéro de grille', 'Grid number'), kind: 'number', optional: true, help: T('Laisse vide pour une nouvelle grille.', 'Leave empty for a new grid.') },
+      { key: 'solution', label: T('Imprimer la solution de cette grille', "Print this grid's solution"), kind: 'toggle' },
     ],
     summary: (b) => label(LEVELS, b.difficulty),
   },
   {
-    type: 'maze', label: 'Labyrinthe', emoji: '🌀', group: G.fun, desc: 'Entrée en haut, sortie en bas',
+    type: 'maze', label: T('Labyrinthe', 'Maze'), emoji: '🌀', group: G.fun, desc: T('Entrée en haut, sortie en bas', 'Entrance at the top, exit at the bottom'),
     defaults: { width: 12, height: 16 },
     fields: [
-      { key: 'width', label: 'Largeur', kind: 'number', min: 4, max: 40 },
-      { key: 'height', label: 'Hauteur', kind: 'number', min: 4, max: 60 },
+      { key: 'width', label: T('Largeur', 'Width'), kind: 'number', min: 4, max: 40 },
+      { key: 'height', label: T('Hauteur', 'Height'), kind: 'number', min: 4, max: 60 },
     ],
     summary: (b) => `${b.width} × ${b.height}`,
   },
   {
-    type: 'arrow_word', label: 'Mots fléchés', emoji: '✍️', group: G.fun, desc: 'Une grille de mots fléchés, définitions par Claude', ai: true,
+    type: 'arrow_word', label: T('Mots fléchés', 'Arrow words'), emoji: '✍️', group: G.fun, desc: T('Une grille de mots fléchés, définitions par Claude', 'A French arrow-word grid, clues by Claude'), ai: true,
     defaults: { level: 2, size: 'moyen' },
     fields: [
-      { key: 'level', label: 'Niveau', kind: 'segmented', options: [[1, 'Facile'], [2, 'Moyen'], [3, 'Difficile'], [4, 'Expert']],
-        help: 'Niveaux 3 et 4 : définitions plus fines, rédigées par un modèle plus cher (une dizaine de centimes par grille neuve).' },
-      { key: 'size', label: 'Taille', kind: 'segmented', options: [['petit', 'Petite'], ['moyen', 'Moyenne'], ['grand', 'Grande']] },
-      { key: 'seed', label: 'Numéro de grille', kind: 'number', optional: true, help: 'Laisse vide pour une nouvelle grille.' },
-      { key: 'solution', label: 'Imprimer la solution de cette grille', kind: 'toggle', help: 'Même numéro, même taille et même niveau.' },
+      { key: 'level', label: T('Niveau', 'Level'), kind: 'segmented', options: [[1, T('Facile', 'Easy')], [2, T('Moyen', 'Medium')], [3, T('Difficile', 'Hard')], [4, 'Expert']],
+        help: T('Niveaux 3 et 4 : définitions plus fines, rédigées par un modèle plus cher (une dizaine de centimes par grille neuve).', 'Levels 3 and 4: finer clues, written by a more expensive model (around 10 cents per new grid).') },
+      { key: 'size', label: T('Taille', 'Size'), kind: 'segmented', options: [['petit', T('Petite', 'Small')], ['moyen', T('Moyenne', 'Medium')], ['grand', T('Grande', 'Large')]] },
+      { key: 'seed', label: T('Numéro de grille', 'Grid number'), kind: 'number', optional: true, help: T('Laisse vide pour une nouvelle grille.', 'Leave empty for a new grid.') },
+      { key: 'solution', label: T('Imprimer la solution de cette grille', "Print this grid's solution"), kind: 'toggle', help: T('Même numéro, même taille et même niveau.', 'Same number, same size and same level.') },
     ],
-    summary: (b) => `${({ 1: 'Facile', 2: 'Moyen', 3: 'Difficile', 4: 'Expert' })[b.level] || ''} · ${({ petit: 'petite', moyen: 'moyenne', grand: 'grande' })[b.size] || ''} grille`,
+    summary: (b) => {
+      const lv = ({ 1: T('Facile', 'Easy'), 2: T('Moyen', 'Medium'), 3: T('Difficile', 'Hard'), 4: 'Expert' })[b.level] || '';
+      const sz = ({ petit: T('petite', 'small'), moyen: T('moyenne', 'medium'), grand: T('grande', 'large') })[b.size] || '';
+      return T(`${lv} · ${sz} grille`, `${lv} · ${sz} grid`);
+    },
   },
   {
-    type: 'nonogram', label: 'Logimage', emoji: '🖍️', group: G.fun, desc: 'Noircir des cases pour révéler un dessin',
+    type: 'nonogram', label: T('Logimage', 'Nonogram'), emoji: '🖍️', group: G.fun, desc: T('Noircir des cases pour révéler un dessin', 'Shade squares to reveal a picture'),
     defaults: {},
     fields: [
-      { key: 'number', label: 'Numéro du dessin (1 à 10)', kind: 'number', min: 1, max: 10, optional: true },
-      { key: 'solution', label: 'Imprimer la solution', kind: 'toggle' },
+      { key: 'number', label: T('Numéro du dessin (1 à 10)', 'Picture number (1 to 10)'), kind: 'number', min: 1, max: 10, optional: true },
+      { key: 'solution', label: T('Imprimer la solution', 'Print the solution'), kind: 'toggle' },
     ],
   },
   {
-    type: 'petit_bac', label: 'Petit bac', emoji: '✏️', group: G.fun, desc: 'Une lettre, des catégories, à jouer en famille',
+    type: 'petit_bac', label: T('Petit bac', 'Categories'), emoji: '✏️', group: G.fun, desc: T('Une lettre, des catégories, à jouer en famille', 'One letter, some categories, to play as a family'),
     defaults: { players: 1, count: 6, categories: [] },
     fields: [
-      { key: 'players', label: 'Joueurs (une feuille chacun)', kind: 'number', min: 1, max: 6 },
-      { key: 'letter', label: 'Lettre', kind: 'text', placeholder: 'Au hasard', maxlength: 1 },
-      { key: 'count', label: 'Nombre de catégories', kind: 'number', min: 3, max: 12 },
-      { key: 'categories', label: 'Mes catégories (remplacent le tirage)', kind: 'list', placeholder: 'Dinosaure…', add: 'Ajouter une catégorie' },
+      { key: 'players', label: T('Joueurs (une feuille chacun)', 'Players (one sheet each)'), kind: 'number', min: 1, max: 6 },
+      { key: 'letter', label: T('Lettre', 'Letter'), kind: 'text', placeholder: T('Au hasard', 'Random'), maxlength: 1 },
+      { key: 'count', label: T('Nombre de catégories', 'Number of categories'), kind: 'number', min: 3, max: 12 },
+      { key: 'categories', label: T('Mes catégories (remplacent le tirage)', 'My categories (replace the draw)'), kind: 'list', placeholder: T('Dinosaure…', 'Dinosaur…'), add: T('Ajouter une catégorie', 'Add a category') },
     ],
-    summary: (b) => `${b.players} joueur${b.players > 1 ? 's' : ''}${b.letter ? ` · lettre ${b.letter.toUpperCase()}` : ''}`,
+    summary: (b) => T(
+      `${b.players} joueur${b.players > 1 ? 's' : ''}${b.letter ? ` · lettre ${b.letter.toUpperCase()}` : ''}`,
+      `${b.players} player${b.players > 1 ? 's' : ''}${b.letter ? ` · letter ${b.letter.toUpperCase()}` : ''}`,
+    ),
   },
   {
-    type: 'mental_math', label: 'Calcul mental', emoji: '➗', group: G.fun, desc: 'Une fiche d’opérations, résultats à l’envers',
+    type: 'mental_math', label: T('Calcul mental', 'Mental math'), emoji: '➗', group: G.fun, desc: T('Une fiche d’opérations, résultats à l’envers', 'A sheet of sums, answers upside down'),
     defaults: { difficulty: 'facile', count: 10 },
     fields: [
-      { key: 'difficulty', label: 'Niveau', kind: 'segmented', options: LEVELS },
-      { key: 'count', label: 'Opérations', kind: 'number', min: 4, max: 30 },
+      { key: 'difficulty', label: T('Niveau', 'Level'), kind: 'segmented', options: LEVELS },
+      { key: 'count', label: T('Opérations', 'Operations'), kind: 'number', min: 4, max: 30 },
     ],
-    summary: (b) => `${label(LEVELS, b.difficulty)} · ${b.count} opérations`,
+    summary: (b) => T(`${label(LEVELS, b.difficulty)} · ${b.count} opérations`, `${label(LEVELS, b.difficulty)} · ${b.count} operations`),
   },
   {
-    type: 'anagram', label: 'Mot mystère', emoji: '🔀', group: G.fun, desc: 'Des lettres mélangées à remettre dans l’ordre',
+    type: 'anagram', label: T('Mot mystère', 'Mystery word'), emoji: '🔀', group: G.fun, desc: T('Des lettres mélangées à remettre dans l’ordre', 'Scrambled letters to put back in order'),
     defaults: { count: 3, theme: '' },
     fields: [
-      { key: 'theme', label: 'Thème', kind: 'select', options: FAMILY_THEMES },
-      { key: 'count', label: 'Nombre de mots', kind: 'number', min: 1, max: 6 },
+      { key: 'theme', label: T('Thème', 'Theme'), kind: 'select', options: FAMILY_THEMES },
+      { key: 'count', label: T('Nombre de mots', 'Number of words'), kind: 'number', min: 1, max: 6 },
     ],
-    summary: (b) => `${b.count} mot${b.count > 1 ? 's' : ''} · ${label(WORD_THEMES, b.theme || '')}`,
+    summary: (b) => T(
+      `${b.count} mot${b.count > 1 ? 's' : ''} · ${label(WORD_THEMES, b.theme || '')}`,
+      `${b.count} word${b.count > 1 ? 's' : ''} · ${label(WORD_THEMES, b.theme || '')}`,
+    ),
   },
   {
-    type: 'cipher', label: 'Message codé', emoji: '🕵️', group: G.fun, desc: 'César, morse ou nombres, à déchiffrer',
+    type: 'cipher', label: T('Message codé', 'Coded message'), emoji: '🕵️', group: G.fun, desc: T('César, morse ou nombres, à déchiffrer', 'Caesar, Morse or numbers, to decode'),
     defaults: { cipher: 'cesar', answer: true, message: '' },
     fields: [
-      { key: 'cipher', label: 'Code', kind: 'segmented', options: [['cesar', 'César'], ['morse', 'Morse'], ['nombres', 'Nombres']] },
-      { key: 'message', label: 'Message secret', kind: 'textarea', placeholder: 'Laisse vide pour un message au hasard' },
-      { key: 'answer', label: 'Imprimer la réponse à l’envers', kind: 'toggle' },
+      { key: 'cipher', label: T('Code', 'Code'), kind: 'segmented', options: [['cesar', T('César', 'Caesar')], ['morse', 'Morse'], ['nombres', T('Nombres', 'Numbers')]] },
+      { key: 'message', label: T('Message secret', 'Secret message'), kind: 'textarea', placeholder: T('Laisse vide pour un message au hasard', 'Leave empty for a random message') },
+      { key: 'answer', label: T('Imprimer la réponse à l’envers', 'Print the answer upside down'), kind: 'toggle' },
     ],
-    summary: (b) => ({ cesar: 'César', morse: 'Morse', nombres: 'Nombres' })[b.cipher] || '',
+    summary: (b) => ({ cesar: T('César', 'Caesar'), morse: 'Morse', nombres: T('Nombres', 'Numbers') })[b.cipher] || '',
   },
   {
-    type: 'coloring', label: 'Coloriage', emoji: '🎨', group: G.fun, desc: 'Un mandala à colorier, toujours différent',
+    type: 'coloring', label: T('Coloriage', 'Coloring'), emoji: '🎨', group: G.fun, desc: T('Un mandala à colorier, toujours différent', 'A mandala to color, always different'),
     defaults: {},
-    fields: [{ key: 'seed', label: 'Numéro du mandala', kind: 'number', optional: true, help: 'Laisse vide pour un nouveau mandala.' }],
+    fields: [{ key: 'seed', label: T('Numéro du mandala', 'Mandala number'), kind: 'number', optional: true, help: T('Laisse vide pour un nouveau mandala.', 'Leave empty for a new mandala.') }],
   },
   {
-    type: 'coupon', label: 'Bon à offrir', emoji: '🎟️', group: G.gift, desc: '« Bon pour un petit-déjeuner au lit »',
+    type: 'coupon', label: T('Bon à offrir', 'Gift voucher'), emoji: '🎟️', group: G.gift, desc: T('« Bon pour un petit-déjeuner au lit »', '“Voucher for breakfast in bed”'),
     defaults: { count: 1, text: '' },
     fields: [
-      { key: 'text', label: 'Bon pour…', kind: 'text', placeholder: 'un petit-déjeuner au lit (vide : une idée au hasard)' },
-      { key: 'from', label: 'Offert par', kind: 'text' },
-      { key: 'to', label: 'Pour', kind: 'text' },
-      { key: 'valid_until', label: 'Valable jusqu’au', kind: 'date' },
-      { key: 'count', label: 'Nombre de bons', kind: 'number', min: 1, max: 6 },
+      { key: 'text', label: T('Bon pour…', 'Voucher for…'), kind: 'text', placeholder: T('un petit-déjeuner au lit (vide : une idée au hasard)', 'breakfast in bed (empty: a random idea)') },
+      { key: 'from', label: T('Offert par', 'From'), kind: 'text' },
+      { key: 'to', label: T('Pour', 'To'), kind: 'text' },
+      { key: 'valid_until', label: T('Valable jusqu’au', 'Valid until'), kind: 'date' },
+      { key: 'count', label: T('Nombre de bons', 'Number of vouchers'), kind: 'number', min: 1, max: 6 },
     ],
-    summary: (b) => b.text || 'Idée au hasard',
+    summary: (b) => b.text || T('Idée au hasard', 'Random idea'),
   },
   {
-    type: 'news', label: 'Actualités', emoji: '📰', group: G.info, desc: 'Revue de presse depuis tes flux RSS',
-    defaults: { title: 'France', feeds: ['https://www.franceinfo.fr/titres.rss', 'https://www.lemonde.fr/rss/une.xml'], count: 3, qr: 2, themes: [], exclude: [] },
+    type: 'news', label: T('Actualités', 'News'), emoji: '📰', group: G.info, desc: T('Revue de presse depuis tes flux RSS', 'Press review from your RSS feeds'),
+    defaults: EN
+      ? { title: 'World', feeds: ['https://feeds.bbci.co.uk/news/world/rss.xml', 'https://hackaday.com/blog/feed/'], count: 3, qr: 2, themes: [], exclude: [] }
+      : { title: 'France', feeds: ['https://www.franceinfo.fr/titres.rss', 'https://www.lemonde.fr/rss/une.xml'], count: 3, qr: 2, themes: [], exclude: [] },
     fields: [
-      { key: 'title', label: 'Titre du bandeau', kind: 'text' },
-      { key: 'feeds', label: 'Flux RSS', kind: 'list', placeholder: 'https://…', add: 'Ajouter un flux' },
-      { key: 'themes', label: 'Thèmes favoris', kind: 'list', placeholder: 'climat, sciences…', add: 'Ajouter un thème' },
-      { key: 'exclude', label: 'Mots à écarter', kind: 'list', placeholder: 'football…', add: 'Ajouter un mot' },
-      { key: 'count', label: 'Articles', kind: 'number', min: 1, max: 5 },
-      { key: 'qr', label: 'QR codes', kind: 'segmented', options: [[0, 'Aucun'], [1, '1'], [2, '2']] },
+      { key: 'title', label: T('Titre du bandeau', 'Banner title'), kind: 'text' },
+      { key: 'feeds', label: T('Flux RSS', 'RSS feeds'), kind: 'list', placeholder: 'https://…', add: T('Ajouter un flux', 'Add a feed') },
+      { key: 'themes', label: T('Thèmes favoris', 'Favorite topics'), kind: 'list', placeholder: T('climat, sciences…', 'climate, science…'), add: T('Ajouter un thème', 'Add a topic') },
+      { key: 'exclude', label: T('Mots à écarter', 'Words to exclude'), kind: 'list', placeholder: T('football…', 'football…'), add: T('Ajouter un mot', 'Add a word') },
+      { key: 'count', label: T('Articles', 'Articles'), kind: 'number', min: 1, max: 5 },
+      { key: 'qr', label: 'QR codes', kind: 'segmented', options: [[0, T('Aucun', 'None')], [1, '1'], [2, '2']] },
     ],
     summary: (b) => b.title,
   },
   {
-    type: 'on_this_day', label: 'Éphéméride', emoji: '🏛️', group: G.info, desc: "C'est arrivé un jour comme aujourd'hui",
+    type: 'on_this_day', label: T('Éphéméride', 'On this day'), emoji: '🏛️', group: G.info, desc: T("C'est arrivé un jour comme aujourd'hui", 'It happened on a day like today'),
     defaults: { count: 3 },
-    fields: [{ key: 'count', label: 'Événements', kind: 'number', min: 1, max: 10 }],
+    fields: [{ key: 'count', label: T('Événements', 'Events'), kind: 'number', min: 1, max: 10 }],
   },
   {
-    type: 'crypto', label: 'Crypto', emoji: '🪙', group: G.info, desc: 'Cours et variation sur 24 h',
+    type: 'crypto', label: 'Crypto', emoji: '🪙', group: G.info, desc: T('Cours et variation sur 24 h', 'Price and 24 h change'),
     defaults: { coins: ['bitcoin', 'ethereum'], currency: 'eur' },
     fields: [
-      { key: 'coins', label: 'Cryptomonnaies (identifiants CoinGecko)', kind: 'list', placeholder: 'bitcoin', add: 'Ajouter' },
-      { key: 'currency', label: 'Devise', kind: 'segmented', options: [['eur', 'Euro'], ['usd', 'Dollar']] },
+      { key: 'coins', label: T('Cryptomonnaies (identifiants CoinGecko)', 'Cryptocurrencies (CoinGecko IDs)'), kind: 'list', placeholder: 'bitcoin', add: T('Ajouter', 'Add') },
+      { key: 'currency', label: T('Devise', 'Currency'), kind: 'segmented', options: [['eur', 'Euro'], ['usd', 'Dollar']] },
     ],
     summary: (b) => (b.coins || []).join(', '),
   },
   {
-    type: 'todo', label: 'À faire', emoji: '✅', group: G.org, desc: 'Une liste à cocher au stylo',
-    defaults: { title: 'À faire', items: [''] },
+    type: 'todo', label: T('À faire', 'To do'), emoji: '✅', group: G.org, desc: T('Une liste à cocher au stylo', 'A checklist to tick with a pen'),
+    defaults: { title: T('À faire', 'To do'), items: [''] },
     fields: [
-      { key: 'title', label: 'Titre', kind: 'text' },
-      { key: 'items', label: 'Choses à faire', kind: 'list', placeholder: 'Acheter du pain', add: 'Ajouter une ligne' },
+      { key: 'title', label: T('Titre', 'Title'), kind: 'text' },
+      { key: 'items', label: T('Choses à faire', 'Things to do'), kind: 'list', placeholder: T('Acheter du pain', 'Buy bread'), add: T('Ajouter une ligne', 'Add a line') },
     ],
-    summary: (b) => `${(b.items || []).filter(Boolean).length} élément(s)`,
+    summary: (b) => `${(b.items || []).filter(Boolean).length} ${T('élément(s)', 'item(s)')}`,
   },
   {
-    type: 'shopping', label: 'Liste de courses', emoji: '🛒', group: G.org, desc: 'La liste partagée de l’appli',
-    defaults: { title: 'Liste de courses', clear: true },
+    type: 'shopping', label: T('Liste de courses', 'Shopping list'), emoji: '🛒', group: G.org, desc: T('La liste partagée de l’appli', "The app's shared list"),
+    defaults: { title: T('Liste de courses', 'Shopping list'), clear: true },
     fields: [
-      { key: 'title', label: 'Titre', kind: 'text' },
-      { key: 'clear', label: 'Vider la liste une fois imprimée', kind: 'toggle' },
+      { key: 'title', label: T('Titre', 'Title'), kind: 'text' },
+      { key: 'clear', label: T('Vider la liste une fois imprimée', 'Clear the list once printed'), kind: 'toggle' },
     ],
   },
   {
-    type: 'agenda', label: 'Agenda', emoji: '🗓️', group: G.org, desc: 'Tes rendez-vous, depuis un calendrier en ligne',
+    type: 'agenda', label: 'Agenda', emoji: '🗓️', group: G.org, desc: T('Tes rendez-vous, depuis un calendrier en ligne', 'Your appointments, from an online calendar'),
     defaults: { calendars: [''], days: 1 },
     fields: [
-      { key: 'calendars', label: 'Liens des calendriers (ICS)', kind: 'list', placeholder: 'webcal://…', add: 'Ajouter un calendrier',
-        help: 'iCloud : partage le calendrier en public et copie le lien. Google : « Adresse secrète au format iCal ».' },
-      { key: 'days', label: 'Jours', kind: 'number', min: 1, max: 7 },
-      { key: 'title', label: 'Titre', kind: 'text', placeholder: 'Agenda' },
+      { key: 'calendars', label: T('Liens des calendriers (ICS)', 'Calendar links (ICS)'), kind: 'list', placeholder: 'webcal://…', add: T('Ajouter un calendrier', 'Add a calendar'),
+        help: T('iCloud : partage le calendrier en public et copie le lien. Google : « Adresse secrète au format iCal ».', 'iCloud: share the calendar publicly and copy the link. Google: “Secret address in iCal format”.') },
+      { key: 'days', label: T('Jours', 'Days'), kind: 'number', min: 1, max: 7 },
+      { key: 'title', label: T('Titre', 'Title'), kind: 'text', placeholder: 'Agenda' },
     ],
-    summary: (b) => `${b.days} jour${b.days > 1 ? 's' : ''}`,
+    summary: (b) => T(`${b.days} jour${b.days > 1 ? 's' : ''}`, `${b.days} day${b.days > 1 ? 's' : ''}`),
   },
   {
-    type: 'bins', label: 'Poubelles', emoji: '🗑️', group: G.org, desc: '« Ce soir, on sort le bac jaune »',
-    defaults: { when: 'veille', always: false, collections: [{ name: 'Bac jaune', days: ['jeudi'], every: 1 }] },
+    type: 'bins', label: T('Poubelles', 'Bins'), emoji: '🗑️', group: G.org, desc: T('« Ce soir, on sort le bac jaune »', '“Tonight, put out the yellow bin”'),
+    defaults: { when: 'veille', always: false, collections: [{ name: T('Bac jaune', 'Yellow bin'), days: ['jeudi'], every: 1 }] },
     fields: [
-      { key: 'collections', label: 'Ramassages', kind: 'bins' },
-      { key: 'when', label: 'Rappel', kind: 'segmented', options: [['veille', 'La veille au soir'], ['jour', 'Le jour même']] },
-      { key: 'always', label: 'Imprimer aussi les jours sans ramassage', kind: 'toggle' },
+      { key: 'collections', label: T('Ramassages', 'Pickups'), kind: 'bins' },
+      { key: 'when', label: T('Rappel', 'Reminder'), kind: 'segmented', options: [['veille', T('La veille au soir', 'The evening before')], ['jour', T('Le jour même', 'On the day')]] },
+      { key: 'always', label: T('Imprimer aussi les jours sans ramassage', 'Also print on days without pickup'), kind: 'toggle' },
     ],
     normalize: (d) => {
       d.collections = (d.collections || []).filter((c) => c.name?.trim()).map((c) => {
@@ -493,20 +525,20 @@ const BLOCKS = [
     summary: (b) => (b.collections || []).map((c) => c.name).filter(Boolean).join(', '),
   },
   {
-    type: 'wifi', label: 'Wi-Fi invités', emoji: '📶', group: G.org, desc: 'Un QR code pour se connecter',
+    type: 'wifi', label: T('Wi-Fi invités', 'Guest Wi-Fi'), emoji: '📶', group: G.org, desc: T('Un QR code pour se connecter', 'A QR code to connect'),
     defaults: { ssid: '', password: '', security: 'wpa', show_password: true },
     fields: [
-      { key: 'ssid', label: 'Nom du réseau', kind: 'text' },
-      { key: 'password', label: 'Mot de passe', kind: 'text' },
-      { key: 'security', label: 'Sécurité', kind: 'segmented', options: [['wpa', 'WPA'], ['wep', 'WEP'], ['none', 'Ouvert']] },
-      { key: 'show_password', label: 'Écrire le mot de passe en clair', kind: 'toggle' },
+      { key: 'ssid', label: T('Nom du réseau', 'Network name'), kind: 'text' },
+      { key: 'password', label: T('Mot de passe', 'Password'), kind: 'text' },
+      { key: 'security', label: T('Sécurité', 'Security'), kind: 'segmented', options: [['wpa', 'WPA'], ['wep', 'WEP'], ['none', T('Ouvert', 'Open')]] },
+      { key: 'show_password', label: T('Écrire le mot de passe en clair', 'Show the password in plain text'), kind: 'toggle' },
     ],
     summary: (b) => b.ssid,
   },
   {
-    type: 'monthly_report', label: 'Bilan du mois', emoji: '🧾', group: G.org, desc: 'Qui a imprimé quoi, façon ticket de caisse',
+    type: 'monthly_report', label: T('Bilan du mois', 'Monthly report'), emoji: '🧾', group: G.org, desc: T('Qui a imprimé quoi, façon ticket de caisse', 'Who printed what, like a till receipt'),
     defaults: {},
-    fields: [{ key: 'month', label: 'Mois', kind: 'month', help: 'Laisse vide pour le mois en cours.' }],
+    fields: [{ key: 'month', label: T('Mois', 'Month'), kind: 'month', help: T('Laisse vide pour le mois en cours.', 'Leave empty for the current month.') }],
   },
 ];
 const BLOCK = Object.fromEntries(BLOCKS.map((b) => [b.type, b]));
@@ -550,7 +582,7 @@ function composerFromPreset(preset, copy = false) {
   const t = preset.ticket || {};
   return {
     id: copy ? null : preset.id,
-    name: copy ? `${preset.name} (copie)` : preset.name,
+    name: copy ? T(`${preset.name} (copie)`, `${preset.name} (copy)`) : preset.name,
     icon: preset.icon || '🧾',
     shared: copy ? false : !!preset.shared,
     schedules: copy ? [] : clone(preset.schedules || []),
@@ -564,17 +596,17 @@ function composerFromPreset(preset, copy = false) {
 // Planification : jours et heures
 // ============================================================================
 
-const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-const DAY_NAMES = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+const DAY_LETTERS = T(['L', 'M', 'M', 'J', 'V', 'S', 'D'], ['M', 'T', 'W', 'T', 'F', 'S', 'S']);
+const DAY_NAMES = T(['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'], ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 
 function daysLabel(days) {
   const d = [...days].sort().join('');
-  if (d === '1234567') return 'Tous les jours';
-  if (d === '12345') return 'En semaine';
-  if (d === '67') return 'Le week-end';
+  if (d === '1234567') return T('Tous les jours', 'Every day');
+  if (d === '12345') return T('En semaine', 'Weekdays');
+  if (d === '67') return T('Le week-end', 'Weekends');
   return days.slice().sort().map((n) => DAY_NAMES[n - 1]).join(' ');
 }
-const timeLabel = (t) => t.replace(':', ' h ');
+const timeLabel = (t) => T(t.replace(':', ' h '), t);
 const scheduleLabel = (s) => `${daysLabel(s.days)} · ${timeLabel(s.time)}`;
 
 // ============================================================================
@@ -607,10 +639,10 @@ function ListEdit({ value, onChange, placeholder, add }) {
     ${items.map((item, i) => html`<div class="item" key=${i}>
       <input class="input" value=${item} placeholder=${placeholder} onInput=${(e) => set(i, e.target.value)}
         onKeyDown=${(e) => { if (e.key === 'Enter') { e.preventDefault(); onChange([...items, '']); } }} />
-      <button type="button" class="iconbtn danger" aria-label="Retirer" onClick=${() => onChange(items.filter((_, j) => j !== i))}>
+      <button type="button" class="iconbtn danger" aria-label=${T('Retirer', 'Remove')} onClick=${() => onChange(items.filter((_, j) => j !== i))}>
         <${Icon} name="x" /></button>
     </div>`)}
-    <button type="button" class="btn ghost small" onClick=${() => onChange([...items, ''])}><${Icon} name="plus" size=${16} /> ${add || 'Ajouter'}</button>
+    <button type="button" class="btn ghost small" onClick=${() => onChange([...items, ''])}><${Icon} name="plus" size=${16} /> ${add || T('Ajouter', 'Add')}</button>
   </div>`;
 }
 
@@ -621,8 +653,8 @@ function BinsEdit({ value, onChange }) {
   return html`<div class="bins">
     ${rows.map((r, i) => html`<div class="bin-row" key=${i}>
       <div class="item">
-        <input class="input" value=${r.name} placeholder="Bac jaune, verre…" onInput=${(e) => set(i, { name: e.target.value })} />
-        <button type="button" class="iconbtn danger" aria-label="Retirer" onClick=${() => onChange(rows.filter((_, j) => j !== i))}><${Icon} name="x" /></button>
+        <input class="input" value=${r.name} placeholder=${T('Bac jaune, verre…', 'Yellow bin, glass…')} onInput=${(e) => set(i, { name: e.target.value })} />
+        <button type="button" class="iconbtn danger" aria-label=${T('Retirer', 'Remove')} onClick=${() => onChange(rows.filter((_, j) => j !== i))}><${Icon} name="x" /></button>
       </div>
       <div class="bin-when">
         <select class="input" value=${r.days?.[0] || 'lundi'} onChange=${(e) => set(i, { days: [e.target.value] })}>
@@ -630,16 +662,16 @@ function BinsEdit({ value, onChange }) {
         <select class="input" value=${r.every || 1} onChange=${(e) => set(i, { every: Number(e.target.value) })}>
           ${EVERY.map(([v, t]) => html`<option value=${v}>${t}</option>`)}</select>
       </div>
-      ${(r.every || 1) > 1 && html`<label class="help">Un jour de ramassage connu, pour caler les semaines :
+      ${(r.every || 1) > 1 && html`<label class="help">${T('Un jour de ramassage connu, pour caler les semaines :', 'A known pickup day, to line up the weeks:')}
         <input class="input" type="date" value=${r.from || ''} onInput=${(e) => set(i, { from: e.target.value })} /></label>`}
     </div>`)}
     <button type="button" class="btn ghost small" onClick=${() => onChange([...rows, { name: '', days: ['lundi'], every: 1 }])}>
-      <${Icon} name="plus" size=${16} /> Ajouter un ramassage</button>
+      <${Icon} name="plus" size=${16} /> ${T('Ajouter un ramassage', 'Add a pickup')}</button>
   </div>`;
 }
 
 // Formats du cadre (largeur / hauteur) : le ticket imprime exactement la zone cadrée.
-const PHOTO_FORMATS = [['portrait', 'Portrait', 3 / 4], ['carre', 'Carré', 1], ['paysage', 'Paysage', 4 / 3]];
+const PHOTO_FORMATS = [['portrait', T('Portrait', 'Portrait'), 3 / 4], ['carre', T('Carré', 'Square'), 1], ['paysage', T('Paysage', 'Landscape'), 4 / 3]];
 const MAX_ZOOM = 5;
 
 function PhotoField({ value, onChange }) {
@@ -683,27 +715,27 @@ function PhotoField({ value, onChange }) {
   if (!photo && !value) {
     return html`<div class="photo-drop" onClick=${() => input.current.click()} role="button" tabindex="0"
       onKeyDown=${(e) => (e.key === 'Enter' || e.key === ' ') && input.current.click()}>${chooser}
-      <div><div class="big-emoji">📷</div><strong>Prendre ou choisir une photo</strong></div></div>`;
+      <div><div class="big-emoji">📷</div><strong>${T('Prendre ou choisir une photo', 'Take or choose a photo')}</strong></div></div>`;
   }
   // Photo déjà enregistrée (ticket rouvert) : elle est déjà cadrée, on la montre telle quelle.
   if (!photo) {
     return html`<div class="photo-saved">${chooser}
-      <img src=${`/api/images/${value}`} alt="Photo choisie" />
+      <img src=${`/api/images/${value}`} alt=${T('Photo choisie', 'Chosen photo')} />
       <div class="photo-actions">
-        <button type="button" class="btn secondary small" onClick=${() => input.current.click()}><${Icon} name="camera" size=${16} /> Changer de photo</button>
-        <button type="button" class="btn ghost small" onClick=${remove}><${Icon} name="x" size=${16} /> Retirer</button>
+        <button type="button" class="btn secondary small" onClick=${() => input.current.click()}><${Icon} name="camera" size=${16} /> ${T('Changer de photo', 'Change photo')}</button>
+        <button type="button" class="btn ghost small" onClick=${remove}><${Icon} name="x" size=${16} /> ${T('Retirer', 'Remove')}</button>
       </div></div>`;
   }
   return html`<div class="photo-crop">${chooser}
-    <button type="button" class="cropper-open" aria-label="Cadrer la photo" onClick=${() => setEditing(true)}>
+    <button type="button" class="cropper-open" aria-label=${T('Cadrer la photo', 'Crop the photo')} onClick=${() => setEditing(true)}>
       <${Cropper} photo=${photo} ratio=${ratio} view=${view} busy=${busy} /></button>
     <div class="photo-actions">
-      <button type="button" class="btn secondary small" onClick=${() => setEditing(true)}><${Icon} name="sliders" size=${16} /> Cadrer</button>
-      <button type="button" class="btn ghost small" onClick=${() => input.current.click()}><${Icon} name="camera" size=${16} /> Changer de photo</button>
-      <button type="button" class="btn ghost small" onClick=${remove}><${Icon} name="x" size=${16} /> Retirer</button>
+      <button type="button" class="btn secondary small" onClick=${() => setEditing(true)}><${Icon} name="sliders" size=${16} /> ${T('Cadrer', 'Crop')}</button>
+      <button type="button" class="btn ghost small" onClick=${() => input.current.click()}><${Icon} name="camera" size=${16} /> ${T('Changer de photo', 'Change photo')}</button>
+      <button type="button" class="btn ghost small" onClick=${remove}><${Icon} name="x" size=${16} /> ${T('Retirer', 'Remove')}</button>
     </div>
-    ${editing && html`<${Sheet} title="Cadrer la photo" onClose=${() => setEditing(false)}
-      footer=${html`<button type="button" class="btn primary block" onClick=${() => setEditing(false)}><${Icon} name="check" /> Valider le cadrage</button>`}>
+    ${editing && html`<${Sheet} title=${T('Cadrer la photo', 'Crop the photo')} onClose=${() => setEditing(false)}
+      footer=${html`<button type="button" class="btn primary block" onClick=${() => setEditing(false)}><${Icon} name="check" /> ${T('Valider le cadrage', 'Confirm crop')}</button>`}>
       <div class="photo-editor">
         <${Cropper} photo=${photo} ratio=${ratio} view=${view} onView=${setView} busy=${busy} interactive />
         <div class="photo-tools">
@@ -713,7 +745,10 @@ function PhotoField({ value, onChange }) {
             <input type="range" min="1" max=${MAX_ZOOM} step="0.01" value=${view.zoom} aria-label="Zoom"
               onInput=${(e) => setView((v) => clampView(photo, ratio, { ...v, zoom: Number(e.target.value) }))} /></label>
         </div>
-        <p class="help muted">Glisse pour déplacer, pince ou fais défiler pour zoomer. Le ticket imprime exactement le cadre, en noir et blanc.</p>
+        <p class="help muted">${T(
+          'Glisse pour déplacer, pince ou fais défiler pour zoomer. Le ticket imprime exactement le cadre, en noir et blanc.',
+          'Drag to move, pinch or scroll to zoom. The ticket prints exactly the frame, in black and white.',
+        )}</p>
       </div>
     </${Sheet}>`}
   </div>`;
@@ -808,7 +843,7 @@ function Cropper({ photo, ratio, view, onView, busy, interactive = false }) {
   // Le format prime : sur un écran bas, c'est la largeur qui s'adapte à la hauteur permise.
   const size = { aspectRatio: String(ratio), width: `min(100%, calc(${interactive ? 58 : 70}dvh * ${ratio}))` };
   return html`<div class="cropper ${interactive ? 'interactive' : ''}" ref=${frame} style=${size} ...${gestures}>
-    ${width > 0 && html`<img src=${photo.url} alt="Photo à cadrer" draggable="false"
+    ${width > 0 && html`<img src=${photo.url} alt=${T('Photo à cadrer', 'Photo to crop')} draggable="false"
       style=${{ width: `${photo.w * scale}px`, height: `${photo.h * scale}px`, left: `${-crop.x * scale}px`, top: `${-crop.y * scale}px` }} />`}
     <div class="cropper-grid" aria-hidden="true"></div>
     ${busy && html`<div class="cropper-busy"><${Spinner} /></div>`}
@@ -821,7 +856,7 @@ function FieldInput({ field, value, onChange }) {
       return html`<textarea class="input" rows="3" value=${value ?? ''} placeholder=${field.placeholder} onInput=${(e) => onChange(e.target.value)}></textarea>`;
     case 'number':
       return html`<input class="input" type="number" inputmode="numeric" min=${field.min} max=${field.max} value=${value ?? ''}
-        placeholder=${field.optional ? 'Au hasard' : ''} onInput=${(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} />`;
+        placeholder=${field.optional ? T('Au hasard', 'Random') : ''} onInput=${(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} />`;
     case 'select':
       return html`<select class="input" value=${value ?? ''} onChange=${(e) => onChange(e.target.value)}>
         ${field.options.map(([v, text]) => html`<option value=${v}>${text}</option>`)}
@@ -849,7 +884,10 @@ function FieldInput({ field, value, onChange }) {
 
 function BlockFields({ data, onChange }) {
   const def = BLOCK[data.type];
-  if (!def?.fields.length) return html`<p class="muted first" style="margin-bottom:0">Rien à régler : ${def?.desc?.toLowerCase() || 'ce bloc se suffit à lui-même'}.</p>`;
+  if (!def?.fields.length) {
+    const hint = def?.desc?.toLowerCase() || T('ce bloc se suffit à lui-même', 'this block is self-explanatory');
+    return html`<p class="muted first" style="margin-bottom:0">${T(`Rien à régler : ${hint}.`, `Nothing to set up: ${hint}.`)}</p>`;
+  }
   const set = (key) => (v) => onChange({ ...data, [key]: v });
   return html`<div class="first">${def.fields.map((f) => f.kind === 'toggle'
     ? html`<${Switch} key=${f.key} label=${f.label} help=${f.help} checked=${data[f.key]} onChange=${set(f.key)} />`
@@ -872,7 +910,7 @@ function Sheet({ title, onClose, children, footer, wide }) {
     <div class="sheet ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label=${title}>
       <div class="grabber"></div>
       <div class="sheet-head"><h2>${title}</h2>
-        <button class="iconbtn" aria-label="Fermer" onClick=${onClose}><${Icon} name="x" /></button></div>
+        <button class="iconbtn" aria-label=${T('Fermer', 'Close')} onClick=${onClose}><${Icon} name="x" /></button></div>
       ${children}
       ${footer && html`<div class="sheet-foot">${footer}</div>`}
     </div>
@@ -882,7 +920,7 @@ function Sheet({ title, onClose, children, footer, wide }) {
 function Confirm({ title, message, action, danger, onConfirm, onClose }) {
   const [busy, setBusy] = useState(false);
   return html`<${Sheet} title=${title} onClose=${onClose} footer=${html`
-    <button class="btn secondary" onClick=${onClose}>Annuler</button>
+    <button class="btn secondary" onClick=${onClose}>${T('Annuler', 'Cancel')}</button>
     <button class="btn ${danger ? 'danger' : 'primary'} grow" disabled=${busy}
       onClick=${async () => { setBusy(true); try { await onConfirm(); onClose(); } finally { setBusy(false); } }}>
       ${busy ? html`<${Spinner} />` : action}</button>`}>
@@ -897,10 +935,10 @@ function Confirm({ title, message, action, danger, onConfirm, onClose }) {
 function Paper({ preview, loading }) {
   if (!preview) {
     return html`<div class="paper-wrap"><div class="paper ${loading ? 'loading' : ''}"><div class="paper-empty">
-      ${loading ? html`<${Spinner} />` : 'Ajoute des blocs pour voir ton ticket ici.'}</div></div></div>`;
+      ${loading ? html`<${Spinner} />` : T('Ajoute des blocs pour voir ton ticket ici.', 'Add blocks to see your ticket here.')}</div></div></div>`;
   }
   return html`<div class="paper-wrap"><div class="paper ${loading ? 'loading' : ''}">
-    ${preview.ops.length === 0 && html`<div class="paper-empty">Ton ticket est vide.</div>`}
+    ${preview.ops.length === 0 && html`<div class="paper-empty">${T('Ton ticket est vide.', 'Your ticket is empty.')}</div>`}
     ${preview.ops.map((op, i) => {
       if (op.t === 'feed') return html`<div class="feed" key=${i} style=${{ height: `${op.n * 1.32}em` }}></div>`;
       if (op.t === 'image') return html`<img class="img" key=${i} src=${op.src} alt="" style=${{ aspectRatio: `${op.width} / ${op.height}` }} />`;
@@ -916,9 +954,11 @@ function PaperMeta({ preview }) {
   if (!preview) return null;
   const cm = Math.round((preview.height_dots / 180) * 2.54);
   const failed = preview.reports.filter((r) => r.error).length;
+  const count = preview.reports.length;
   return html`<div class="paper-meta">
-    <span>≈ ${cm} cm de papier</span>
-    ${failed ? html`<span style="color:var(--danger)">${failed} bloc${failed > 1 ? 's' : ''} en erreur</span>` : html`<span>${preview.reports.length} bloc${preview.reports.length > 1 ? 's' : ''}</span>`}
+    <span>${T(`≈ ${cm} cm de papier`, `≈ ${cm} cm of paper`)}</span>
+    ${failed ? html`<span style="color:var(--danger)">${T(`${failed} bloc${failed > 1 ? 's' : ''} en erreur`, `${failed} block${failed > 1 ? 's' : ''} in error`)}</span>`
+      : html`<span>${T(`${count} bloc${count > 1 ? 's' : ''}`, `${count} block${count > 1 ? 's' : ''}`)}</span>`}
   </div>`;
 }
 
@@ -955,16 +995,19 @@ function FirstAccount({ onLogin }) {
     try {
       const { user } = await api('POST', '/api/setup', { name, password });
       store.set('printr.lastUser', user.id);
-      toast(`Bienvenue ${user.name} !`, 'ok', '🎉');
+      toast(T(`Bienvenue ${user.name} !`, `Welcome, ${user.name}!`), 'ok', '🎉');
       onLogin(user);
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   };
   return html`<form class="first-account" onSubmit=${submit}>
-    <p style="margin:24px 0 14px"><strong>Bienvenue !</strong><br/><span class="muted">Crée ton compte pour commencer. Tu pourras ensuite ajouter le reste de la famille.</span></p>
-    <div class="field"><input class="input" placeholder="Ton prénom" autocomplete="username" value=${name} onInput=${(e) => setName(e.target.value)} autofocus /></div>
-    <div class="field"><input class="input" type="password" placeholder="Mot de passe (8 caractères minimum)" autocomplete="new-password"
+    <p style="margin:24px 0 14px"><strong>${T('Bienvenue !', 'Welcome!')}</strong><br/><span class="muted">${T(
+      'Crée ton compte pour commencer. Tu pourras ensuite ajouter le reste de la famille.',
+      'Create your account to get started. You can add the rest of the family afterwards.',
+    )}</span></p>
+    <div class="field"><input class="input" placeholder=${T('Ton prénom', 'Your first name')} autocomplete="username" value=${name} onInput=${(e) => setName(e.target.value)} autofocus /></div>
+    <div class="field"><input class="input" type="password" placeholder=${T('Mot de passe (8 caractères minimum)', 'Password (8 characters minimum)')} autocomplete="new-password"
       value=${password} onInput=${(e) => setPassword(e.target.value)} /></div>
-    <button class="btn primary big block" disabled=${busy || !name.trim() || password.length < 8}>${busy ? html`<${Spinner} />` : 'Créer mon compte'}</button>
+    <button class="btn primary big block" disabled=${busy || !name.trim() || password.length < 8}>${busy ? html`<${Spinner} />` : T('Créer mon compte', 'Create my account')}</button>
   </form>`;
 }
 
@@ -999,7 +1042,7 @@ function Login({ onLogin }) {
   return html`<div class="login"><div class="login-card">
     <img class="logo" src="/mark.png" alt="" />
     <h1>Printr</h1>
-    <p class="muted" style="margin:0">L'imprimante de la maison</p>
+    <p class="muted" style="margin:0">${T("L'imprimante de la maison", 'The printer of the house')}</p>
     ${users === null ? html`<div style="margin:32px"><${Spinner} /></div>` : users.length === 0
       ? html`<${FirstAccount} onLogin=${onLogin} />`
       : html`<div class="who">${users.map((u) => html`<button type="button" class=${who === u.id ? 'on' : ''}
@@ -1007,9 +1050,9 @@ function Login({ onLogin }) {
           <span style="color:var(--ink-2)">${u.name}</span></button>`)}</div>`}
     ${who && users?.length > 0 && html`<form onSubmit=${submit} class=${shake ? 'shake' : ''}>
       <div class="field"><input ref=${field} class="input" type="password" autocomplete="current-password"
-        placeholder="Mot de passe" value=${password} onInput=${(e) => setPassword(e.target.value)}
+        placeholder=${T('Mot de passe', 'Password')} value=${password} onInput=${(e) => setPassword(e.target.value)}
         style="text-align:center;font-size:18px;min-height:52px" /></div>
-      <button class="btn primary big block" disabled=${busy || !password}>${busy ? html`<${Spinner} />` : 'Entrer'}</button>
+      <button class="btn primary big block" disabled=${busy || !password}>${busy ? html`<${Spinner} />` : T('Entrer', 'Sign in')}</button>
     </form>`}
   </div></div>`;
 }
@@ -1030,20 +1073,20 @@ function PresetCard({ preset, me, onPrint, onEdit, onCopy, onDelete }) {
         <h3>${preset.name}</h3>
         <div class="meta">
           ${preset.schedules?.filter((s) => s.enabled).map((s) => html`<span class="chip accent" key=${s.id}><${Icon} name="clock" />${scheduleLabel(s)}</span>`)}
-          ${preset.shared && mine && html`<span class="chip"><${Icon} name="users" />Partagé</span>`}
+          ${preset.shared && mine && html`<span class="chip"><${Icon} name="users" />${T('Partagé', 'Shared')}</span>`}
           ${!mine && preset.owner && html`<span class="chip"><${Avatar} user=${preset.owner} size="small" />${preset.owner.name}</span>`}
         </div>
       </div>
     </div>
-    <div class="blocks-line">${blocks.map((b) => `${BLOCK[b.type]?.emoji || '▫️'} ${BLOCK[b.type]?.label || b.type}`).join('  ·  ') || 'Ticket vide'}</div>
+    <div class="blocks-line">${blocks.map((b) => `${BLOCK[b.type]?.emoji || '▫️'} ${BLOCK[b.type]?.label || b.type}`).join('  ·  ') || T('Ticket vide', 'Empty ticket')}</div>
     <div class="preset-actions">
-      <button class="btn primary small" disabled=${busy} onClick=${print}>${busy ? html`<${Spinner} />` : html`<${Icon} name="printer" size=${17} />`} Imprimer</button>
+      <button class="btn primary small" disabled=${busy} onClick=${print}>${busy ? html`<${Spinner} />` : html`<${Icon} name="printer" size=${17} />`} ${T('Imprimer', 'Print')}</button>
       ${mine
-        ? html`<button class="btn secondary small" onClick=${() => onEdit(preset)}><${Icon} name="edit" size=${16} /> Modifier</button>`
-        : html`<button class="btn secondary small" onClick=${() => onCopy(preset)}><${Icon} name="copy" size=${16} /> Copier</button>`}
+        ? html`<button class="btn secondary small" onClick=${() => onEdit(preset)}><${Icon} name="edit" size=${16} /> ${T('Modifier', 'Edit')}</button>`
+        : html`<button class="btn secondary small" onClick=${() => onCopy(preset)}><${Icon} name="copy" size=${16} /> ${T('Copier', 'Copy')}</button>`}
       <span class="grow"></span>
-      ${mine && html`<button class="iconbtn" aria-label="Dupliquer" title="Dupliquer" onClick=${() => onCopy(preset)}><${Icon} name="copy" /></button>
-        <button class="iconbtn danger" aria-label="Supprimer" title="Supprimer" onClick=${() => onDelete(preset)}><${Icon} name="trash" /></button>`}
+      ${mine && html`<button class="iconbtn" aria-label=${T('Dupliquer', 'Duplicate')} title=${T('Dupliquer', 'Duplicate')} onClick=${() => onCopy(preset)}><${Icon} name="copy" /></button>
+        <button class="iconbtn danger" aria-label=${T('Supprimer', 'Delete')} title=${T('Supprimer', 'Delete')} onClick=${() => onDelete(preset)}><${Icon} name="trash" /></button>`}
     </div>
   </div>`;
 }
@@ -1053,20 +1096,22 @@ function Home({ me, presets, reload, openComposer }) {
   const mine = presets?.filter((p) => p.owner?.id === me.id) || [];
   const family = presets?.filter((p) => p.owner?.id !== me.id) || [];
   const hour = new Date().getHours();
-  const hello = hour < 5 ? 'Bonne nuit' : hour < 18 ? 'Bonjour' : 'Bonsoir';
-  const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const hello = hour < 5 ? T('Bonne nuit', 'Good night') : hour < 18 ? T('Bonjour', 'Hello') : T('Bonsoir', 'Good evening');
+  const today = new Date().toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' });
 
   const print = async (preset) => {
     try {
       const r = await api('POST', `/api/presets/${preset.id}/print`);
-      r.errors?.length ? toast(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, 'error', '⚠️') : toast('Imprimé !', 'ok', '🧾');
+      r.errors?.length
+        ? toast(T(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, `Printed, with ${r.errors.length} block(s) in error`), 'error', '⚠️')
+        : toast(T('Imprimé !', 'Printed!'), 'ok', '🧾');
     } catch (e) { toast(e.message, 'error'); }
   };
   const remove = (preset) => setConfirm({
-    title: 'Supprimer ce ticket ?',
-    message: html`« ${preset.name} » et ses planifications seront supprimés définitivement.`,
-    action: 'Supprimer', danger: true,
-    onConfirm: async () => { await api('DELETE', `/api/presets/${preset.id}`); toast('Ticket supprimé', 'ok', '🗑️'); reload(); },
+    title: T('Supprimer ce ticket ?', 'Delete this ticket?'),
+    message: html`${T('« ', '“')}${preset.name}${T(' » et ses planifications seront supprimés définitivement.', '” and its schedules will be permanently deleted.')}`,
+    action: T('Supprimer', 'Delete'), danger: true,
+    onConfirm: async () => { await api('DELETE', `/api/presets/${preset.id}`); toast(T('Ticket supprimé', 'Ticket deleted'), 'ok', '🗑️'); reload(); },
   });
   const cards = (list) => html`<div class="presets">${list.map((p) => html`<${PresetCard} key=${p.id} preset=${p} me=${me}
     onPrint=${print} onEdit=${(x) => openComposer(composerFromPreset(x))} onCopy=${(x) => openComposer(composerFromPreset(x, true))} onDelete=${remove} />`)}</div>`;
@@ -1075,17 +1120,20 @@ function Home({ me, presets, reload, openComposer }) {
     <h2 style="margin:4px 2px 2px;font-size:26px;letter-spacing:-0.02em">${hello} ${me.name} 👋</h2>
     <p class="muted" style="margin:0 2px 18px">${capitalize(today)}</p>
     <div class="hero">
-      <a class="action-card coral" href="#/message"><div class="big-emoji">💌</div><div><strong>Petit mot</strong><span>Une photo, quelques mots</span></div></a>
-      <button class="action-card sky" onClick=${() => openComposer(emptyComposer())}><div class="big-emoji">🧾</div><div><strong>Nouveau ticket</strong><span>Compose bloc par bloc</span></div></button>
-      <a class="action-card mint wide" href="#/courses"><div class="big-emoji">🛒</div><div><strong>Courses</strong><span>La liste de toute la famille</span></div></a>
+      <a class="action-card coral" href="#/message"><div class="big-emoji">💌</div><div><strong>${T('Petit mot', 'Little note')}</strong><span>${T('Une photo, quelques mots', 'A photo, a few words')}</span></div></a>
+      <button class="action-card sky" onClick=${() => openComposer(emptyComposer())}><div class="big-emoji">🧾</div><div><strong>${T('Nouveau ticket', 'New ticket')}</strong><span>${T('Compose bloc par bloc', 'Compose block by block')}</span></div></button>
+      <a class="action-card mint wide" href="#/courses"><div class="big-emoji">🛒</div><div><strong>${T('Courses', 'Shopping')}</strong><span>${T('La liste de toute la famille', "The whole family's list")}</span></div></a>
     </div>
-    <div class="section-title">Mes tickets</div>
+    <div class="section-title">${T('Mes tickets', 'My tickets')}</div>
     ${presets === null ? html`<div style="padding:30px;display:grid;place-items:center"><${Spinner} /></div>`
       : mine.length ? cards(mine)
-      : html`<div class="empty"><div class="big-emoji">🌱</div><h3>Pas encore de ticket enregistré</h3>
-          <p class="muted" style="margin:0 0 16px">Compose un ticket, puis enregistre-le pour l'imprimer en un geste… ou chaque matin.</p>
-          <button class="btn primary" onClick=${() => openComposer(emptyComposer())}><${Icon} name="plus" /> Composer mon premier ticket</button></div>`}
-    ${family.length > 0 && html`<div class="section-title">Partagés par la famille</div>${cards(family)}`}
+      : html`<div class="empty"><div class="big-emoji">🌱</div><h3>${T('Pas encore de ticket enregistré', 'No saved ticket yet')}</h3>
+          <p class="muted" style="margin:0 0 16px">${T(
+            "Compose un ticket, puis enregistre-le pour l'imprimer en un geste… ou chaque matin.",
+            'Compose a ticket, then save it to print it in one tap… or every morning.',
+          )}</p>
+          <button class="btn primary" onClick=${() => openComposer(emptyComposer())}><${Icon} name="plus" /> ${T('Composer mon premier ticket', 'Compose my first ticket')}</button></div>`}
+    ${family.length > 0 && html`<div class="section-title">${T('Partagés par la famille', 'Shared by the family')}</div>${cards(family)}`}
     ${confirm && html`<${Confirm} ...${confirm} onClose=${() => setConfirm(null)} />`}
   </div>`;
 }
@@ -1099,15 +1147,15 @@ function Catalog({ onPick, onClose }) {
   const q = query.trim().toLowerCase();
   const matches = BLOCKS.filter((b) => !q || `${b.label} ${b.desc}`.toLowerCase().includes(q));
   const groups = [...new Set(matches.map((b) => b.group))];
-  return html`<${Sheet} title="Ajouter un bloc" onClose=${onClose} wide>
-    <div class="catalog-search"><input class="input" placeholder="Rechercher : météo, photo, sudoku…" value=${query}
+  return html`<${Sheet} title=${T('Ajouter un bloc', 'Add a block')} onClose=${onClose} wide>
+    <div class="catalog-search"><input class="input" placeholder=${T('Rechercher : météo, photo, sudoku…', 'Search: weather, photo, sudoku…')} value=${query}
       onInput=${(e) => setQuery(e.target.value)} autofocus /></div>
     ${groups.map((g) => html`<div class="catalog-group" key=${g}><h4>${g}</h4><div class="catalog">
       ${matches.filter((b) => b.group === g).map((b) => html`<button type="button" key=${b.type} onClick=${() => onPick(b.type)}>
         <span class="row" style="width:100%"><span class="emoji">${b.emoji}</span><span class="grow"></span>${b.ai && html`<span class="badge">Claude</span>`}</span>
         <strong>${b.label}</strong><span>${b.desc}</span></button>`)}
     </div></div>`)}
-    ${matches.length === 0 && html`<p class="muted" style="text-align:center;padding:24px">Aucun bloc ne correspond.</p>`}
+    ${matches.length === 0 && html`<p class="muted" style="text-align:center;padding:24px">${T('Aucun bloc ne correspond.', 'No block matches.')}</p>`}
   </${Sheet}>`;
 }
 
@@ -1124,7 +1172,7 @@ function BlockCard({ item, index, count, error, dragging, onChange, onToggle, on
   return html`<div class="card block ${item.open ? 'open' : ''} ${error ? 'error' : ''} ${shown ? 'shown' : ''} ${dragging ? 'dragging' : ''}"
     data-uid=${item.uid} onAnimationEnd=${(e) => e.target === e.currentTarget && setShown(true)}>
     <div class="block-head" onClick=${onToggle}>
-      <button class="grip" aria-label="Déplacer (glisser, ou flèches haut et bas)" title="Glisser pour déplacer"
+      <button class="grip" aria-label=${T('Déplacer (glisser, ou flèches haut et bas)', 'Move (drag, or use the up and down arrows)')} title=${T('Glisser pour déplacer', 'Drag to move')}
         onClick=${(e) => e.stopPropagation()} onPointerDown=${onGrab} onKeyDown=${keys}><${Icon} name="grip" /></button>
       <div class="block-emoji">${def.emoji}</div>
       <div class="grow">
@@ -1132,8 +1180,8 @@ function BlockCard({ item, index, count, error, dragging, onChange, onToggle, on
         <div class="block-summary">${blockSummary(item.data)}</div>
       </div>
       <div class="block-tools" onClick=${(e) => e.stopPropagation()}>
-        <button class="iconbtn" aria-label="Dupliquer" onClick=${onCopy}><${Icon} name="copy" /></button>
-        <button class="iconbtn danger" aria-label="Supprimer" onClick=${onRemove}><${Icon} name="trash" /></button>
+        <button class="iconbtn" aria-label=${T('Dupliquer', 'Duplicate')} onClick=${onCopy}><${Icon} name="copy" /></button>
+        <button class="iconbtn danger" aria-label=${T('Supprimer', 'Delete')} onClick=${onRemove}><${Icon} name="trash" /></button>
       </div>
     </div>
     ${error && html`<div class="block-error">${error}</div>`}
@@ -1265,12 +1313,12 @@ function TimePicker({ value, onChange }) {
   const minutes = Array.from({ length: 12 }, (_, i) => pad(i * 5));
   if (!minutes.includes(m)) minutes.push(m);
   minutes.sort();
-  return html`<div class="time-picker" role="group" aria-label="Heure">
-    <select aria-label="Heures" value=${h} onChange=${(e) => onChange(`${e.target.value}:${m}`)}>
+  return html`<div class="time-picker" role="group" aria-label=${T('Heure', 'Time')}>
+    <select aria-label=${T('Heures', 'Hours')} value=${h} onChange=${(e) => onChange(`${e.target.value}:${m}`)}>
       ${Array.from({ length: 24 }, (_, i) => pad(i)).map((v) => html`<option value=${v}>${v}</option>`)}
     </select>
-    <span>h</span>
-    <select aria-label="Minutes" value=${m} onChange=${(e) => onChange(`${h}:${e.target.value}`)}>
+    <span>${T('h', ':')}</span>
+    <select aria-label=${T('Minutes', 'Minutes')} value=${m} onChange=${(e) => onChange(`${h}:${e.target.value}`)}>
       ${minutes.map((v) => html`<option value=${v}>${v}</option>`)}
     </select>
   </div>`;
@@ -1291,17 +1339,17 @@ function ScheduleEditor({ schedules, onChange }) {
       </div>
       <div class="row" style="margin-top:8px">
         <div class="quick-days">
-          <button type="button" class="btn ghost small" onClick=${() => update(i, { days: [1, 2, 3, 4, 5, 6, 7] })}>Tous les jours</button>
-          <button type="button" class="btn ghost small" onClick=${() => update(i, { days: [1, 2, 3, 4, 5] })}>En semaine</button>
-          <button type="button" class="btn ghost small" onClick=${() => update(i, { days: [6, 7] })}>Week-end</button>
+          <button type="button" class="btn ghost small" onClick=${() => update(i, { days: [1, 2, 3, 4, 5, 6, 7] })}>${T('Tous les jours', 'Every day')}</button>
+          <button type="button" class="btn ghost small" onClick=${() => update(i, { days: [1, 2, 3, 4, 5] })}>${T('En semaine', 'Weekdays')}</button>
+          <button type="button" class="btn ghost small" onClick=${() => update(i, { days: [6, 7] })}>${T('Week-end', 'Weekend')}</button>
         </div>
         <span class="grow"></span>
         <label class="switch" style="padding:0"><input type="checkbox" checked=${s.enabled} onChange=${(e) => update(i, { enabled: e.target.checked })} /><span class="track"></span></label>
-        <button class="iconbtn danger" aria-label="Retirer" onClick=${() => onChange(schedules.filter((_, j) => j !== i))}><${Icon} name="trash" /></button>
+        <button class="iconbtn danger" aria-label=${T('Retirer', 'Remove')} onClick=${() => onChange(schedules.filter((_, j) => j !== i))}><${Icon} name="trash" /></button>
       </div>
     </div>`)}
     <button type="button" class="btn secondary small" onClick=${() => onChange([...schedules, { days: [1, 2, 3, 4, 5], time: '08:00', enabled: true }])}>
-      <${Icon} name="clock" size=${16} /> Ajouter un horaire</button>
+      <${Icon} name="clock" size=${16} /> ${T('Ajouter un horaire', 'Add a schedule')}</button>
   </div>`;
 }
 
@@ -1312,18 +1360,21 @@ function SaveSheet({ state, onSave, onClose, focusSchedule }) {
   const invalid = draft.schedules.some((s) => !s.days.length || !s.time);
   const ai = usesAi(state.blocks.map((b) => b.data));
   const save = async () => { setBusy(true); try { await onSave(draft); onClose(); } catch (e) { toast(e.message, 'error'); } finally { setBusy(false); } };
-  return html`<${Sheet} title=${state.id ? 'Réglages du ticket' : 'Enregistrer le ticket'} onClose=${onClose} footer=${html`
-    <button class="btn secondary" onClick=${onClose}>Annuler</button>
-    <button class="btn primary grow" disabled=${busy || !draft.name.trim() || invalid} onClick=${save}>${busy ? html`<${Spinner} />` : 'Enregistrer'}</button>`}>
-    <${Field} label="Nom"><input class="input" value=${draft.name} placeholder="Horoscope du matin" autofocus=${!focusSchedule}
+  return html`<${Sheet} title=${state.id ? T('Réglages du ticket', 'Ticket settings') : T('Enregistrer le ticket', 'Save ticket')} onClose=${onClose} footer=${html`
+    <button class="btn secondary" onClick=${onClose}>${T('Annuler', 'Cancel')}</button>
+    <button class="btn primary grow" disabled=${busy || !draft.name.trim() || invalid} onClick=${save}>${busy ? html`<${Spinner} />` : T('Enregistrer', 'Save')}</button>`}>
+    <${Field} label=${T('Nom', 'Name')}><input class="input" value=${draft.name} placeholder=${T('Horoscope du matin', 'Morning horoscope')} autofocus=${!focusSchedule}
       onInput=${(e) => set({ name: e.target.value })} /></${Field}>
-    <${Field} label="Icône"><div class="icon-picker">${ICON_CHOICES.map((i) => html`<button type="button" class=${draft.icon === i ? 'on' : ''}
+    <${Field} label=${T('Icône', 'Icon')}><div class="icon-picker">${ICON_CHOICES.map((i) => html`<button type="button" class=${draft.icon === i ? 'on' : ''}
       onClick=${() => set({ icon: i })}>${i}</button>`)}</div></${Field}>
-    <${Switch} label="Partager avec la famille" help="Les autres pourront l'imprimer et le copier." checked=${draft.shared} onChange=${(v) => set({ shared: v })} />
-    <div class="section-title" style="margin-top:18px">Impression automatique</div>
+    <${Switch} label=${T('Partager avec la famille', 'Share with the family')} help=${T("Les autres pourront l'imprimer et le copier.", 'Others will be able to print and copy it.')} checked=${draft.shared} onChange=${(v) => set({ shared: v })} />
+    <div class="section-title" style="margin-top:18px">${T('Impression automatique', 'Automatic printing')}</div>
     <${ScheduleEditor} schedules=${draft.schedules} onChange=${(schedules) => set({ schedules })} />
     ${ai && draft.schedules.length > 0 && html`<p class="help muted" style="font-size:13px;margin-bottom:0">
-      🔮 Ce ticket utilise Claude : un petit appel payant par impression (le contenu est gardé en cache pour la journée).</p>`}
+      🔮 ${T(
+        'Ce ticket utilise Claude : un petit appel payant par impression (le contenu est gardé en cache pour la journée).',
+        'This ticket uses Claude: a small paid call per print (the content is cached for the day).',
+      )}</p>`}
   </${Sheet}>`;
 }
 
@@ -1366,8 +1417,10 @@ function Composer({ initial, onSaved }) {
   const print = async () => {
     setPrinting(true);
     try {
-      const r = await api('POST', '/api/print', { ticket, label: state.name || 'Ticket composé' });
-      r.errors?.length ? toast(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, 'error', '⚠️') : toast('Imprimé !', 'ok', '🧾');
+      const r = await api('POST', '/api/print', { ticket, label: state.name || T('Ticket composé', 'Composed ticket') });
+      r.errors?.length
+        ? toast(T(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, `Printed, with ${r.errors.length} block(s) in error`), 'error', '⚠️')
+        : toast(T('Imprimé !', 'Printed!'), 'ok', '🧾');
     } catch (e) { toast(e.message, 'error'); } finally { setPrinting(false); }
   };
 
@@ -1376,7 +1429,7 @@ function Composer({ initial, onSaved }) {
     const saved = state.id ? await api('PUT', `/api/presets/${state.id}`, body) : await api('POST', '/api/presets', body);
     if (!state.id) store.del('printr.draft');
     setState((s) => ({ ...s, ...meta, id: saved.id, schedules: saved.schedules }));
-    toast(state.id ? 'Ticket mis à jour' : 'Ticket enregistré', 'ok', '✨');
+    toast(state.id ? T('Ticket mis à jour', 'Ticket updated') : T('Ticket enregistré', 'Ticket saved'), 'ok', '✨');
     onSaved();
   };
   const quickSave = async () => {
@@ -1391,41 +1444,41 @@ function Composer({ initial, onSaved }) {
         ${state.id && html`<div class="row" style="margin:0 2px 14px">
           <span style="font-size:26px">${state.icon}</span>
           <div class="grow"><div style="font-weight:800;font-size:18px">${state.name}</div>
-            <div class="muted" style="font-size:13px">${state.schedules.filter((s) => s.enabled).map(scheduleLabel).join(' · ') || 'Pas de planification'}</div></div>
-          <button class="btn secondary small" onClick=${() => setSaveSheet({ focusSchedule: true })}><${Icon} name="sliders" size=${16} /> Réglages</button>
+            <div class="muted" style="font-size:13px">${state.schedules.filter((s) => s.enabled).map(scheduleLabel).join(' · ') || T('Pas de planification', 'No schedule')}</div></div>
+          <button class="btn secondary small" onClick=${() => setSaveSheet({ focusSchedule: true })}><${Icon} name="sliders" size=${16} /> ${T('Réglages', 'Settings')}</button>
         </div>`}
         <div class="blocklist ${sort.dragging ? 'sorting' : ''}" ref=${sort.list}>
           ${state.blocks.length === 0 && html`<div class="empty" style="padding:30px 18px"><div class="big-emoji">✨</div>
-            <h3>Compose ton ticket</h3><p class="muted" style="margin:0 0 14px">Quelques idées pour commencer :</p>
+            <h3>${T('Compose ton ticket', 'Compose your ticket')}</h3><p class="muted" style="margin:0 0 14px">${T('Quelques idées pour commencer :', 'A few ideas to start:')}</p>
             <div class="row wrap" style="justify-content:center">${['date', 'weather', 'horoscope', 'riddle', 'workout', 'news'].map((t) =>
               html`<button class="btn secondary small" onClick=${() => add(t)}>${BLOCK[t].emoji} ${BLOCK[t].label}</button>`)}</div></div>`}
           ${state.blocks.map((item, i) => html`${i > 0 && html`<div class="inserter" key=${`+${item.uid}`}>
-              <button aria-label="Insérer un bloc ici" title="Insérer un bloc ici" onClick=${() => setCatalog({ at: i })}><${Icon} name="plus" size=${14} /></button></div>`}
+              <button aria-label=${T('Insérer un bloc ici', 'Insert a block here')} title=${T('Insérer un bloc ici', 'Insert a block here')} onClick=${() => setCatalog({ at: i })}><${Icon} name="plus" size=${14} /></button></div>`}
             <${BlockCard} key=${item.uid} item=${item} index=${i} count=${state.blocks.length} error=${errors[i]} dragging=${sort.dragging === item.uid}
             onToggle=${() => setBlocks((b) => b.map((x) => (x.uid === item.uid ? { ...x, open: !x.open } : x)))}
             onChange=${(data) => setBlocks((b) => b.map((x) => (x.uid === item.uid ? { ...x, data } : x)))}
             onMove=${(d) => sort.step(item.uid, i, d)} onGrab=${sort.grab(item.uid)}
             onCopy=${() => setBlocks((b) => [...b.slice(0, i + 1), { uid: uid(), open: true, data: clone(item.data) }, ...b.slice(i + 1)])}
             onRemove=${() => setBlocks((b) => b.filter((x) => x.uid !== item.uid))} />`)}
-          <button class="add-block" onClick=${() => setCatalog({})}><${Icon} name="plus" /> Ajouter un bloc</button>
+          <button class="add-block" onClick=${() => setCatalog({})}><${Icon} name="plus" /> ${T('Ajouter un bloc', 'Add a block')}</button>
         </div>
         <div class="card ticket-settings">
-          <${Switch} label="Couper le papier à la fin" checked=${state.cut} onChange=${(cut) => setState((s) => ({ ...s, cut }))} />
-          <div class="spacing-row"><span class="label">Espace entre les blocs</span>
-            <${Segmented} options=${[[0, 'Aucun'], [1, '1 ligne'], [2, '2 lignes']]} value=${Number(state.spacing)} onChange=${(spacing) => setState((s) => ({ ...s, spacing }))} /></div>
+          <${Switch} label=${T('Couper le papier à la fin', 'Cut the paper at the end')} checked=${state.cut} onChange=${(cut) => setState((s) => ({ ...s, cut }))} />
+          <div class="spacing-row"><span class="label">${T('Espace entre les blocs', 'Space between blocks')}</span>
+            <${Segmented} options=${[[0, T('Aucun', 'None')], [1, T('1 ligne', '1 line')], [2, T('2 lignes', '2 lines')]]} value=${Number(state.spacing)} onChange=${(spacing) => setState((s) => ({ ...s, spacing }))} /></div>
         </div>
         <div class="actionbar">
-          <button class="btn ghost preview-fab" aria-label="Aperçu" onClick=${() => setMobilePreview(true)}><${Icon} name="eye" /><span class="lbl">Aperçu</span></button>
-          <button class="btn secondary" aria-label=${state.id ? 'Enregistrer' : 'Garder'} disabled=${saving || !state.blocks.length} onClick=${quickSave}>${saving ? html`<${Spinner} />` : html`<${Icon} name="save" />`}<span class="lbl">${state.id ? 'Enregistrer' : 'Garder'}</span></button>
-          <button class="btn primary" disabled=${printing || !state.blocks.length} onClick=${print}>${printing ? html`<${Spinner} />` : html`<${Icon} name="printer" />`} Imprimer</button>
+          <button class="btn ghost preview-fab" aria-label=${T('Aperçu', 'Preview')} onClick=${() => setMobilePreview(true)}><${Icon} name="eye" /><span class="lbl">${T('Aperçu', 'Preview')}</span></button>
+          <button class="btn secondary" aria-label=${state.id ? T('Enregistrer', 'Save') : T('Garder', 'Keep')} disabled=${saving || !state.blocks.length} onClick=${quickSave}>${saving ? html`<${Spinner} />` : html`<${Icon} name="save" />`}<span class="lbl">${state.id ? T('Enregistrer', 'Save') : T('Garder', 'Keep')}</span></button>
+          <button class="btn primary" disabled=${printing || !state.blocks.length} onClick=${print}>${printing ? html`<${Spinner} />` : html`<${Icon} name="printer" />`} ${T('Imprimer', 'Print')}</button>
         </div>
       </div>
       <aside class="preview-col"><${Paper} preview=${preview} loading=${loading} /><${PaperMeta} preview=${preview} /></aside>
     </div>
     ${catalog && html`<${Catalog} onPick=${(type) => add(type, catalog.at)} onClose=${() => setCatalog(null)} />`}
     ${saveSheet && html`<${SaveSheet} state=${state} focusSchedule=${saveSheet.focusSchedule} onSave=${persist} onClose=${() => setSaveSheet(null)} />`}
-    ${mobilePreview && html`<${Sheet} title="Aperçu" onClose=${() => setMobilePreview(false)} footer=${html`
-      <button class="btn primary grow" disabled=${printing} onClick=${print}>${printing ? html`<${Spinner} />` : html`<${Icon} name="printer" />`} Imprimer</button>`}>
+    ${mobilePreview && html`<${Sheet} title=${T('Aperçu', 'Preview')} onClose=${() => setMobilePreview(false)} footer=${html`
+      <button class="btn primary grow" disabled=${printing} onClick=${print}>${printing ? html`<${Spinner} />` : html`<${Icon} name="printer" />`} ${T('Imprimer', 'Print')}</button>`}>
       <${Paper} preview=${preview} loading=${loading} /><${PaperMeta} preview=${preview} /></${Sheet}>`}
   </div>`;
 }
@@ -1435,7 +1488,7 @@ function Composer({ initial, onSaved }) {
 // ============================================================================
 
 function Message({ me, onSaved }) {
-  const [title, setTitle] = useState('Pour toi');
+  const [title, setTitle] = useState(T('Pour toi', 'For you'));
   const [text, setText] = useState('');
   const [picto, setPicto] = useState('coeur');
   const [photo, setPhoto] = useState(null);
@@ -1460,34 +1513,34 @@ function Message({ me, onSaved }) {
   const print = async () => {
     setPrinting(true);
     try {
-      await api('POST', '/api/print', { ticket, label: `Petit mot${title.trim() ? ` · ${title.trim()}` : ''}` });
+      await api('POST', '/api/print', { ticket, label: `${T('Petit mot', 'Little note')}${title.trim() ? ` · ${title.trim()}` : ''}` });
       setDone(true);
-      toast('Envoyé à l’imprimante !', 'ok', '💌');
+      toast(T('Envoyé à l’imprimante !', 'Sent to the printer!'), 'ok', '💌');
       setTimeout(() => setDone(false), 2400);
     } catch (e) { toast(e.message, 'error'); } finally { setPrinting(false); }
   };
 
   return html`<div class="page"><div class="composer">
     <div class="message">
-      <${Field} label="Une photo ?"><${PhotoField} value=${photo} onChange=${setPhoto} /></${Field}>
-      <${Field} label="Un dessin ?"><div class="pictos">
-        <button type="button" class=${!picto ? 'on' : ''} aria-label="Aucun" onClick=${() => setPicto(null)} style="font-size:15px;font-weight:800">Ø</button>
+      <${Field} label=${T('Une photo ?', 'A photo?')}><${PhotoField} value=${photo} onChange=${setPhoto} /></${Field}>
+      <${Field} label=${T('Un dessin ?', 'A drawing?')}><div class="pictos">
+        <button type="button" class=${!picto ? 'on' : ''} aria-label=${T('Aucun', 'None')} onClick=${() => setPicto(null)} style="font-size:15px;font-weight:800">Ø</button>
         ${PICTOS.map(([v, e]) => html`<button type="button" class=${picto === v ? 'on' : ''} aria-label=${v} onClick=${() => setPicto(v)}>${e}</button>`)}
       </div></${Field}>
-      <${Field} label="Titre"><input class="input" value=${title} placeholder="Pour toi" onInput=${(e) => setTitle(e.target.value)} /></${Field}>
-      <${Field} label="Ton petit mot"><textarea class="input" rows="5" value=${text} placeholder="Je pense fort à toi…"
+      <${Field} label=${T('Titre', 'Title')}><input class="input" value=${title} placeholder=${T('Pour toi', 'For you')} onInput=${(e) => setTitle(e.target.value)} /></${Field}>
+      <${Field} label=${T('Ton petit mot', 'Your little note')}><textarea class="input" rows="5" value=${text} placeholder=${T('Je pense fort à toi…', 'Thinking of you…')}
         onInput=${(e) => setText(e.target.value)}></textarea></${Field}>
-      <${Field} label="Signé"><input class="input" value=${signature} onInput=${(e) => setSignature(e.target.value)} /></${Field}>
+      <${Field} label=${T('Signé', 'Signed')}><input class="input" value=${signature} onInput=${(e) => setSignature(e.target.value)} /></${Field}>
       <button class="btn primary big block" disabled=${printing || empty} onClick=${print}>
-        ${printing ? html`<${Spinner} />` : done ? html`<${Icon} name="check" /> Envoyé !` : html`<${Icon} name="send" /> Envoyer à l'imprimante`}</button>
-      <button class="btn ghost block" style="margin-top:8px" disabled=${empty} onClick=${() => setSaveSheet(true)}><${Icon} name="save" /> Garder comme modèle</button>
-      <div class="section-title" style="display:block">Aperçu</div>
+        ${printing ? html`<${Spinner} />` : done ? html`<${Icon} name="check" /> ${T('Envoyé !', 'Sent!')}` : html`<${Icon} name="send" /> ${T("Envoyer à l'imprimante", 'Send to the printer')}`}</button>
+      <button class="btn ghost block" style="margin-top:8px" disabled=${empty} onClick=${() => setSaveSheet(true)}><${Icon} name="save" /> ${T('Garder comme modèle', 'Keep as a template')}</button>
+      <div class="section-title" style="display:block">${T('Aperçu', 'Preview')}</div>
       <div style="display:block" class="message-preview"><${Paper} preview=${preview} loading=${loading} /></div>
     </div>
     <aside class="preview-col"><${Paper} preview=${preview} loading=${loading} /><${PaperMeta} preview=${preview} /></aside>
     ${saveSheet && html`<${SaveSheet}
-      state=${{ ...emptyComposer(), name: title.trim() || 'Petit mot', icon: '💌', blocks: ticket.blocks.map((data) => ({ data })) }}
-      onSave=${async (meta) => { await api('POST', '/api/presets', { ...meta, ticket }); toast('Modèle enregistré', 'ok', '✨'); onSaved(); }}
+      state=${{ ...emptyComposer(), name: title.trim() || T('Petit mot', 'Little note'), icon: '💌', blocks: ticket.blocks.map((data) => ({ data })) }}
+      onSave=${async (meta) => { await api('POST', '/api/presets', { ...meta, ticket }); toast(T('Modèle enregistré', 'Template saved'), 'ok', '✨'); onSaved(); }}
       onClose=${() => setSaveSheet(false)} />`}
   </div></div>`;
 }
@@ -1520,8 +1573,8 @@ function Shopping({ users }) {
     setBusy(true);
     try {
       const ticket = { cut: true, spacing: 1, blocks: [{ type: 'date' }, { type: 'shopping', clear }] };
-      await api('POST', '/api/print', { ticket, label: 'Liste de courses' });
-      toast('Liste imprimée, bonnes courses !', 'ok', '🛒');
+      await api('POST', '/api/print', { ticket, label: T('Liste de courses', 'Shopping list') });
+      toast(T('Liste imprimée, bonnes courses !', 'List printed, happy shopping!'), 'ok', '🛒');
       load();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   };
@@ -1529,25 +1582,29 @@ function Shopping({ users }) {
 
   return html`<div class="page" style="max-width:640px">
     <form class="shop-add" onSubmit=${add}>
-      <input ref=${input} class="input" value=${text} placeholder="Lait, pain, piles…" onInput=${(e) => setText(e.target.value)}
-        aria-label="Article à ajouter" enterkeyhint="done" />
-      <button class="btn primary" disabled=${!text.trim()}><${Icon} name="plus" /> Ajouter</button>
+      <input ref=${input} class="input" value=${text} placeholder=${T('Lait, pain, piles…', 'Milk, bread, batteries…')} onInput=${(e) => setText(e.target.value)}
+        aria-label=${T('Article à ajouter', 'Item to add')} enterkeyhint="done" />
+      <button class="btn primary" disabled=${!text.trim()}><${Icon} name="plus" /> ${T('Ajouter', 'Add')}</button>
     </form>
     ${items === null ? html`<div style="padding:30px;display:grid;place-items:center"><${Spinner} /></div>`
-      : !items.length ? html`<div class="empty"><div class="big-emoji">🧺</div><h3>La liste est vide</h3>
-          <p class="muted" style="margin:0">Ajoute ce qui manque au fil de la semaine : toute la famille voit la même liste.</p></div>`
+      : !items.length ? html`<div class="empty"><div class="big-emoji">🧺</div><h3>${T('La liste est vide', 'The list is empty')}</h3>
+          <p class="muted" style="margin:0">${T(
+            'Ajoute ce qui manque au fil de la semaine : toute la famille voit la même liste.',
+            'Add what you need through the week: the whole family sees the same list.',
+          )}</p></div>`
       : html`<div class="card shop-list">${items.map((item) => html`<div class="shop-item" key=${item.id}>
-          <button class="shop-check" aria-label=${`Retirer ${item.text}`} title="C'est pris !" onClick=${() => remove(item.id)}><${Icon} name="check" size=${16} /></button>
+          <button class="shop-check" aria-label=${T(`Retirer ${item.text}`, `Remove ${item.text}`)} title=${T("C'est pris !", 'Got it!')} onClick=${() => remove(item.id)}><${Icon} name="check" size=${16} /></button>
           <span class="grow">${item.text}</span>
           ${byName[item.by] ? html`<${Avatar} user=${byName[item.by]} size="small" />` : html`<span class="muted" style="font-size:12px">${item.by}</span>`}
         </div>`)}</div>
         <div class="shop-actions">
-          <${Switch} label="Vider la liste une fois imprimée" checked=${clear} onChange=${setClearPref} />
-          <button class="btn primary big block" disabled=${busy} onClick=${print}>${busy ? html`<${Spinner} />` : html`<${Icon} name="printer" />`} Imprimer la liste</button>
-          <button class="btn ghost block" onClick=${() => setConfirm(true)}><${Icon} name="trash" /> Tout effacer</button>
+          <${Switch} label=${T('Vider la liste une fois imprimée', 'Clear the list once printed')} checked=${clear} onChange=${setClearPref} />
+          <button class="btn primary big block" disabled=${busy} onClick=${print}>${busy ? html`<${Spinner} />` : html`<${Icon} name="printer" />`} ${T('Imprimer la liste', 'Print the list')}</button>
+          <button class="btn ghost block" onClick=${() => setConfirm(true)}><${Icon} name="trash" /> ${T('Tout effacer', 'Clear all')}</button>
         </div>`}
-    ${confirm && html`<${Confirm} title="Effacer toute la liste ?" message="Tous les articles seront retirés, pour toute la famille."
-      action="Effacer" danger onConfirm=${async () => { setItems(await api('DELETE', '/api/shopping')); toast('Liste effacée', 'ok', '🧹'); }}
+    ${confirm && html`<${Confirm} title=${T('Effacer toute la liste ?', 'Clear the whole list?')}
+      message=${T('Tous les articles seront retirés, pour toute la famille.', 'All items will be removed, for the whole family.')}
+      action=${T('Effacer', 'Clear')} danger onConfirm=${async () => { setItems(await api('DELETE', '/api/shopping')); toast(T('Liste effacée', 'List cleared'), 'ok', '🧹'); }}
       onClose=${() => setConfirm(false)} />`}
   </div>`;
 }
@@ -1562,13 +1619,13 @@ function History({ users }) {
   const byName = Object.fromEntries((users || []).map((u) => [u.name, u]));
   const dayLabel = (d) => {
     const today = new Date(); const y = new Date(Date.now() - 864e5);
-    if (d.toDateString() === today.toDateString()) return "Aujourd'hui";
-    if (d.toDateString() === y.toDateString()) return 'Hier';
-    return capitalize(d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }));
+    if (d.toDateString() === today.toDateString()) return T("Aujourd'hui", 'Today');
+    if (d.toDateString() === y.toDateString()) return T('Hier', 'Yesterday');
+    return capitalize(d.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' }));
   };
   if (entries === null) return html`<div class="page" style="display:grid;place-items:center;min-height:40vh"><${Spinner} /></div>`;
-  if (!entries.length) return html`<div class="page"><div class="empty"><div class="big-emoji">🕰️</div><h3>Rien d'imprimé pour l'instant</h3>
-    <p class="muted" style="margin:0">Les impressions de toute la famille apparaîtront ici.</p></div></div>`;
+  if (!entries.length) return html`<div class="page"><div class="empty"><div class="big-emoji">🕰️</div><h3>${T("Rien d'imprimé pour l'instant", 'Nothing printed yet')}</h3>
+    <p class="muted" style="margin:0">${T("Les impressions de toute la famille apparaîtront ici.", "The whole family's prints will show up here.")}</p></div></div>`;
   const groups = [];
   for (const e of entries) {
     const label = dayLabel(new Date(e.at));
@@ -1578,12 +1635,14 @@ function History({ users }) {
   return html`<div class="page" style="max-width:760px">
     ${groups.map((g) => html`<div key=${g.label}><div class="history-day">${g.label}</div><div class="card">
       ${g.items.map((e, i) => html`<div class="history-item" key=${i}>
-        <div class="history-time">${new Date(e.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
+        <div class="history-time">${new Date(e.at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })}</div>
         ${byName[e.by] ? html`<${Avatar} user=${byName[e.by]} size="small" />` : html`<span class="chip" style="height:22px;padding:0 6px"><${Icon} name="clock" /></span>`}
         <div class="grow"><strong>${e.label}</strong>
-          <div class="muted" style="font-size:13px">${e.by === 'planification' ? 'Impression planifiée' : `par ${e.by}`}</div>
+          <div class="muted" style="font-size:13px">${e.by === 'planification' ? T('Impression planifiée', 'Scheduled print') : T(`par ${e.by}`, `by ${e.by}`)}</div>
           ${e.errors?.length > 0 && html`<ul class="history-errors">${e.errors.map((err) => html`<li>${err}</li>`)}</ul>`}</div>
-        <span class="chip ${e.ok ? (e.errors?.length ? 'warn' : 'ok') : 'danger'}">${e.ok ? (e.errors?.length ? 'Partiel' : 'Imprimé') : 'Échec'}</span>
+        <span class="chip ${e.ok ? (e.errors?.length ? 'warn' : 'ok') : 'danger'}">${e.ok
+          ? (e.errors?.length ? T('Partiel', 'Partial') : T('Imprimé', 'Printed'))
+          : T('Échec', 'Failed')}</span>
       </div>`)}
     </div></div>`)}
   </div>`;
@@ -1614,61 +1673,67 @@ function AccountSheet({ me, users, version, update, reloadUsers, onLogout, onClo
   const run = async (fn) => { setBusy(true); try { await fn(); } catch (e) { toast(e.message, 'error'); } finally { setBusy(false); } };
   const add = (e) => { e.preventDefault(); run(async () => {
     const { user } = await api('POST', '/api/users', { name, password });
-    toast(`Compte créé pour ${user.name}`, 'ok', '👋');
+    toast(T(`Compte créé pour ${user.name}`, `Account created for ${user.name}`), 'ok', '👋');
     setName(''); setPassword(''); reloadUsers();
   }); };
   const changePassword = (e) => { e.preventDefault(); run(async () => {
     await api('PUT', '/api/me/password', { password: mine });
-    toast('Mot de passe changé', 'ok', '🔑'); setMine('');
+    toast(T('Mot de passe changé', 'Password changed'), 'ok', '🔑'); setMine('');
   }); };
   const remove = (u) => setConfirm({
-    title: `Supprimer le compte de ${u.name} ?`,
-    message: html`Ses tickets enregistrés et leurs planifications seront supprimés aussi.`,
-    action: 'Supprimer', danger: true,
-    onConfirm: async () => { await api('DELETE', `/api/users/${u.id}`); toast(`Compte de ${u.name} supprimé`, 'ok', '🗑️'); reloadUsers(); },
+    title: T(`Supprimer le compte de ${u.name} ?`, `Delete ${u.name}'s account?`),
+    message: html`${T(
+      'Ses tickets enregistrés et leurs planifications seront supprimés aussi.',
+      'Their saved tickets and their schedules will be deleted too.',
+    )}`,
+    action: T('Supprimer', 'Delete'), danger: true,
+    onConfirm: async () => { await api('DELETE', `/api/users/${u.id}`); toast(T(`Compte de ${u.name} supprimé`, `${u.name}'s account deleted`), 'ok', '🗑️'); reloadUsers(); },
   });
-  return html`<${Sheet} title="Mon compte" onClose=${onClose}>
+  return html`<${Sheet} title=${T('Mon compte', 'My account')} onClose=${onClose}>
     <div class="row" style="margin-bottom:6px"><${Avatar} user=${me} size="large" /><div><strong>${me.name}</strong>
-      <div class="muted">Connecté sur cet appareil</div></div></div>
+      <div class="muted">${T('Connecté sur cet appareil', 'Signed in on this device')}</div></div></div>
 
     ${me.admin && update && html`<a class="update-card" href=${update.url} target="_blank" rel="noopener">
       <span class="big-emoji">✨</span>
-      <span class="grow"><strong>Printr ${update.version} est disponible</strong>
-        <span class="muted">Tu as la ${version}. Lis les nouveautés, puis mets à jour depuis ton ordinateur.</span></span>
+      <span class="grow"><strong>${T(`Printr ${update.version} est disponible`, `Printr ${update.version} is available`)}</strong>
+        <span class="muted">${T(
+          `Tu as la ${version}. Lis les nouveautés, puis mets à jour depuis ton ordinateur.`,
+          `You're on ${version}. Read what's new, then update from your computer.`,
+        )}</span></span>
       <${Icon} name="send" size=${18} /></a>`}
 
-    <div class="section-title">La famille</div>
+    <div class="section-title">${T('La famille', 'The family')}</div>
     <div class="card family">${users.map((u) => html`<div class="family-row" key=${u.id}>
-      <${Avatar} user=${u} /><span class="grow">${u.name}${u.id === me.id ? html` <span class="muted">(toi)</span>` : ''}</span>
+      <${Avatar} user=${u} /><span class="grow">${u.name}${u.id === me.id ? html` <span class="muted">${T('(toi)', '(you)')}</span>` : ''}</span>
       ${u.admin && html`<span class="chip">Admin</span>`}
-      ${me.admin && u.id !== me.id && html`<button class="iconbtn danger" aria-label=${`Supprimer ${u.name}`} title="Supprimer" onClick=${() => remove(u)}><${Icon} name="trash" /></button>`}
+      ${me.admin && u.id !== me.id && html`<button class="iconbtn danger" aria-label=${T(`Supprimer ${u.name}`, `Delete ${u.name}`)} title=${T('Supprimer', 'Delete')} onClick=${() => remove(u)}><${Icon} name="trash" /></button>`}
     </div>`)}</div>
     <form class="family-add" onSubmit=${add}>
-      <input class="input" placeholder="Prénom" value=${name} onInput=${(e) => setName(e.target.value)} />
-      <input class="input" type="password" placeholder="Son mot de passe (8 caractères minimum)" autocomplete="new-password" value=${password} onInput=${(e) => setPassword(e.target.value)} />
-      <button class="btn secondary" disabled=${busy || !name.trim() || password.length < 8}><${Icon} name="plus" size=${16} /> Ajouter</button>
+      <input class="input" placeholder=${T('Prénom', 'First name')} value=${name} onInput=${(e) => setName(e.target.value)} />
+      <input class="input" type="password" placeholder=${T('Son mot de passe (8 caractères minimum)', 'Their password (8 characters minimum)')} autocomplete="new-password" value=${password} onInput=${(e) => setPassword(e.target.value)} />
+      <button class="btn secondary" disabled=${busy || !name.trim() || password.length < 8}><${Icon} name="plus" size=${16} /> ${T('Ajouter', 'Add')}</button>
     </form>
 
-    <div class="section-title">Mon mot de passe</div>
+    <div class="section-title">${T('Mon mot de passe', 'My password')}</div>
     <form class="family-add" onSubmit=${changePassword}>
-      <input class="input" type="password" placeholder="Nouveau mot de passe (8 caractères minimum)" autocomplete="new-password" value=${mine} onInput=${(e) => setMine(e.target.value)} />
-      <button class="btn secondary" disabled=${busy || mine.length < 8}>Changer</button>
+      <input class="input" type="password" placeholder=${T('Nouveau mot de passe (8 caractères minimum)', 'New password (8 characters minimum)')} autocomplete="new-password" value=${mine} onInput=${(e) => setMine(e.target.value)} />
+      <button class="btn secondary" disabled=${busy || mine.length < 8}>${T('Changer', 'Change')}</button>
     </form>
 
-    <button class="btn danger block" style="margin-top:22px" onClick=${onLogout}><${Icon} name="logout" /> Se déconnecter</button>
+    <button class="btn danger block" style="margin-top:22px" onClick=${onLogout}><${Icon} name="logout" /> ${T('Se déconnecter', 'Sign out')}</button>
     ${version && html`<p class="version">printr ${version}</p>`}
     ${confirm && html`<${Confirm} ...${confirm} onClose=${() => setConfirm(null)} />`}
   </${Sheet}>`;
 }
 
 const NAV = [
-  { hash: '#/', label: 'Accueil', icon: 'home', title: 'Printr' },
-  { hash: '#/compose', label: 'Composer', icon: 'ticket', title: 'Composer' },
-  { hash: '#/message', label: 'Petit mot', icon: 'heart', title: 'Un petit mot' },
-  { hash: '#/history', label: 'Historique', icon: 'history', title: 'Historique' },
+  { hash: '#/', label: T('Accueil', 'Home'), icon: 'home', title: 'Printr' },
+  { hash: '#/compose', label: T('Composer', 'Compose'), icon: 'ticket', title: T('Composer', 'Compose') },
+  { hash: '#/message', label: T('Petit mot', 'Little note'), icon: 'heart', title: T('Un petit mot', 'A little note') },
+  { hash: '#/history', label: T('Historique', 'History'), icon: 'history', title: T('Historique', 'History') },
 ];
 // Écrans accessibles depuis l'accueil, sans onglet.
-const ROUTES = [...NAV, { hash: '#/courses', title: 'Liste de courses' }];
+const ROUTES = [...NAV, { hash: '#/courses', title: T('Liste de courses', 'Shopping list') }];
 
 function App() {
   const [me, setMe] = useState(undefined);
@@ -1706,7 +1771,9 @@ function App() {
   const openComposer = (state) => { setComposer(state); location.hash = '#/compose'; };
   const logout = async () => { await api('POST', '/api/logout').catch(() => {}); setMenu(false); setMe(null); };
   const route = ROUTES.find((n) => n.hash === hash) || NAV[0];
-  const title = route.hash === '#/compose' ? (composer.id ? 'Modifier le ticket' : 'Nouveau ticket') : route.title;
+  const title = route.hash === '#/compose'
+    ? (composer.id ? T('Modifier le ticket', 'Edit ticket') : T('Nouveau ticket', 'New ticket'))
+    : route.title;
 
   let page;
   if (route.hash === '#/compose') page = html`<${Composer} initial=${composer} onSaved=${loadPresets} />`;
@@ -1716,29 +1783,29 @@ function App() {
   else page = html`<${Home} me=${me} presets=${presets} reload=${loadPresets} openComposer=${openComposer} />`;
 
   return html`<div class="shell">
-    <nav class="sidebar" aria-label="Navigation">
+    <nav class="sidebar" aria-label=${T('Navigation', 'Navigation')}>
       <div class="brand"><img src="/mark.png" alt="" />Printr</div>
       ${NAV.map((n) => html`<a class="navlink ${n.hash === route.hash ? 'active' : ''}" href=${n.hash}
         onClick=${n.hash === '#/compose' ? (e) => { if (route.hash !== '#/compose') { e.preventDefault(); openComposer(store.get('printr.draft', null) || emptyComposer()); } } : undefined}>
         <${Icon} name=${n.icon} />${n.label}</a>`)}
       <div class="spacer"></div>
-      ${version && html`<div class="version">printr ${version}${me.admin && update && html` · <a href=${update.url} target="_blank" rel="noopener">${update.version} disponible</a>`}</div>`}
+      ${version && html`<div class="version">printr ${version}${me.admin && update && html` · <a href=${update.url} target="_blank" rel="noopener">${T(`${update.version} disponible`, `${update.version} available`)}</a>`}</div>`}
       <div class="account-row">
         <button type="button" class="navlink account" onClick=${() => setMenu(true)}><${Avatar} user=${me} />
-          <span class="grow"><strong>${me.name}</strong><span class="muted">Mon compte</span></span></button>
-        <button class="iconbtn" aria-label="Se déconnecter" title="Se déconnecter" onClick=${logout}><${Icon} name="logout" /></button></div>
+          <span class="grow"><strong>${me.name}</strong><span class="muted">${T('Mon compte', 'My account')}</span></span></button>
+        <button class="iconbtn" aria-label=${T('Se déconnecter', 'Sign out')} title=${T('Se déconnecter', 'Sign out')} onClick=${logout}><${Icon} name="logout" /></button></div>
     </nav>
     <main class="main">
       <header class="topbar ${scrolled ? 'scrolled' : ''}">
         ${route.hash === '#/'
           ? html`<h1 class="home-title"><img src="/mark.png" alt="" />${title}${version && html`<span class="version">${version}</span>`}</h1>`
           : html`<h1>${title}</h1>`}
-        ${route.hash === '#/compose' && composer.id && html`<button class="btn ghost small" onClick=${() => openComposer(emptyComposer())}><${Icon} name="plus" size=${16} /> Nouveau</button>`}
-        <button class="me" aria-label="Mon compte" title="Mon compte" onClick=${() => setMenu(true)}><${Avatar} user=${me} /><span>Mon compte</span></button>
+        ${route.hash === '#/compose' && composer.id && html`<button class="btn ghost small" onClick=${() => openComposer(emptyComposer())}><${Icon} name="plus" size=${16} /> ${T('Nouveau', 'New')}</button>`}
+        <button class="me" aria-label=${T('Mon compte', 'My account')} title=${T('Mon compte', 'My account')} onClick=${() => setMenu(true)}><${Avatar} user=${me} /><span>${T('Mon compte', 'My account')}</span></button>
       </header>
       ${page}
     </main>
-    <nav class="tabbar" aria-label="Navigation">
+    <nav class="tabbar" aria-label=${T('Navigation', 'Navigation')}>
       ${NAV.map((n) => html`<a class="tab ${n.hash === route.hash ? 'active' : ''}" href=${n.hash}><${Icon} name=${n.icon} />${n.label}</a>`)}
     </nav>
     ${menu && html`<${AccountSheet} me=${me} users=${users} version=${version} update=${update} reloadUsers=${loadUsers} onLogout=${logout} onClose=${() => setMenu(false)} />`}

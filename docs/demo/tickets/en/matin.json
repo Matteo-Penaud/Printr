@@ -1,0 +1,9 @@
+{ "blocks": [
+  { "type": "title", "text": "Good morning!" },
+  { "type": "date" },
+  { "type": "separator", "style": "═" },
+  { "type": "weather", "location": "Lyon", "days": 3 },
+  { "type": "moon" },
+  { "type": "quote" },
+  { "type": "todo", "items": ["Water the tomatoes", "Call Grandma", "Buy thermal paper"] }
+] }

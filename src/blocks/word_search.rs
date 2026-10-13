@@ -9,25 +9,34 @@ use serde::Deserialize;
 use super::sudoku::Difficulty;
 use crate::doc::{Align, Doc, Style};
 use crate::draw;
+use crate::i18n::{en, t};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Theme {
+    #[serde(alias = "animals")]
     Animaux,
-    #[serde(alias = "fruits", alias = "legumes")]
+    #[serde(alias = "fruits", alias = "legumes", alias = "fruits_vegetables", alias = "vegetables")]
     FruitsLegumes,
+    #[serde(alias = "cooking", alias = "kitchen")]
     Cuisine,
     Nature,
+    #[serde(alias = "sports")]
     Sport,
+    #[serde(alias = "jobs")]
     Metiers,
+    #[serde(alias = "home", alias = "house")]
     Maison,
+    #[serde(alias = "travel")]
     Voyage,
+    #[serde(alias = "music")]
     Musique,
+    #[serde(alias = "school")]
     Ecole,
-    #[serde(alias = "dev", alias = "developpement_logiciel")]
+    #[serde(alias = "dev", alias = "developpement_logiciel", alias = "software", alias = "programming")]
     Developpement,
     Devops,
-    #[serde(alias = "reseau", alias = "networking")]
+    #[serde(alias = "reseau", alias = "networking", alias = "networks")]
     Reseaux,
     #[serde(alias = "ai", alias = "intelligence_artificielle")]
     Ia,
@@ -53,24 +62,28 @@ pub(crate) const THEMES: [Theme; 14] = [
 impl Theme {
     pub fn label(self) -> &'static str {
         match self {
-            Theme::Animaux => "animaux",
-            Theme::FruitsLegumes => "fruits et légumes",
-            Theme::Cuisine => "cuisine",
-            Theme::Nature => "nature",
-            Theme::Sport => "sport",
-            Theme::Metiers => "métiers",
-            Theme::Maison => "maison",
-            Theme::Voyage => "voyage",
-            Theme::Musique => "musique",
-            Theme::Ecole => "école",
-            Theme::Developpement => "développement",
+            Theme::Animaux => t("animaux", "animals"),
+            Theme::FruitsLegumes => t("fruits et légumes", "fruit and vegetables"),
+            Theme::Cuisine => t("cuisine", "cooking"),
+            Theme::Nature => t("nature", "nature"),
+            Theme::Sport => t("sport", "sport"),
+            Theme::Metiers => t("métiers", "jobs"),
+            Theme::Maison => t("maison", "home"),
+            Theme::Voyage => t("voyage", "travel"),
+            Theme::Musique => t("musique", "music"),
+            Theme::Ecole => t("école", "school"),
+            Theme::Developpement => t("développement", "software"),
             Theme::Devops => "DevOps",
-            Theme::Reseaux => "réseaux",
-            Theme::Ia => "intelligence artificielle",
+            Theme::Reseaux => t("réseaux", "networks"),
+            Theme::Ia => t("intelligence artificielle", "artificial intelligence"),
         }
     }
 
     pub(crate) fn words(self) -> &'static [&'static str] {
+        if en() { english_words(self) } else { self.french_words() }
+    }
+
+    fn french_words(self) -> &'static [&'static str] {
         match self {
             Theme::Animaux => &[
                 "chat", "chien", "lapin", "cheval", "vache", "mouton", "cochon", "canard", "poule", "renard",
@@ -160,6 +173,86 @@ impl Theme {
     }
 }
 
+/// Mêmes thèmes en anglais : mots courants, 3 à 10 lettres, aucun mot contenu dans un autre.
+fn english_words(theme: Theme) -> &'static [&'static str] {
+    match theme {
+        Theme::Animaux => &[
+            "cat", "dog", "rabbit", "horse", "cow", "sheep", "pig", "duck", "hen", "fox", "wolf", "bear", "tiger",
+            "lion", "giraffe", "zebra", "monkey", "owl", "eagle", "whale", "dolphin", "turtle", "frog", "squirrel",
+            "hedgehog", "mouse", "goat", "panda", "koala", "beaver",
+        ],
+        Theme::FruitsLegumes => &[
+            "apple", "pear", "cherry", "strawberry", "banana", "orange", "lemon", "apricot", "peach", "plum", "grape",
+            "melon", "kiwi", "celery", "mango", "carrot", "fennel", "turnip", "radish", "tomato", "zucchini",
+            "eggplant", "bean", "spinach", "cabbage", "lettuce", "onion", "pumpkin", "beet", "fig",
+        ],
+        Theme::Cuisine => &[
+            "knife", "spoon", "fork", "pan", "pot", "ladle", "whisk", "grater", "sieve", "plate", "bowl", "cup",
+            "glass", "oven", "flour", "sugar", "butter", "recipe", "cake", "pie", "soup", "omelette", "pepper",
+            "yeast", "salt", "sauce", "spice", "mustard", "vinegar", "cheese", "apron", "kettle",
+        ],
+        Theme::Nature => &[
+            "tree", "forest", "river", "mountain", "hill", "valley", "meadow", "flower", "leaf", "branch", "root",
+            "rock", "sand", "cloud", "rain", "storm", "snow", "sun", "star", "ocean", "beach", "cliff", "spring",
+            "pond", "field", "moss", "fern", "oak", "pine", "volcano",
+        ],
+        Theme::Sport => &[
+            "football", "tennis", "rugby", "judo", "swimming", "race", "cycling", "climbing", "boxing", "golf",
+            "sailing", "rowing", "fencing", "dance", "karate", "handball", "basketball", "hockey", "racket",
+            "referee", "team", "match", "stadium", "medal", "podium", "sprint", "marathon", "diving", "skating",
+            "surfing",
+        ],
+        Theme::Metiers => &[
+            "baker", "doctor", "postman", "plumber", "carpenter", "gardener", "nurse", "pilot", "lawyer", "judge",
+            "painter", "mason", "cook", "waiter", "barber", "florist", "librarian", "shepherd", "sailor", "singer",
+            "potter", "dentist", "architect", "butcher", "farmer", "policeman", "cashier", "teacher", "engineer",
+            "chef",
+        ],
+        Theme::Maison => &[
+            "kitchen", "bedroom", "attic", "cellar", "garage", "garden", "window", "door", "staircase", "ceiling",
+            "roof", "hallway", "balcony", "wardrobe", "armchair", "table", "stool", "lamp", "carpet", "curtain",
+            "mirror", "shelf", "pillow", "cushion", "cupboard", "fireplace", "bathtub", "floor", "sofa", "rug",
+        ],
+        Theme::Voyage => &[
+            "suitcase", "plane", "train", "boat", "ticket", "passport", "map", "compass", "hotel", "beach", "museum",
+            "station", "airport", "cruise", "hiking", "camping", "tent", "guide", "souvenir", "border", "stopover",
+            "departure", "arrival", "tourist", "photo", "landscape", "inn", "visit", "road", "holiday",
+        ],
+        Theme::Musique => &[
+            "piano", "guitar", "violin", "flute", "banjo", "trumpet", "harp", "tambourine", "saxophone", "accordion",
+            "organ", "clarinet", "note", "scale", "rhythm", "melody", "cymbal", "song", "chorus", "concert",
+            "orchestra", "choir", "score", "tempo", "opera", "record", "mic", "bass", "xylophone", "ukulele",
+        ],
+        Theme::Ecole => &[
+            "notebook", "pencil", "eraser", "ruler", "schoolbag", "case", "board", "chalk", "classroom", "pupil",
+            "homework", "lesson", "canteen", "dictation", "maths", "reading", "compass", "scissors", "glue", "crayon",
+            "page", "exam", "report", "course", "history", "geography", "playground", "recess", "desk", "locker",
+        ],
+        Theme::Developpement => &[
+            "code", "function", "variable", "loop", "object", "class", "method", "interface", "debugging", "test",
+            "file", "branch", "commit", "merge", "repository", "software", "algorithm", "syntax", "query", "server",
+            "module", "package", "byte", "string", "integer", "pointer", "stack", "recursion", "compiler", "array",
+        ],
+        Theme::Devops => &[
+            "container", "docker", "pipeline", "delivery", "cluster", "cloud", "image", "volume", "script", "robot",
+            "alert", "log", "metric", "backup", "replica", "load", "release", "kubernetes", "ansible", "terraform",
+            "registry", "secret", "node", "uptime", "incident", "migration", "production", "monitoring", "machine",
+            "virtual",
+        ],
+        Theme::Reseaux => &[
+            "router", "bridge", "address", "packet", "frame", "cable", "fiber", "wifi", "antenna", "server", "client",
+            "protocol", "port", "mask", "gateway", "firewall", "domain", "latency", "bandwidth", "signal", "modem",
+            "ethernet", "proxy", "tunnel", "socket", "network", "routing", "host", "subnet", "ping",
+        ],
+        Theme::Ia => &[
+            "neuron", "network", "model", "data", "corpus", "agent", "token", "prompt", "vector", "weight", "bias",
+            "gradient", "layer", "input", "output", "robot", "logic", "inference", "algorithm", "learning",
+            "prediction", "context", "memory", "language", "assistant", "synapse", "tensor", "perceptron",
+            "attention", "error",
+        ],
+    }
+}
+
 /// Mot tel qu'il se cherche dans la grille : majuscules sans accents, lettres seules.
 pub(crate) fn grid_form(word: &str) -> String {
     let mut s = String::with_capacity(word.len());
@@ -197,9 +290,9 @@ fn settings(difficulty: Difficulty) -> (usize, usize, &'static [(i64, i64)]) {
 
 fn hint(difficulty: Difficulty) -> &'static str {
     match difficulty {
-        Difficulty::Easy => "De gauche à droite et de haut en bas",
-        Difficulty::Medium => "Horizontal, vertical et en diagonale",
-        Difficulty::Hard => "Dans tous les sens, même à l'envers",
+        Difficulty::Easy => t("De gauche à droite et de haut en bas", "Left to right and top to bottom"),
+        Difficulty::Medium => t("Horizontal, vertical et en diagonale", "Across, down and diagonally"),
+        Difficulty::Hard => t("Dans tous les sens, même à l'envers", "Every direction, even backwards"),
     }
 }
 
@@ -327,7 +420,11 @@ pub fn build(
     let puzzle = generate(seed, difficulty, &candidates, count);
 
     let mut doc = Doc::new();
-    let title = if solution { "Solution des mots mêlés" } else { "Mots mêlés" };
+    let title = if solution {
+        t("Solution des mots mêlés", "Word search solution")
+    } else {
+        t("Mots mêlés", "Word search")
+    };
     match subject {
         Some(subject) if !solution => doc.header(&format!("{title} · {subject}")),
         _ => doc.header(title),
@@ -341,7 +438,7 @@ pub fn build(
         let line: String = row.iter().map(|w| format!("{w:^14}")).collect();
         doc.line(&line, Style::default());
     }
-    doc.text(&format!("n° {seed}"), Style::default().small().align(Align::Right));
+    doc.text(&tr!("n° {seed}", "No. {seed}"), Style::default().small().align(Align::Right));
     doc
 }
 
@@ -416,6 +513,37 @@ mod tests {
         let p = generate(5, Difficulty::Easy, &words, 2);
         assert_eq!(p.size, 12);
         assert_eq!(p.words, ["ANNIVERSAIRE", "GATEAU"]);
+    }
+
+    #[test]
+    fn english_lists_fit_and_place_their_words() {
+        use crate::i18n::{with_lang, Lang};
+        with_lang(Lang::En, || {
+            for theme in THEMES {
+                let words = theme_words(theme);
+                assert!(words.len() >= 28, "{theme:?} : {} mots", words.len());
+                for w in theme.words() {
+                    assert!(w.bytes().all(|b| b.is_ascii_alphabetic()), "{w}");
+                    let g = grid_form(w);
+                    assert!(g.len() >= 3 && g.len() <= settings(Difficulty::Easy).0, "{w} : {}", g.len());
+                }
+                let forms: Vec<String> = theme.words().iter().map(|w| grid_form(w)).collect();
+                for a in &forms {
+                    for b in &forms {
+                        assert!(a == b || !a.contains(b.as_str()), "{theme:?} : {b} est dans {a}");
+                    }
+                }
+                for (seed, diff) in [(3, Difficulty::Easy), (42, Difficulty::Medium), (7, Difficulty::Hard)] {
+                    let (_, count, _) = settings(diff);
+                    let p = generate(seed, diff, &words, count);
+                    assert!(p.words.len() >= count - 2, "{theme:?} {diff:?} : {} mots", p.words.len());
+                    for w in &p.words {
+                        assert!(find(&p, w), "{w} introuvable");
+                    }
+                }
+            }
+            assert_eq!(Theme::Ia.label(), "artificial intelligence");
+        });
     }
 
     #[test]

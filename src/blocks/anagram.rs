@@ -7,6 +7,7 @@ use rand::{RngExt, SeedableRng};
 
 use super::word_search::{grid_form, Theme};
 use crate::doc::{Align, Doc, Style};
+use crate::i18n::t;
 
 /// Thèmes tirés au hasard : ceux qui parlent à toute la famille (les thèmes techniques
 /// restent disponibles en les demandant).
@@ -59,23 +60,25 @@ pub fn build(theme: Option<Theme>, count: u8, seed: Option<u64>) -> Doc {
     }
 
     let mut doc = Doc::new();
-    doc.header(if count > 1 { "Mots mystères" } else { "Mot mystère" });
+    doc.header(if count > 1 { t("Mots mystères", "Mystery words") } else { t("Mot mystère", "Mystery word") });
     for (i, (theme, form, _)) in picked.iter().enumerate() {
         doc.feed(1);
         doc.text(&spaced(&scramble(form, &mut rng)), Style::default().bold().center().size(2));
         let number = if count > 1 { format!("{}. ", i + 1) } else { String::new() };
-        let hint = format!("{number}{} · {} lettres", theme.label(), form.chars().count());
+        let letters = form.chars().count();
+        let hint = tr!("{}{} · {} lettres", "{}{} · {} letters", number, theme.label(), letters);
         doc.text(&hint, Style::default().small().center());
         doc.line(&format!("{:^42}", "_ ".repeat(form.len()).trim_end()), Style::default());
     }
-    doc.text(&format!("n° {seed}"), Style::default().small().align(Align::Right));
+    doc.text(&tr!("n° {seed}", "No. {seed}"), Style::default().small().align(Align::Right));
     doc.feed(1);
     let answers: Vec<String> = picked
         .iter()
         .enumerate()
         .map(|(i, (_, _, word))| if count > 1 { format!("{}. {word}", i + 1) } else { word.to_string() })
         .collect();
-    doc.text(&format!("Réponse{} : {}", if count > 1 { "s" } else { "" }, answers.join("  ")), Style::default().small().upside_down());
+    let plural = if count > 1 { "s" } else { "" };
+    doc.text(&tr!("Réponse{} : {}", "Answer{}: {}", plural, answers.join("  ")), Style::default().small().upside_down());
     doc
 }
 
@@ -95,6 +98,32 @@ mod tests {
             b.sort();
             assert_eq!(a, b);
         }
+    }
+
+    #[test]
+    fn english_lines_fit_for_many_seeds() {
+        use crate::i18n::{with_lang, Lang};
+        with_lang(Lang::En, || {
+            for seed in 0..100 {
+                let doc = build(None, 4, Some(seed));
+                for op in &doc.ops {
+                    if let Op::Line { text, style } = op {
+                        assert!(text.chars().count() <= style.columns(), "{text}");
+                    }
+                }
+            }
+            let doc = build(Some(Theme::Animaux), 1, Some(5));
+            let texts: Vec<String> = doc
+                .ops
+                .iter()
+                .filter_map(|op| match op {
+                    Op::Line { text, .. } => Some(text.clone()),
+                    _ => None,
+                })
+                .collect();
+            assert!(texts.iter().any(|t| t.contains("Answer: ")), "{texts:?}");
+            assert!(texts.iter().any(|t| t.contains("MYSTERY WORD")), "{texts:?}");
+        });
     }
 
     #[test]

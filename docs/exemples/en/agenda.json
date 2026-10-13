@@ -1,0 +1,1 @@
+{ "blocks": [{ "type": "agenda", "calendars": ["docs/exemples/en/family.ics"], "days": 2, "title": "Family calendar" }] }

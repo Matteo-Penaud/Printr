@@ -134,6 +134,20 @@ const PICTURES: &[(&str, [&str; N])] = &[
     ]),
 ];
 
+/// Noms des dessins, dans le même ordre que `PICTURES`.
+const NAMES_EN: [&str; N] = [
+    "heart",
+    "fir tree",
+    "boat",
+    "smile",
+    "mushroom",
+    "umbrella",
+    "house",
+    "cat",
+    "fish",
+    "teacup",
+];
+
 fn cells(picture: &[&str; N]) -> Vec<Vec<bool>> {
     picture.iter().map(|row| row.chars().map(|c| c == '#' || c == '~').collect()).collect()
 }
@@ -212,22 +226,36 @@ fn render(grid: &[Vec<bool>], solution: bool) -> GrayImage {
 pub fn build(number: Option<usize>, solution: bool) -> anyhow::Result<Doc> {
     let index = match number {
         Some(n) if (1..=PICTURES.len()).contains(&n) => n - 1,
-        Some(n) => anyhow::bail!("logimage n° {n} inconnu (1 à {})", PICTURES.len()),
+        Some(n) => anyhow::bail!(
+            "{}",
+            tr!("logimage n° {n} inconnu (1 à {})", "nonogram No. {n} unknown (1 to {})", PICTURES.len())
+        ),
         None => rand::rng().random_range(0..PICTURES.len()),
     };
-    let (name, picture) = &PICTURES[index];
+    let (name_fr, picture) = &PICTURES[index];
+    let name = crate::i18n::t(*name_fr, NAMES_EN[index]);
     let grid = cells(picture);
 
     let mut doc = Doc::new();
-    doc.header(if solution { "Solution du logimage" } else { "Logimage" });
-    if solution {
-        doc.text(&format!("C'était… {name} !"), Style::default().small().center());
+    doc.header(if solution {
+        crate::i18n::t("Solution du logimage", "Nonogram solution")
     } else {
-        doc.text("Noircis les cases : les nombres donnent les suites de cases noires, dans l'ordre.", Style::default().small().center());
+        crate::i18n::t("Logimage", "Nonogram")
+    });
+    if solution {
+        doc.text(&tr!("C'était… {name} !", "It was: {name}!"), Style::default().small().center());
+    } else {
+        doc.text(
+            crate::i18n::t(
+                "Noircis les cases : les nombres donnent les suites de cases noires, dans l'ordre.",
+                "Shade the cells: the numbers give the runs of shaded cells, in order.",
+            ),
+            Style::default().small().center(),
+        );
     }
     doc.feed(1);
     doc.image(render(&grid, solution));
-    doc.text(&format!("n° {}", index + 1), Style::default().small().align(Align::Right));
+    doc.text(&tr!("n° {}", "No. {}", index + 1), Style::default().small().align(Align::Right));
     Ok(doc)
 }
 

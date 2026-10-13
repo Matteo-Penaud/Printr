@@ -8,13 +8,19 @@ use chrono::{DateTime, Duration, Utc};
 use super::Ctx;
 use crate::doc::{Align, Doc, Style};
 use crate::draw;
+use crate::i18n::t;
 
 /// Longueur maximale du chapô imprimé.
 const SUMMARY_MAX: usize = 260;
 
 /// Rubriques et formats écartés : directs, vidéos, podcasts, tribunes.
-const NOISE_PREFIXES: &[&str] = &["en direct", "direct", "video", "podcast", "replay", "tribune", "entretien"];
-const NOISE_PATHS: &[&str] = &["/live/", "/direct/", "/video/", "/videos/", "/podcast", "/replay", "/idees/", "/opinion", "/tribune"];
+const NOISE_PREFIXES: &[&str] = &[
+    "en direct", "direct", "video", "podcast", "replay", "tribune", "entretien", "live ", "watch ", "opinion ", "op ed ",
+];
+const NOISE_PATHS: &[&str] = &[
+    "/live/", "/direct/", "/video/", "/videos/", "/podcast", "/replay", "/idees/", "/opinion", "/tribune", "/watch/",
+    "/op-ed",
+];
 
 #[derive(Debug, Clone)]
 pub struct Article {
@@ -190,11 +196,11 @@ fn host(url: &str) -> String {
 fn fetch(agent: &ureq::Agent, url: &str, index: usize) -> Result<Vec<Article>> {
     let mut response = agent
         .get(url)
-        .header("User-Agent", "printr/0.1 (imprimante à tickets personnelle)")
+        .header("User-Agent", "printr/0.1 (personal receipt printer)")
         .call()
-        .with_context(|| format!("flux injoignable : {url}"))?;
+        .with_context(|| tr!("flux injoignable : {url}", "feed unreachable: {url}"))?;
     let bytes = response.body_mut().with_config().limit(10 * 1024 * 1024).read_to_vec()?;
-    let feed = feed_rs::parser::parse(bytes.as_slice()).with_context(|| format!("flux illisible : {url}"))?;
+    let feed = feed_rs::parser::parse(bytes.as_slice()).with_context(|| tr!("flux illisible : {url}", "unreadable feed: {url}"))?;
     let source = host(feed.links.first().map_or(url, |l| l.href.as_str()));
     let feed_len = feed.entries.len();
     Ok(feed
@@ -224,13 +230,13 @@ fn fetch(agent: &ureq::Agent, url: &str, index: usize) -> Result<Vec<Article>> {
 
 pub fn build(ctx: &Ctx, title: &str, feeds: &[String], options: &Options) -> Result<Doc> {
     if feeds.is_empty() {
-        bail!("aucun flux RSS (`feeds`)");
+        bail!("{}", t("aucun flux RSS (`feeds`)", "no RSS feed (`feeds`)"));
     }
     // Les flux sont téléchargés en parallèle ; un flux en panne n'empêche pas les autres.
     let results: Vec<Result<Vec<Article>>> = std::thread::scope(|s| {
         let handles: Vec<_> =
             feeds.iter().enumerate().map(|(i, url)| s.spawn(move || fetch(&ctx.http, url, i))).collect();
-        handles.into_iter().map(|h| h.join().unwrap_or_else(|_| bail!("erreur interne"))).collect()
+        handles.into_iter().map(|h| h.join().unwrap_or_else(|_| bail!("{}", t("erreur interne", "internal error")))).collect()
     });
     let mut articles = Vec::new();
     let mut errors = Vec::new();
@@ -241,16 +247,16 @@ pub fn build(ctx: &Ctx, title: &str, feeds: &[String], options: &Options) -> Res
         }
     }
     if articles.is_empty() {
-        bail!("{}", if errors.is_empty() { "aucun article".to_owned() } else { errors.join(" ; ") });
+        bail!("{}", if errors.is_empty() { t("aucun article", "no articles").to_owned() } else { errors.join(" ; ") });
     }
 
     let chosen = select(articles, options, Utc::now());
     if chosen.is_empty() {
-        bail!("aucun article récent ne correspond");
+        bail!("{}", t("aucun article récent ne correspond", "no recent article matches"));
     }
 
     let mut doc = Doc::new();
-    doc.header(&format!("Actualités · {title}"));
+    doc.header(&tr!("Actualités · {title}", "News · {title}"));
     let qr = options.qr.min(2).min(chosen.len());
     for (i, article) in chosen.iter().enumerate() {
         doc.feed(1);
@@ -276,7 +282,7 @@ pub fn build(ctx: &Ctx, title: &str, feeds: &[String], options: &Options) -> Res
         doc.line(&caption, style);
     }
     if !errors.is_empty() {
-        doc.text(&format!("({} flux en panne)", errors.len()), Style::default().small().center());
+        doc.text(&tr!("({} flux en panne)", "({} feeds down)", errors.len()), Style::default().small().center());
     }
     Ok(doc)
 }
@@ -355,6 +361,23 @@ mod tests {
         assert_eq!(entry.title.as_ref().unwrap().content, "Le prix de lélectricité");
         assert_eq!(strip_html(&entry.summary.as_ref().unwrap().content), "Un chapô court.");
         assert_eq!(host("https://www.exemple.fr/eco/prix.html"), "exemple.fr");
+    }
+
+    #[test]
+    fn english_noise_is_filtered() {
+        use crate::i18n::{with_lang, Lang};
+        with_lang(Lang::En, || {
+            let articles = vec![
+                article("Live: the prime minister addresses the nation", "https://a.fr/politics/x", 0, 0),
+                article("Watch: the launch in full", "https://a.fr/science/launch", 0, 1),
+                article("Opinion: why the budget fails", "https://a.fr/society/y", 0, 2),
+                article("A quiet local story about bread", "https://a.fr/food/bread", 0, 3),
+            ];
+            let chosen = select(articles, &options(&[], &[]), Utc::now());
+            assert_eq!(chosen.len(), 1);
+            assert!(chosen[0].title.contains("bread"));
+            assert!(is_noise(&article("Watch us", "https://a.fr/x/watch/y", 0, 0), &[]));
+        });
     }
 
     #[test]

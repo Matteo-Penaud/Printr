@@ -6,7 +6,7 @@ use std::f64::consts::TAU;
 use chrono::{DateTime, Duration, Local, TimeZone, Utc};
 
 use crate::doc::{Doc, Style};
-use crate::{draw, fr};
+use crate::{draw, i18n};
 
 /// Durée moyenne d'une lunaison, en jours.
 const SYNODIC_MONTH: f64 = 29.530_588_853;
@@ -29,8 +29,18 @@ fn name(age: f64) -> &'static str {
         "Dernier quartier",
         "Dernier croissant",
     ];
+    const NAMES_EN: [&str; 8] = [
+        "New moon",
+        "Waxing crescent",
+        "First quarter",
+        "Waxing gibbous",
+        "Full moon",
+        "Waning gibbous",
+        "Last quarter",
+        "Waning crescent",
+    ];
     let octant = ((age / SYNODIC_MONTH * 8.0) + 0.5).floor() as usize % 8;
-    NAMES[octant]
+    i18n::t(NAMES[octant], NAMES_EN[octant])
 }
 
 const DIAMETER: i64 = 150;
@@ -70,20 +80,20 @@ pub fn build(now: DateTime<Utc>) -> Doc {
     let in_days = |target: f64| (target - age).rem_euclid(SYNODIC_MONTH);
     let date_in = |days: f64| {
         let when = (now + Duration::seconds((days * 86_400.0) as i64)).with_timezone(&Local);
-        format!("{} {}", fr::weekday_short(when.date_naive()), fr::day_month(when.date_naive()))
+        format!("{} {}", i18n::weekday_short(when.date_naive()), i18n::day_month(when.date_naive()))
     };
 
     let mut doc = Doc::new();
-    doc.header("Lune");
+    doc.header(i18n::t("Lune", "Moon"));
     doc.feed(1);
     doc.image(render(fraction));
     doc.text(name(age), Style::default().bold().center());
-    doc.text(&format!("Éclairée à {illumination:.0} %"), Style::default().center());
+    doc.text(&tr!("Éclairée à {illumination:.0} %", "Illuminated {illumination:.0}%"), Style::default().center());
     let (full, new) = (in_days(SYNODIC_MONTH / 2.0), in_days(0.0));
-    let mut next = [(full, "Pleine lune"), (new, "Nouvelle lune")];
+    let mut next = [(full, i18n::t("Pleine lune", "Full moon")), (new, i18n::t("Nouvelle lune", "New moon"))];
     next.sort_by(|a, b| a.0.total_cmp(&b.0));
     for (days, label) in next {
-        doc.text(&format!("{label} : {}", date_in(days)), Style::default().small().center());
+        doc.text(&tr!("{label} : {}", "{label}: {}", date_in(days)), Style::default().small().center());
     }
     doc
 }

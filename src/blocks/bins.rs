@@ -7,7 +7,7 @@ use image::GrayImage;
 use serde::Deserialize;
 
 use crate::doc::{Doc, Style};
-use crate::{draw, fr};
+use crate::{draw, i18n};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -98,14 +98,22 @@ fn bin_icon() -> GrayImage {
 }
 
 pub fn build(collections: &[Collection], when: When, always: bool, today: NaiveDate) -> anyhow::Result<Doc> {
-    anyhow::ensure!(!collections.is_empty(), "indiquer au moins un ramassage (`collections`)");
+    anyhow::ensure!(
+        !collections.is_empty(),
+        "{}",
+        i18n::t("indiquer au moins un ramassage (`collections`)", "give at least one collection (`collections`)")
+    );
     let day = if when == When::Veille { today + Duration::days(1) } else { today };
     let due: Vec<&Collection> = collections.iter().filter(|c| c.collects_on(day)).collect();
 
     let mut doc = Doc::new();
     if due.is_empty() {
         if always {
-            let nothing = if when == When::Veille { "Pas de poubelle à sortir ce soir." } else { "Pas de ramassage aujourd'hui." };
+            let nothing = if when == When::Veille {
+                i18n::t("Pas de poubelle à sortir ce soir.", "No bins to put out tonight.")
+            } else {
+                i18n::t("Pas de ramassage aujourd'hui.", "No collection today.")
+            };
             doc.text(nothing, Style::default().small().center());
             // Le prochain ramassage, dans les quatre semaines.
             let next = (1..=28).map(|k| day + Duration::days(k)).find_map(|d| {
@@ -114,7 +122,12 @@ pub fn build(collections: &[Collection], when: When, always: bool, today: NaiveD
             });
             if let Some((date, names)) = next {
                 let date = if when == When::Veille { date - Duration::days(1) } else { date };
-                let text = format!("Prochain : {names}, {} {}", fr::weekday(date), fr::day_month(date));
+                let text = tr!(
+                    "Prochain : {names}, {} {}",
+                    "Next: {names}, {} {}",
+                    i18n::weekday(date),
+                    i18n::day_month(date)
+                );
                 doc.text(&text, Style::default().small().center());
             }
         }
@@ -122,10 +135,14 @@ pub fn build(collections: &[Collection], when: When, always: bool, today: NaiveD
     }
     doc.image(bin_icon());
     doc.feed(1);
-    let intro = if when == When::Veille { "Ce soir, on sort :" } else { "Aujourd'hui, ramassage :" };
+    let intro = if when == When::Veille {
+        i18n::t("Ce soir, on sort :", "Tonight, put out:")
+    } else {
+        i18n::t("Aujourd'hui, ramassage :", "Today, collection:")
+    };
     doc.text(intro, Style::default().center());
     for c in due {
-        doc.text(&fr::capitalize(&c.name), Style::default().bold().center().size(2));
+        doc.text(&i18n::capitalize(&c.name), Style::default().bold().center().size(2));
     }
     Ok(doc)
 }

@@ -140,10 +140,10 @@ pub fn build(seed: Option<u64>) -> Doc {
     let (folds, layers) = design(&mut StdRng::seed_from_u64(seed));
 
     let mut doc = Doc::new();
-    doc.header("Coloriage");
+    doc.header(crate::i18n::t("Coloriage", "Coloring page"));
     doc.feed(1);
     doc.image(render(folds, &layers));
-    doc.text(&format!("n° {seed}"), Style::default().small().align(Align::Right));
+    doc.text(&tr!("n° {seed}", "No. {seed}"), Style::default().small().align(Align::Right));
     doc
 }
 

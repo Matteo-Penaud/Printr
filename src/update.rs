@@ -12,6 +12,8 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
+use crate::i18n::t;
+
 const REPO: &str = "XNinety9/Printr";
 /// Première vérification peu après le démarrage, puis toutes les `interval()` minutes.
 const FIRST_CHECK: Duration = Duration::from_secs(60);
@@ -66,10 +68,10 @@ fn check(http: &ureq::Agent) -> Result<Option<Available>> {
         .header("Accept", "application/vnd.github+json")
         .header("User-Agent", concat!("printr/", env!("CARGO_PKG_VERSION")))
         .call()
-        .context("GitHub injoignable")?
+        .context(t("GitHub injoignable", "GitHub unreachable"))?
         .body_mut()
         .read_json()
-        .context("réponse de GitHub illisible")?;
+        .context(t("réponse de GitHub illisible", "GitHub response unreadable"))?;
     let names: Vec<String> = tags.into_iter().map(|t| t.name).collect();
     Ok(newer(&names, env!("CARGO_PKG_VERSION")))
 }
@@ -92,12 +94,12 @@ pub fn spawn(latest: Arc<Mutex<Option<Available>>>) {
                 Ok(found) => {
                     let mut slot = latest.lock().unwrap_or_else(|e| e.into_inner());
                     if let Some(new) = found.as_ref().filter(|n| slot.as_ref() != Some(*n)) {
-                        eprintln!("nouvelle version disponible : printr {} ({})", new.version, new.url);
+                        eprintln!("{}", tr!("nouvelle version disponible : printr {} ({})", "new version available: printr {} ({})", new.version, new.url));
                     }
                     *slot = found;
                 }
                 // Hors ligne, GitHub en panne : on réessaiera à la prochaine échéance.
-                Err(e) => eprintln!("vérification des mises à jour impossible : {e:#}"),
+                Err(e) => eprintln!("{}", tr!("vérification des mises à jour impossible : {e:#}", "cannot check for updates: {e:#}")),
             }
             std::thread::sleep(interval);
         }

@@ -1,0 +1,7 @@
+{ "blocks": [
+  { "type": "title", "text": "Game break" },
+  { "type": "riddle", "number": 1 },
+  { "type": "sudoku", "difficulty": "medium", "seed": 2026 },
+  { "type": "word_search", "difficulty": "easy", "theme": "animals", "seed": 41082 },
+  { "type": "workout", "level": "hard", "number": 25 }
+] }

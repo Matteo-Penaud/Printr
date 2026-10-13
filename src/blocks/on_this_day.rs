@@ -8,7 +8,7 @@ use rand::SeedableRng;
 use serde::Deserialize;
 
 use crate::doc::{Doc, Style};
-use crate::fr;
+use crate::i18n;
 
 #[derive(Deserialize)]
 struct Feed {
@@ -23,7 +23,8 @@ struct Event {
 
 pub fn build(agent: &ureq::Agent, today: NaiveDate, count: u8) -> Result<Doc> {
     let url = format!(
-        "https://api.wikimedia.org/feed/v1/wikipedia/fr/onthisday/events/{:02}/{:02}",
+        "https://api.wikimedia.org/feed/v1/wikipedia/{}/onthisday/events/{:02}/{:02}",
+        i18n::lang().code(),
         today.month(),
         today.day()
     );
@@ -31,7 +32,7 @@ pub fn build(agent: &ureq::Agent, today: NaiveDate, count: u8) -> Result<Doc> {
         .get(&url)
         .header("User-Agent", "printr/0.1 (imprimante à tickets personnelle)")
         .call()
-        .context("Wikipédia injoignable")?
+        .context(i18n::t("Wikipédia injoignable", "Wikipedia unreachable"))?
         .body_mut()
         .read_json()?;
 
@@ -42,10 +43,10 @@ pub fn build(agent: &ureq::Agent, today: NaiveDate, count: u8) -> Result<Doc> {
     events.sort_by_key(|e| e.year);
 
     let mut doc = Doc::new();
-    doc.header(&format!("Un {} dans l'histoire", fr::day_month(today)));
+    doc.header(&tr!("Un {} dans l'histoire", "On this day, {}", i18n::day_month(today)));
     for e in events {
         doc.feed(1);
-        doc.hanging(&format!("{} : ", e.year.unwrap_or_default()), &fr::capitalize(&e.text), Style::default());
+        doc.hanging(&tr!("{} : ", "{}: ", e.year.unwrap_or_default()), &i18n::capitalize(&e.text), Style::default());
     }
     Ok(doc)
 }

@@ -1,42 +1,44 @@
-# Contribuer à Printr
+# Contributing to Printr
 
-Merci de ton intérêt ! Ce guide explique comment mettre le projet en route, comment il est
-organisé et comment proposer une modification. Pas besoin d'imprimante : un émulateur et un
-aperçu dans le terminal suffisent pour presque tout.
+[🇫🇷 Version française](CONTRIBUTING.fr.md)
 
-## Mettre en route
+Thanks for your interest! This guide explains how to get the project running, how it is organized,
+and how to propose a change. You don't need a printer: an emulator and a preview in the terminal
+are enough for almost everything.
 
-Il faut une chaîne Rust stable (`rustup`). Pour l'émulateur et les captures, il faut aussi
-[`uv`](https://docs.astral.sh/uv/), et Chromium pour les captures de l'interface.
+## Getting started
+
+You need a stable Rust toolchain (`rustup`). For the emulator and the screenshots you also need
+[`uv`](https://docs.astral.sh/uv/), and Chromium for the web interface screenshots.
 
 ```sh
 git clone https://github.com/XNinety9/Printr && cd Printr
-cargo test                                               # tous les tests, sans réseau ni imprimante
-cargo run -- --preview print examples/complet.json       # aperçu du ticket complet dans le terminal
+cargo test                                               # all tests, no network or printer needed
+cargo run -- --preview print examples/complet.json       # preview of the full ticket in the terminal
 ```
 
-Quelques variables d'environnement utiles :
+A few useful environment variables:
 
-| Variable | Rôle |
+| Variable | What it does |
 | --- | --- |
-| `ANTHROPIC_API_KEY` | Blocs Claude (`horoscope`, `word_of_the_day`). Facultative : sans elle, ces blocs affichent une erreur et le reste du ticket sort normalement. |
-| `PRINTR_BARNUM` | Commande de [Barnum](https://github.com/XNinety9/Barnum) pour le bloc `barnum`, par exemple `python3 ../Barnum/main.py`. |
-| `PRINTR_DATA_DIR` | Comptes, presets et historique de l'interface web. Utilise un dossier jetable pour tes essais. |
-| `PRINTR_GLITCH` | Fréquence des glitchs (une impression sur N, 20 par défaut, 0 : jamais). |
-| `PRINTR_CACHE_DIR` | Cache des contenus du jour. |
-| `PRINTR_WEB_DIR=web` | Sert l'interface depuis le disque : on modifie `web/` sans recompiler. |
-| `PRINTR_DEBUG=1` | Affiche les réponses brutes de Claude et le classement des actualités. |
+| `ANTHROPIC_API_KEY` | Claude blocks (`horoscope`, `word_of_the_day`). Optional: without it, these blocks show an error and the rest of the ticket prints normally. |
+| `PRINTR_BARNUM` | Command for [Barnum](https://github.com/XNinety9/Barnum) used by the `barnum` block, for example `python3 ../Barnum/main.py`. |
+| `PRINTR_DATA_DIR` | Accounts, presets and history of the web interface. Use a throwaway folder for your tests. |
+| `PRINTR_GLITCH` | How often glitches happen (one print in N, 20 by default, 0: never). |
+| `PRINTR_CACHE_DIR` | Cache of the day's content. |
+| `PRINTR_WEB_DIR=web` | Serves the interface from disk: edit `web/` without recompiling. |
+| `PRINTR_DEBUG=1` | Shows Claude's raw responses and the news ranking. |
 
-## Tester sans imprimante
+## Testing without a printer
 
-- **Aperçu terminal** : `--preview` affiche le ticket encadré, avec gras, inversé et soulignés.
-- **Émulateur** : `scripts/demo.sh [ticket.json]` imprime dans l'émulateur
-  [emupos](https://pypi.org/project/emupos/) (profil TM-T88V dans `emulator/`) et donne le PNG
-  du ticket, au point près.
-- **Octets bruts** : `--dump sortie.bin` écrit exactement ce qui partirait vers l'imprimante.
-- **Exemples de blocs** : `docs/exemples/generer.sh [bloc…]` réimprime les exemples de
-  `docs/exemples/` dans l'émulateur, avec des données fictives. Pense à y ajouter ton bloc.
-- **Interface web** :
+- **Terminal preview**: `--preview` shows the ticket inside a frame, with bold, reverse and underlined text.
+- **Emulator**: `scripts/demo.sh [ticket.json]` prints to the
+  [emupos](https://pypi.org/project/emupos/) emulator (TM-T88V profile in `emulator/`) and gives
+  you the PNG of the ticket, pixel for pixel.
+- **Raw bytes**: `--dump sortie.bin` writes exactly what would be sent to the printer.
+- **Block examples**: `docs/exemples/generer.sh [bloc…]` re-prints the examples in
+  `docs/exemples/` through the emulator, with dummy data. Don't forget to add your block there.
+- **Web interface**:
 
   ```sh
   export PRINTR_DATA_DIR=/tmp/printr-dev PRINTR_WEB_DIR=web
@@ -44,71 +46,71 @@ Quelques variables d'environnement utiles :
   cargo run -- --dump /tmp/sortie.bin serve --listen 127.0.0.1:8080
   ```
 
-Les blocs Claude coûtent de l'argent à chaque génération. Pour itérer, préfère l'aperçu de
-l'interface web, qui n'appelle jamais Claude, ou le cache du jour : sans `--refresh`, un
-horoscope déjà généré aujourd'hui est repris tel quel.
+Claude blocks cost money on every generation. To iterate, prefer the web interface preview, which
+never calls Claude, or the day's cache: without `--refresh`, a horoscope already generated today
+is reused as is.
 
-## Organisation du code
+## Code layout
 
-| Fichier | Rôle |
+| File | Role |
 | --- | --- |
-| `src/main.rs` | Ligne de commande (clap), aide en français |
-| `src/blocks/mod.rs` | Le format JSON des tickets, l'enum `Block`, la construction en parallèle |
-| `src/blocks/*.rs` | Un fichier par bloc un peu fourni (météo, sudoku, Barnum…) |
-| `src/doc.rs` | Représentation intermédiaire du ticket : lignes stylées, images, QR codes, aperçus |
-| `src/cp858.rs` | Encodage du texte pour l'imprimante (page de code PC858) |
-| `src/raster.rs`, `src/draw.rs` | Images : tramage, dessins (sudoku, labyrinthe, QR codes côte à côte) |
-| `src/output.rs` | Envoi vers l'imprimante USB, TCP ou un fichier |
-| `src/server.rs`, `src/store.rs`, `src/scheduler.rs` | Serveur web, données (comptes, presets, historique), planificateur |
-| `src/claude.rs`, `src/cache.rs` | Client de l'API Claude, cache des contenus du jour |
-| `src/ui.rs` | Sortie console : progression, résumé, erreurs, journal du serveur |
-| `web/` | Interface web (Preact + htm, sans compilation), intégrée au binaire |
-| `docs/` | Site vitrine (GitHub Pages) et ses illustrations |
+| `src/main.rs` | Command line (clap), help text in French |
+| `src/blocks/mod.rs` | The ticket JSON format, the `Block` enum, parallel construction |
+| `src/blocks/*.rs` | One file per block with some substance (weather, sudoku, Barnum…) |
+| `src/doc.rs` | Intermediate representation of a ticket: styled lines, images, QR codes, previews |
+| `src/cp858.rs` | Text encoding for the printer (PC858 code page) |
+| `src/raster.rs`, `src/draw.rs` | Images: dithering, drawings (sudoku, maze, side-by-side QR codes) |
+| `src/output.rs` | Sending to the USB printer, over TCP, or to a file |
+| `src/server.rs`, `src/store.rs`, `src/scheduler.rs` | Web server, data (accounts, presets, history), scheduler |
+| `src/claude.rs`, `src/cache.rs` | Claude API client, cache of the day's content |
+| `src/ui.rs` | Console output: progress, summary, errors, server log |
+| `web/` | Web interface (Preact + htm, no build step), embedded in the binary |
+| `docs/` | Showcase site (GitHub Pages) and its illustrations |
 
-## Développer un nouveau bloc
+## Developing a new block
 
-Un bloc, c'est une entrée du JSON d'un ticket (`{ "type": "…", … }`) qui se transforme en un
-morceau de ticket. Pour le développer, on suit toujours le même chemin, illustré ici avec un
-bloc d'exemple, « Dés », qui lance quelques dés et affiche leur total :
+A block is an entry in a ticket's JSON (`{ "type": "…", … }`) that turns into a piece of ticket.
+To develop one, we always follow the same path, illustrated here with an example block, "Dice",
+which rolls a few dice and shows their total:
 
 ```json
 { "type": "dice", "count": 3 }
 ```
 
-### 1. Déclarer le bloc et ses paramètres
+### 1. Declare the block and its parameters
 
-Dans `src/blocks/mod.rs`, ajoute une variante à l'enum `Block`. Son nom, en `snake_case`, donne
-le `type` du JSON ; ses champs sont les paramètres.
+In `src/blocks/mod.rs`, add a variant to the `Block` enum. Its name, in `snake_case`, gives the
+JSON `type`; its fields are the parameters.
 
 ```rust
-    /// Lancer de dés.
+    /// Dice roll.
     Dice {
-        /// Nombre de dés, de 1 à 6.
+        /// Number of dice, from 1 to 6.
         #[serde(default = "two")]
         count: u8,
     },
 ```
 
-- Donne une valeur par défaut (`#[serde(default)]`, ou une fonction comme `two`) à tout ce qui
-  n'est pas indispensable : un ticket minimal doit fonctionner.
-- Un paramètre inconnu est refusé (`deny_unknown_fields`), ce qui signale les fautes de frappe.
-- Pour une liste de choix, déclare un `enum` avec `#[serde(rename_all = "snake_case")]` et des
-  alias français (`#[serde(alias = "facile")]`), comme `sudoku::Difficulty`.
+- Give a default value (`#[serde(default)]`, or a function such as `two`) to anything that isn't
+  essential: a minimal ticket must work.
+- An unknown parameter is refused (`deny_unknown_fields`), which catches typos.
+- For a list of choices, declare an `enum` with `#[serde(rename_all = "snake_case")]` and French
+  aliases (`#[serde(alias = "facile")]`), as `sudoku::Difficulty` does.
 
-### 2. Écrire le rendu
+### 2. Write the rendering
 
-Crée `src/blocks/dice.rs`. Sa fonction `build` reçoit les paramètres et renvoie un `Doc`, la
-représentation du ticket avant impression :
+Create `src/blocks/dice.rs`. Its `build` function receives the parameters and returns a `Doc`,
+the representation of the ticket before printing:
 
 ```rust
-//! Lancer de dés : un ou plusieurs dés à six faces, et leur total.
+//! Dice roll: one or more six-sided dice, and their total.
 
 use rand::rngs::StdRng;
 use rand::{RngExt, SeedableRng};
 
 use crate::doc::{Doc, Style};
 
-/// Tire `count` dés (de 1 à 6 dés).
+/// Rolls `count` dice (from 1 to 6 dice).
 fn roll(count: u8, rng: &mut StdRng) -> Vec<u8> {
     (0..count.clamp(1, 6)).map(|_| rng.random_range(1..=6)).collect()
 }
@@ -119,49 +121,48 @@ pub fn build(count: u8) -> Doc {
     let total: u32 = rolls.iter().map(|&r| u32::from(r)).sum();
 
     let mut doc = Doc::new();
-    doc.header("Lancer de dés");
+    doc.header("Dice roll");
     doc.feed(1);
     doc.text(&faces.join("  "), Style::default().bold().center().size(2));
-    doc.text(&format!("Total : {total}"), Style::default().center());
+    doc.text(&format!("Total: {total}"), Style::default().center());
     doc
 }
 ```
 
-La boîte à outils de `Doc` (`src/doc.rs`) :
+Toolbox of `Doc` (`src/doc.rs`):
 
-| Méthode | Effet |
+| Method | Effect |
 | --- | --- |
-| `header("Titre")` | Bandeau inversé (blanc sur noir) sur toute la largeur |
-| `text(texte, style)` | Texte coupé aux mots ; une ligne vide saute une ligne |
-| `hanging("Préfixe : ", texte, style)` | Texte dont les lignes suivantes s'alignent après le préfixe |
-| `line(texte, style)` | Une ligne telle quelle, espaces conservés : idéal pour des colonnes |
-| `rule('─')`, `feed(n)` | Ligne de séparation, lignes vides |
-| `image(img)`, `qr(données, taille)` | Image de 512 points de large, QR code |
+| `header("Title")` | Reversed banner (white on black) across the full width |
+| `text(text, style)` | Word-wrapped text; an empty line skips a line |
+| `hanging("Prefix: ", text, style)` | Text whose following lines align after the prefix |
+| `line(text, style)` | One line as is, spaces kept: ideal for columns |
+| `rule('─')`, `feed(n)` | Separator line, blank lines |
+| `image(img)`, `qr(data, size)` | Image 512 dots wide, QR code |
 
-Et pour `Style` : `bold()`, `underline()`, `reverse()`, `small()` (police B), `size(1..=8)`,
-`center()`, `align(…)`, `upside_down()`. Le papier fait 42 colonnes en police normale, 56 en
-petite police, et 42 divisé par la taille quand on agrandit (21 colonnes en taille 2).
+And for `Style`: `bold()`, `underline()`, `reverse()`, `small()` (font B), `size(1..=8)`,
+`center()`, `align(…)`, `upside_down()`. The paper is 42 columns wide in normal font, 56 in small
+font, and 42 divided by the size when enlarged (21 columns at size 2).
 
-Pour une image (dessin, grille, photo), voir `draw.rs` et `raster.rs` : `draw::canvas(hauteur)`
-donne un canevas blanc de 512 points de large, `draw::fill_rect` y dessine, et
-`raster::prepare` trame une photo.
+For an image (drawing, grid, photo), see `draw.rs` and `raster.rs`: `draw::canvas(height)` gives a
+white canvas 512 dots wide, `draw::fill_rect` draws on it, and `raster::prepare` dithers a photo.
 
-### 3. Brancher le bloc
+### 3. Wire up the block
 
-Toujours dans `src/blocks/mod.rs`, trois ajouts :
+Still in `src/blocks/mod.rs`, three additions:
 
 ```rust
-mod dice;                                          // en haut du fichier
+mod dice;                                          // at the top of the file
 
-Block::Dice { .. } => "dés",                       // dans Block::name()
+Block::Dice { .. } => "dice",                      // in Block::name()
 
-Block::Dice { count } => doc = dice::build(*count), // dans Block::build()
+Block::Dice { count } => doc = dice::build(*count), // in Block::build()
 ```
 
-Si un paramètre précise utilement le bloc (une ville, un signe…), ajoute-le aussi dans
-`Block::label()` : il apparaît dans la console (« météo · Lyon »), l'historique et les erreurs.
+If a parameter usefully identifies the block (a city, a sign…), also add it to `Block::label()`:
+it then appears in the console ("weather · Lyon"), in the history and in errors.
 
-### 4. Essayer
+### 4. Try it
 
 ```sh
 echo '{"blocks":[{"type":"dice","count":3}]}' | cargo run -- --preview print
@@ -169,23 +170,23 @@ echo '{"blocks":[{"type":"dice","count":3}]}' | cargo run -- --preview print
 
 ```
 ╭──────────────────────────────────────────────────────────╮
-│                      LANCER DE DÉS                       │
+│                        DICE ROLL                         │
 │                                                          │
 │                        1   4   2                         │
-│                        Total : 7                         │
-╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ✂ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
+│                         Total: 7                         │
+╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌ ✂ ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯
 ```
 
-Puis le vrai rendu, au point près, dans l'émulateur :
+Then the real rendering, pixel for pixel, in the emulator:
 
 ```sh
 echo '{"blocks":[{"type":"dice","count":3}]}' > /tmp/des.json && scripts/demo.sh /tmp/des.json
 ```
 
-### 5. Tester
+### 5. Test
 
-Ajoute des tests en bas du fichier. Isole ce qui est aléatoire ou réseau pour pouvoir le tester
-de façon déterministe, ici avec une graine fixe :
+Add tests at the bottom of the file. Isolate whatever is random or networked so that it can be
+tested deterministically, here with a fixed seed:
 
 ```rust
 #[cfg(test)]
@@ -204,115 +205,108 @@ mod tests {
 }
 ```
 
-### 6. L'ajouter à l'interface web
+### 6. Add it to the web interface
 
-Dans `web/app.js`, ajoute une entrée au catalogue `BLOCKS`. Les champs du formulaire sont
-générés à partir de `fields` :
+In `web/app.js`, add an entry to the `BLOCKS` catalog. The form fields are generated from `fields`:
 
 ```js
   {
-    type: 'dice', label: 'Dés', emoji: '🎲', group: G.fun, desc: 'Un lancer de dés et son total',
+    type: 'dice', label: 'Dice', emoji: '🎲', group: G.fun, desc: 'A dice roll and its total',
     defaults: { count: 2 },
-    fields: [{ key: 'count', label: 'Nombre de dés', kind: 'number', min: 1, max: 6 }],
-    summary: (b) => `${b.count} dé${b.count > 1 ? 's' : ''}`,
+    fields: [{ key: 'count', label: 'Number of dice', kind: 'number', min: 1, max: 6 }],
+    summary: (b) => `${b.count} die${b.count > 1 ? 's' : ''}`,
   },
 ```
 
-Types de champs disponibles (`kind`) : `text`, `textarea`, `number`, `select`, `segmented`
-(boutons côte à côte), `toggle`, `date`, `list` (liste de textes), `icons` (choix par emoji) et
-`image` (photo envoyée depuis le téléphone). Ajoute `ai: true` si le bloc appelle Claude : il
-reçoit alors le badge « Claude » dans le catalogue. Un paramètre sans champ dans le formulaire
-est conservé tel quel à l'enregistrement.
+Available field types (`kind`): `text`, `textarea`, `number`, `select`, `segmented` (side-by-side
+buttons), `toggle`, `date`, `list` (a list of texts), `icons` (choice by emoji) and `image` (a
+photo sent from the phone). Add `ai: true` if the block calls Claude: it then gets the "Claude"
+badge in the catalog. A parameter with no field in the form is kept as is when saved.
 
-Avec `PRINTR_WEB_DIR=web`, recharge simplement la page pour voir ton bloc dans le catalogue.
+With `PRINTR_WEB_DIR=web`, simply reload the page to see your block in the catalog.
 
-### 7. Le documenter
+### 7. Document it
 
-- un exemple dans `docs/exemples/` (`mon_bloc.json`), dont `generer.sh mon_bloc` tire le PNG ;
-- sa fiche dans `docs/exemples/catalogue.json` (groupe, emoji, nom et description en français et
-  en anglais) : `docs/build.py` en tire la page des blocs du site, et refuse de construire si
-  l'exemple ou son PNG manque ;
-- une ligne dans le tableau des blocs du `README.md` (paramètres et valeurs par défaut) ;
-- une pastille dans le catalogue de `docs/index.html`, en français et en anglais, qui pointe
-  vers sa fiche : `<a class="chip" href="blocs.html#mon_bloc">`.
+- an example in `docs/exemples/` (`mon_bloc.json`), from which `generer.sh mon_bloc` produces the PNG;
+- its entry in `docs/exemples/catalogue.json` (group, emoji, name and description, in French and
+  in English): `docs/build.py` builds the site's blocks page from it, and refuses to build if the
+  example or its PNG is missing;
+- a line in the blocks table of the `README.md` (parameters and default values);
+- a chip in the catalog of `docs/index.html`, in French and in English, pointing to its entry:
+  `<a class="chip" href="blocs.html#mon_bloc">`.
 
-### Cas particuliers
+### Special cases
 
-**Un bloc qui interroge une API** reçoit le contexte (`ctx: &Ctx`) et utilise son client HTTP,
-qui a déjà un délai d'expiration :
+**A block that queries an API** receives the context (`ctx: &Ctx`) and uses its HTTP client, which
+already has a timeout:
 
 ```rust
 let data: Reponse = ctx.http.get("https://…").query("ville", ville).call()?.body_mut().read_json()?;
 ```
 
-Préfère les API gratuites et sans clé, et gère leur panne par une erreur claire (`anyhow`). Pour
-le tester sans réseau, sépare le décodage et le rendu de l'appel, et teste-les sur une réponse
-d'exemple (voir `barnum.rs`).
+Prefer free APIs that need no key, and handle their outages with a clear error (`anyhow`). To test
+without the network, separate the decoding and the rendering from the call, and test them on a
+sample response (see `barnum.rs`).
 
-**Un bloc qui appelle Claude** (voir `horoscope.rs` et `word.rs`) :
+**A block that calls Claude** (see `horoscope.rs` and `word.rs`):
 
-- demande une réponse JSON structurée avec `ctx.claude.generate(système, prompt, schéma, effort)` ;
-- en aperçu (`ctx.preview`), n'appelle jamais Claude : renvoie `ai_placeholder(titre, description)` ;
-- garde le résultat en cache pour la journée (`ctx.cache`, avec `get` et `put`, sous une clé qui
-  contient la date et `PROMPT_VERSION`), et ignore le cache si `ctx.refresh` est vrai ;
-- vérifie que la réponse est complète, et retente une fois si un champ revient vide.
+- asks for a structured JSON answer with `ctx.claude.generate(system, prompt, schema, effort)`;
+- in preview (`ctx.preview`), never calls Claude: it returns `ai_placeholder(title, description)`;
+- keeps its result cached for the day (`ctx.cache`, with `get` and `put`, under a key that
+  contains the date and `PROMPT_VERSION`), and ignores the cache if `ctx.refresh` is true;
+- checks that the answer is complete, and retries once if a field comes back empty.
 
-**Les règles qui valent pour tous les blocs** :
+**The rules that apply to every block**:
 
-- un bloc en échec ne fait jamais tomber le ticket : renvoie une erreur, le ticket imprimera un
-  message à sa place ;
-- pas d'emoji ni de caractères exotiques à imprimer, que la page PC858 ne contient pas : pour
-  un dessin, passe par une image (voir `picto.rs`) ;
-- les blocs se construisent en parallèle : un bloc lent ne retarde pas les autres, mais le
-  ticket attend le plus lent avant d'imprimer.
+- a failing block never brings down the ticket: return an error, and the ticket prints a message
+  in its place;
+- no emoji or exotic characters to print, since the PC858 code page doesn't have them: for a
+  drawing, go through an image (see `picto.rs`);
+- blocks are built in parallel: a slow block does not hold up the others, but the ticket waits for
+  the slowest one before printing.
 
 ## Conventions
 
-- **Langue** : le code est en anglais ; les commentaires, messages, textes imprimés et la
-  documentation sont en français, avec la typographie française (espace avant « : ; ! ? »,
-  guillemets « »).
-- **Style** : `cargo fmt` et `cargo clippy` sans avertissement. Le build ne doit produire aucun
-  warning.
-- **Sortie console** : passe par `ui.rs` et `anstream` (couleurs coupées automatiquement hors
-  terminal ou avec `NO_COLOR`).
-- **Commits** : des messages en français, à l'impératif ou au nominal (« Blocs énigme et défi
-  sportif »), avec un paragraphe d'explication quand le changement n'est pas évident.
+- **Language**: the code is in English; comments, messages, printed text and documentation are in
+  French, with French typography (a space before « : ; ! ? », guillemets « »).
+- **Style**: `cargo fmt` and `cargo clippy` without warnings. The build must produce no warnings.
+- **Console output**: goes through `ui.rs` and `anstream` (colors are stripped automatically
+  outside a terminal, or with `NO_COLOR`).
+- **Commits**: messages in French, in the imperative or the noun form ("Blocs énigme et défi
+  sportif"), with an explanatory paragraph when the change is not obvious.
 
-## Interface web et site
+## Web interface and site
 
-- L'interface vit dans `web/`. Avec `PRINTR_WEB_DIR=web`, un simple rechargement de la page
-  suffit. Vérifie-la sur téléphone (390 px de large) comme sur ordinateur, en clair et en
-  sombre.
-- Les captures du site et du README se régénèrent avec `docs/demo/photo-session.sh`, toujours
-  sur des données fictives. N'y mets jamais de vraies données personnelles.
-- Les déclinaisons du logo se régénèrent avec
-  `uv run --with pillow python docs/brand/make-assets.py`.
-- Le site se construit avec `docs/build.py` : la page d'accueil (`docs/index.html`) et la
-  documentation, rendue depuis `README.md` et `CONTRIBUTING.md`. Une modification de ces
-  fichiers met donc aussi le site à jour. Aperçu local :
+- The interface lives in `web/`. With `PRINTR_WEB_DIR=web`, a simple page reload is enough. Check
+  it on a phone (390 px wide) as well as on a computer, in light and dark mode.
+- The screenshots for the site and the README are regenerated with `docs/demo/photo-session.sh`,
+  always with fictional data. Never put real personal data in them.
+- The logo variants are regenerated with `uv run --with pillow python docs/brand/make-assets.py`.
+- The site is built with `docs/build.py`: the home page (`docs/index.html`) and the documentation,
+  rendered from `README.md` and `CONTRIBUTING.md`. A change to these files therefore also updates
+  the site. Local preview:
   `uvx --with markdown --with pymdown-extensions python docs/build.py && python3 -m http.server -d _site`.
 
 ## Versions
 
-Le numéro de version (`Cargo.toml`, affiché par `printr --version` et dans l'appli) suit le
-[versionnage sémantique](https://semver.org/lang/fr/) :
+The version number (`Cargo.toml`, shown by `printr --version` and in the app) follows
+[semantic versioning](https://semver.org/lang/fr/):
 
-- **correctif** (1.0.**1**) : une correction, sans rien changer à l'usage ;
-- **mineure** (1.**1**.0) : un bloc, une option ou un écran de plus, les tickets existants
-  marchent toujours ;
-- **majeure** (**2**.0.0) : un changement qui oblige à modifier ses tickets ou sa configuration.
+- **patch** (1.0.**1**): a fix, with nothing changed about how it is used;
+- **minor** (1.**1**.0): one more block, option or screen; existing tickets keep working;
+- **major** (**2**.0.0): a change that requires editing your tickets or your configuration.
 
-Chaque version publiée a son étiquette git (`v1.0.0`), créée sur `master` une fois la version
-poussée : `git tag -a v1.1.0 -m "printr 1.1.0" && git push origin v1.1.0`. Les installations la
-voient dans la journée (« Mon compte » de l'administrateur) : ne pousse une étiquette que pour
-une version prête à être installée.
+Every published version has its git tag (`v1.0.0`), created on `master` once the version has been
+pushed: `git tag -a v1.1.0 -m "printr 1.1.0" && git push origin v1.1.0`. Installations see it
+within the day ("My account" of the administrator): only push a tag for a version that is ready
+to be installed.
 
-## Proposer une modification
+## Proposing a change
 
-1. Crée une branche à partir de `master`.
-2. Vérifie que `cargo test` passe et que `cargo build` ne produit aucun warning.
-3. Si tu touches au rendu, joins une capture de l'aperçu ou de l'émulateur à ta demande de
-   fusion.
-4. Ouvre une pull request en décrivant le pourquoi autant que le comment.
+1. Create a branch from `master`.
+2. Check that `cargo test` passes and that `cargo build` produces no warnings.
+3. If you touch the rendering, attach a screenshot of the preview or of the emulator output to
+   your pull request.
+4. Open a pull request describing the why as much as the how.
 
-Une question, une idée de bloc ? Ouvre une issue.
+Got a question or an idea for a block? Open an issue.

@@ -8,6 +8,7 @@ use rand::SeedableRng;
 use serde::Deserialize;
 
 use crate::doc::{Align, Doc, Style};
+use crate::i18n::{en, t};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -27,28 +28,116 @@ pub enum Level {
 impl Level {
     pub fn label(self) -> &'static str {
         match self {
-            Level::Easy => "facile",
-            Level::Medium => "moyen",
-            Level::Hard => "difficile",
+            Level::Easy => t("facile", "easy"),
+            Level::Medium => t("moyen", "medium"),
+            Level::Hard => t("difficile", "hard"),
         }
     }
 
     fn tagline(self) -> &'static str {
         match self {
-            Level::Easy => "Tout le monde peut le faire.",
-            Level::Medium => "Là, on commence à causer.",
-            Level::Hard => "Ça rigole plus : réservé aux vrais déglingos.",
+            Level::Easy => t("Tout le monde peut le faire.", "Anyone can do this."),
+            Level::Medium => t("Là, on commence à causer.", "Now we're talking."),
+            Level::Hard => t(
+                "Ça rigole plus : réservé aux vrais déglingos.",
+                "No more laughing: reserved for the total maniacs.",
+            ),
         }
     }
 
     fn challenges(self) -> &'static [&'static str] {
-        match self {
-            Level::Easy => EASY,
-            Level::Medium => MEDIUM,
-            Level::Hard => HARD,
-        }
+        let (fr, english) = match self {
+            Level::Easy => (EASY, EASY_EN),
+            Level::Medium => (MEDIUM, MEDIUM_EN),
+            Level::Hard => (HARD, HARD_EN),
+        };
+        if en() { english } else { fr }
     }
 }
+
+const EASY_EN: &[&str] = &[
+    "Take the stairs all day: no elevator or escalator allowed.",
+    "3 sets of 10 calf raises, holding on to a wall.",
+    "Walk for 10 minutes right after lunch.",
+    "Balance on one foot for 30 seconds, each foot, every time you brush your teeth.",
+    "3 sets of 10 chair squats: sit down and stand up without using your hands.",
+    "Every hour, get up and stretch for one minute.",
+    "5 minutes of stretching tonight: neck, shoulders, back, thighs.",
+    "3 sets of 10 wall push-ups.",
+    "Get at least 5,000 steps in during the day.",
+    "20 arm circles each way, three times during the day.",
+    "Walk around during every phone call.",
+    "Get off one stop early or park farther away: an extra 10 minutes of walking.",
+    "3 times 20 seconds of plank on your knees.",
+    "20 high knees in place, three times during the day.",
+    "Get up from the floor 5 times without using your hands.",
+    "3 sets of 10 glute bridges, lying on your back.",
+    "Dance to three songs in a row, even alone in your kitchen.",
+    "2 sets of 8 forward lunges per leg, holding on to a chair.",
+    "Read or work standing up for 15 minutes longer than usual.",
+    "3 sets of 10 side leg raises per leg, holding on to a wall.",
+    "Step up and down one stair for 2 minutes without stopping.",
+    "15 minutes of housework to music, at a good pace.",
+    "3 times 30 seconds of wall sit (knees bent, back against the wall).",
+    "Slowly bend toward your toes with legs straight, 10 times, three times during the day.",
+    "10 minutes of walking outside, with no phone in your hand.",
+];
+
+const MEDIUM_EN: &[&str] = &[
+    "50 push-ups over the day, in as many sets as you need (on your knees if needed).",
+    "100 squats over the day.",
+    "3 times 45 seconds of plank.",
+    "3 sets of 15 alternating lunges.",
+    "20 minutes of brisk walking, in one go.",
+    "3 times 1 minute of wall sit.",
+    "3 sets of 10 burpees.",
+    "5 times 30 seconds of jumping jacks, with 30 seconds of rest between each.",
+    "3 sets of 12 chair dips.",
+    "Take 10,000 steps over the day.",
+    "3 sets of 20 mountain climbers.",
+    "3 times 30 seconds of side plank on each side.",
+    "Climb 20 floors in total over the day.",
+    "3 sets of 10 glute bridges on one leg, each leg.",
+    "4 times 1 minute of small hops in place, like jump rope.",
+    "3 sets of 20 crunches and 3 sets of 15 leg raises.",
+    "Circuit of 3 rounds: 10 push-ups, 15 squats, 20 seconds of plank.",
+    "3 sets of 10 jump squats.",
+    "3 times 30 seconds of superman: lying face down, arms and legs raised.",
+    "15 minutes of light running.",
+    "3 sets of 8 close-grip push-ups.",
+    "3 sets of 12 reverse lunges per leg.",
+    "3 times 30 seconds of fast high knees, then 30 seconds of butt kicks.",
+    "100 crunches over the day.",
+    "1 minute 30 of plank in one go.",
+];
+
+const HARD_EN: &[&str] = &[
+    "100 push-ups over the day.",
+    "100 burpees over the day.",
+    "300 squats over the day.",
+    "3 times 2 minutes of plank.",
+    "Circuit of 5 rounds with no break: 10 burpees, 20 jump squats, 15 push-ups, 30 seconds of plank.",
+    "10 sets of 10 push-ups: one set at the start of every hour.",
+    "5 minutes of wall sit in total, in two parts at most.",
+    "3 sets of 10 decline push-ups, feet up on a chair.",
+    "3 sets of 8 single-leg squats per leg, holding on to a door frame.",
+    "3 sets of 10 explosive push-ups: lift your hands off the floor on every push.",
+    "Run 5 km.",
+    "50 jump squats and 50 jump lunges.",
+    "20 minutes: at the start of each minute, 5 burpees and 5 jump squats.",
+    "3 times 1 minute of side plank on each side.",
+    "3 sets of 15 chair dips, feet elevated.",
+    "Climb 30 floors over the day, including 10 in a row running.",
+    "200 mountain climbers.",
+    "Tabata twice during the day: 8 rounds of 20 seconds of burpees and 10 seconds of rest.",
+    "100 jump lunges.",
+    "3 times 45 seconds of hollow hold: lying on your back, arms and legs straight and off the floor.",
+    "3 sets of 10 archer push-ups: weight shifted to one side, then the other.",
+    "5 minutes of plank in total, in two parts at most.",
+    "1,000 small jumps in place over the day.",
+    "15 minutes of going up and down the stairs.",
+    "A push-up pyramid: 1, 2, 3... up to 10, then back down to 1.",
+];
 
 const EASY: &[&str] = &[
     "Prends les escaliers toute la journée : interdiction d'utiliser l'ascenseur ou l'escalator.",
@@ -147,19 +236,29 @@ pub fn build(today: NaiveDate, level: Level, number: Option<usize>) -> Result<Do
     let list = level.challenges();
     let index = match number {
         Some(n) if (1..=list.len()).contains(&n) => n - 1,
-        Some(n) => bail!("défi n° {n} inconnu (1 à {})", list.len()),
+        Some(n) => {
+            let msg = tr!(
+                "défi n° {n} inconnu (1 à {})",
+                "challenge No. {n} not found (1 to {})",
+                list.len()
+            );
+            bail!("{}", msg)
+        }
         None => of_day(today, level),
     };
 
     let mut doc = Doc::new();
-    doc.header(&format!("Défi sportif · {}", level.label()));
+    doc.header(&tr!("Défi sportif · {}", "Workout challenge · {}", level.label()));
     doc.text(level.tagline(), Style::default().small().center());
     doc.feed(1);
     doc.text(list[index], Style::default().bold());
-    doc.text(&format!("n° {}", index + 1), Style::default().small().align(Align::Right));
+    doc.text(&tr!("n° {}", "No. {}", index + 1), Style::default().small().align(Align::Right));
     doc.feed(1);
-    doc.text("[ ] Fait !", Style::default().size(2));
-    doc.text("Écoute ton corps : adapte ou arrête en cas de douleur.", Style::default().small().center());
+    doc.text(t("[ ] Fait !", "[ ] Done!"), Style::default().size(2));
+    doc.text(
+        t("Écoute ton corps : adapte ou arrête en cas de douleur.", "Listen to your body: adapt or stop if it hurts."),
+        Style::default().small().center(),
+    );
     Ok(doc)
 }
 
@@ -177,6 +276,28 @@ mod tests {
             seen.dedup();
             assert_eq!(seen.len(), n);
         }
+    }
+
+    #[test]
+    fn english_challenges_cycle_without_repeat() {
+        use crate::i18n::{with_lang, Lang};
+        with_lang(Lang::En, || {
+            let start = NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
+            for level in [Level::Easy, Level::Medium, Level::Hard] {
+                let n = level.challenges().len();
+                assert_eq!(n, 25);
+                let mut seen: Vec<usize> = (0..n as i64).map(|d| of_day(start + chrono::Duration::days(d), level)).collect();
+                seen.sort();
+                seen.dedup();
+                assert_eq!(seen.len(), n);
+                assert!(level.challenges().iter().all(|c| !c.is_empty() && c.is_ascii()));
+            }
+            let day = NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
+            assert!(build(day, Level::Hard, Some(1)).is_ok());
+            let err = build(day, Level::Hard, Some(99)).err().map(|e| e.to_string()).unwrap_or_default();
+            assert_eq!(err, "challenge No. 99 not found (1 to 25)");
+            assert_eq!(Level::Medium.label(), "medium");
+        });
     }
 
     #[test]

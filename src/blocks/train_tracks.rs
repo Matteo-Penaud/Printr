@@ -367,16 +367,32 @@ pub fn build(difficulty: Difficulty, seed: Option<u64>, solution: bool) -> Doc {
     let puzzle = generate(seed, difficulty);
 
     let mut doc = Doc::new();
-    let title = if solution { "Solution de la voie ferrée" } else { "Voie ferrée" };
+    let title = if solution {
+        crate::i18n::t("Solution de la voie ferrée", "Train tracks solution")
+    } else {
+        crate::i18n::t("Voie ferrée", "Train tracks")
+    };
     doc.header(&format!("{title} · {}", difficulty.label()));
     if !solution {
         let small = Style::default().small().center();
-        doc.text("Relie A à B par une seule voie, sans croisement.", small);
-        doc.text("Nombres : cases de voie par ligne et par colonne.", small);
+        doc.text(
+            crate::i18n::t(
+                "Relie A à B par une seule voie, sans croisement.",
+                "Connect A to B with a single track, without crossing.",
+            ),
+            small,
+        );
+        doc.text(
+            crate::i18n::t(
+                "Nombres : cases de voie par ligne et par colonne.",
+                "Numbers: track cells per row and column.",
+            ),
+            small,
+        );
     }
     doc.feed(1);
     doc.image(render(&puzzle, solution));
-    doc.text(&format!("n° {seed}"), Style::default().small().align(Align::Right));
+    doc.text(&tr!("n° {seed}", "No. {seed}"), Style::default().small().align(Align::Right));
     doc
 }
 

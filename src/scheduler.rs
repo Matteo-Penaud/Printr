@@ -38,7 +38,7 @@ fn run_due(app: &App) {
         }
         if !due.is_empty() {
             if let Err(e) = store.save() {
-                eprintln!("planification non enregistrée : {e:#}");
+                eprintln!("{}", tr!("planification non enregistrée : {e:#}", "schedule not saved: {e:#}"));
             }
         }
         due
@@ -49,11 +49,11 @@ fn run_due(app: &App) {
             Ok(ticket) => {
                 let printed = app.print(&ticket, "planification", &name);
                 match printed.failure {
-                    None => eprintln!("planification « {name} » imprimée"),
-                    Some(e) => eprintln!("planification « {name} » en échec : {e}"),
+                    None => eprintln!("{}", tr!("planification « {name} » imprimée", "schedule \"{name}\" printed")),
+                    Some(e) => eprintln!("{}", tr!("planification « {name} » en échec : {e}", "schedule \"{name}\" failed: {e}")),
                 }
             }
-            Err(e) => eprintln!("planification « {name} » : ticket invalide ({e})"),
+            Err(e) => eprintln!("{}", tr!("planification « {name} » : ticket invalide ({e})", "schedule \"{name}\": invalid ticket ({e})")),
         }
     }
 }

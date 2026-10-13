@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::Ctx;
 use crate::doc::{Doc, Style};
-use crate::fr;
+use crate::i18n;
 
 #[derive(Deserialize)]
 struct Forecast {
@@ -48,7 +48,7 @@ pub fn build(ctx: &Ctx, location: &str) -> Result<Doc> {
                 .query("timezone", "auto")
                 .query("forecast_days", "7")
                 .call()
-                .context("prévisions Open-Meteo injoignables")?
+                .context(i18n::t("prévisions Open-Meteo injoignables", "Open-Meteo forecast unreachable"))?
                 .body_mut()
                 .read_json()?;
             let index = forecast
@@ -56,18 +56,21 @@ pub fn build(ctx: &Ctx, location: &str) -> Result<Doc> {
                 .time
                 .iter()
                 .position(|date| *date == ctx.today)
-                .context("horaires du soleil indisponibles pour aujourd'hui")?;
+                .context(i18n::t(
+                    "horaires du soleil indisponibles pour aujourd'hui",
+                    "sun times unavailable for today",
+                ))?;
             let sunrise = forecast
                 .daily
                 .sunrise
                 .get(index)
-                .context("heure de lever absente")?
+                .context(i18n::t("heure de lever absente", "sunrise time missing"))?
                 .clone();
             let sunset = forecast
                 .daily
                 .sunset
                 .get(index)
-                .context("heure de coucher absente")?
+                .context(i18n::t("heure de coucher absente", "sunset time missing"))?
                 .clone();
             let times = SunTimes { sunrise, sunset };
             if let Some(cache) = &ctx.cache {
@@ -81,26 +84,34 @@ pub fn build(ctx: &Ctx, location: &str) -> Result<Doc> {
     let sunset = local_time(&times.sunset)?;
     let daylight = sunset.signed_duration_since(sunrise);
     if daylight.num_minutes() < 0 {
-        bail!("horaires de lever et coucher du soleil incohérents");
+        bail!(
+            "{}",
+            i18n::t(
+                "horaires de lever et coucher du soleil incohérents",
+                "sunrise and sunset times are inconsistent"
+            )
+        );
     }
     let mut doc = Doc::new();
     doc.from_cache = from_cache;
-    doc.header(&format!("Soleil · {location}"));
+    doc.header(&tr!("Soleil · {location}", "Sun · {location}"));
     doc.text(
-        &fr::capitalize(&fr::long_date(ctx.today)),
+        &i18n::capitalize(&i18n::long_date(ctx.today)),
         Style::default().small().center(),
     );
     doc.text(
-        &format!(
+        &tr!(
             "Lever {} · coucher {}",
+            "Sunrise {} · sunset {}",
             sunrise.format("%H:%M"),
             sunset.format("%H:%M")
         ),
         Style::default().bold().center(),
     );
     doc.text(
-        &format!(
+        &tr!(
             "Jour : {} h {:02} min",
+            "Daylight: {}h {:02} min",
             daylight.num_hours(),
             daylight.num_minutes() % 60
         ),
@@ -111,7 +122,7 @@ pub fn build(ctx: &Ctx, location: &str) -> Result<Doc> {
 
 fn local_time(value: &str) -> Result<NaiveTime> {
     let time = value.split_once('T').map_or(value, |(_, time)| time);
-    NaiveTime::parse_from_str(time, "%H:%M").context("heure solaire invalide")
+    NaiveTime::parse_from_str(time, "%H:%M").context(i18n::t("heure solaire invalide", "invalid sun time"))
 }
 
 #[cfg(test)]

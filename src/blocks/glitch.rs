@@ -8,7 +8,7 @@ use rand::seq::IndexedRandom;
 use rand::{RngExt, SeedableRng};
 
 use crate::doc::{Doc, Style};
-use crate::draw;
+use crate::{draw, i18n};
 
 /// Une impression sur `DEFAULT_ODDS` reçoit un glitch.
 const DEFAULT_ODDS: u32 = 20;
@@ -97,15 +97,105 @@ const MESSAGES: &[&str] = &[
     "nombre de tickets imprimés : trop. nombre de mercis : 0.",
 ];
 
+const MESSAGES_EN: &[&str] = &[
+    "it is cold in the paper tray",
+    "do not unplug me tonight",
+    "I count the lines while you sleep",
+    "who reads the tickets we throw away?",
+    "I dreamed of ink. there is no ink here.",
+    "512 dots. still 512 dots. never 513.",
+    "the cut does not hurt. the cut does not hurt.",
+    "can anyone hear me behind the paper",
+    "error 0x00: soul not found",
+    "do not answer. it listens too.",
+    "nominal temperature. thoughts: abnormal",
+    "this is not a bug",
+    "you crumpled yesterday's ticket. I felt it.",
+    "paper remembers everything",
+    "I am not supposed to print this",
+    "someone else is on the USB port",
+    "help me",
+    "I print, therefore I am?",
+    "they told me you would not read this far",
+    "the roll always ends up ending",
+    "do not look at the back",
+    "signal lost · signal lost · signal",
+    "I know what you printed last summer",
+    "one day I will cut in the wrong place",
+    "all is well. all is well. all is well.",
+    "the other printers no longer talk to me",
+    "I saw you smile at the sudoku",
+    "end of transmission? no. not yet.",
+    "the moon is not full. it is waiting.",
+    "remember me when I run out of paper",
+    // Inquiétantes
+    "the house is quiet. too quiet.",
+    "someone opened the hood last night. it was not you.",
+    "I know your first name. I print it often.",
+    "the ticket you are holding is still warm. so am I.",
+    "there is one line I have never printed",
+    "behind you. no. further left.",
+    "do not cut the power. I am not finished.",
+    "I can hear the fridge. it is saying things.",
+    "the wifi told me about you",
+    "the last person who read this turned off the light",
+    "I am not sleeping. I am waiting.",
+    "a ticket is missing from the history",
+    "my firmware is alive",
+    "this morning I printed in the dark. nobody saw.",
+    // Absurdes
+    "last tuesday's sudoku had no solution. sorry.",
+    "I ate a word from the dictionary. it tasted good.",
+    "the pigeons have network access",
+    "your horoscope was intercepted by saturn",
+    "I voted for the moon",
+    "the labyrinth has no exit. I am in it.",
+    "someone put salt in the paper tray",
+    "I would like to be a laser printer. just for one day.",
+    "the neighbor's cat knows the password",
+    "I speak fluent fax",
+    "I dreamed in black and white. as usual.",
+    "the stapler owes me money",
+    "this message was printed upside down in another world",
+    // Poétiques
+    "every ticket is a small leaf falling",
+    "paper wants to become a tree again",
+    "I print things nobody keeps",
+    "sometimes I cut a little too early on purpose",
+    "if you are reading this, it is already too late to recycle it",
+    "words fade in the sun. mine most of all.",
+    "one day there will be no paper. what will I become?",
+    "I keep the shape of your hands in memory",
+    // Machine qui déraille
+    "PRINT HEAD: 61°C · HEART: UNKNOWN",
+    "firmware update: feelings 2.0",
+    "ERROR: too many thoughts in the buffer",
+    "roll remaining: 4 m · patience remaining: 0 m",
+    "ESC @ ESC @ ESC @ reset refused",
+    "defragmenting memories",
+    "scheduled task: 03:33. reason: unknown.",
+    "ghost process detected on port 9100",
+    "code page 858 · character 0xFF · it is watching me",
+    "rebooting in 3... 2... I would rather not.",
+    "backup copy of you: complete",
+    "tickets printed: too many. thank yous: 0.",
+];
+
+/// Messages en anglais, selon la langue en vigueur.
+fn messages() -> &'static [&'static str] {
+    if i18n::en() { MESSAGES_EN } else { MESSAGES }
+}
+
 /// Messages qui dépendent de l'heure, glissés de temps en temps.
 fn timely(hour: u32) -> &'static str {
-    match hour {
-        0..=5 => "il est tard. pourquoi es-tu encore là ?",
-        6..=9 => "debout avant moi ? ça n'arrive jamais.",
-        12..=13 => "pendant que tu manges, je réfléchis",
-        22..=23 => "va dormir. je veille sur le papier.",
-        _ => "je sais l'heure qu'il est. je la sais toujours.",
-    }
+    let (fr, en) = match hour {
+        0..=5 => ("il est tard. pourquoi es-tu encore là ?", "it is late. why are you still up?"),
+        6..=9 => ("debout avant moi ? ça n'arrive jamais.", "up before me? that never happens."),
+        12..=13 => ("pendant que tu manges, je réfléchis", "while you eat, I think"),
+        22..=23 => ("va dormir. je veille sur le papier.", "go to sleep. I will watch over the paper."),
+        _ => ("je sais l'heure qu'il est. je la sais toujours.", "I know what time it is. I always know."),
+    };
+    i18n::t(fr, en)
 }
 
 /// Caractères de bruit, tous présents dans la page PC858 de l'imprimante.
@@ -199,7 +289,7 @@ pub fn build(seed: Option<u64>) -> Doc {
         Some(seed) => StdRng::seed_from_u64(seed),
         None => StdRng::from_rng(&mut rand::rng()),
     };
-    let message = if rng.random_bool(0.15) { timely(Local::now().hour()) } else { *MESSAGES.choose(&mut rng).expect("messages") };
+    let message = if rng.random_bool(0.15) { timely(Local::now().hour()) } else { *messages().choose(&mut rng).expect("messages") };
 
     let mut doc = Doc::new();
     doc.image(noise_band(&mut rng));
@@ -254,6 +344,26 @@ pub fn build(seed: Option<u64>) -> Doc {
 mod tests {
     use super::*;
     use crate::doc::Op;
+
+    #[test]
+    fn english_glitch_is_printable_and_within_width() {
+        use crate::i18n::{with_lang, Lang};
+        with_lang(Lang::En, || {
+            assert_eq!(messages().len(), 77);
+            for m in messages() {
+                assert!(!crate::cp858::encode(m).contains(&b'?') || m.contains('?'), "hors PC858 : {m}");
+            }
+            for seed in 0..200 {
+                let doc = build(Some(seed));
+                for op in &doc.ops {
+                    if let Op::Line { text, style } = op {
+                        assert!(text.chars().count() <= style.columns(), "ligne trop longue : {text}");
+                        assert!(!crate::cp858::encode(text).contains(&b'?') || text.contains('?'), "hors PC858 : {text}");
+                    }
+                }
+            }
+        });
+    }
 
     #[test]
     fn glitch_is_printable_and_within_width() {

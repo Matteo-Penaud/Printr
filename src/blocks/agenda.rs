@@ -10,7 +10,7 @@ use rrule::{RRule, RRuleSet, Tz, Unvalidated};
 
 use super::Ctx;
 use crate::doc::{Doc, Style};
-use crate::fr;
+use crate::i18n;
 
 /// Un instant d'un calendrier : une date seule (événement sur la journée) ou une heure précise.
 #[derive(Clone, Copy, Debug)]
@@ -205,32 +205,36 @@ fn fetch(ctx: &Ctx, source: &str) -> Result<String> {
         None => source.to_owned(),
     };
     if url.starts_with("http://") || url.starts_with("https://") {
-        let mut response = ctx.http.get(&url).call().context("calendrier injoignable")?;
+        let mut response = ctx.http.get(&url).call().context(i18n::t("calendrier injoignable", "calendar unreachable"))?;
         Ok(response.body_mut().with_config().limit(10 * 1024 * 1024).read_to_string()?)
     } else {
         ctx.check_local_file(&url)?;
-        std::fs::read_to_string(&url).with_context(|| format!("calendrier illisible : {url}"))
+        std::fs::read_to_string(&url).with_context(|| tr!("calendrier illisible : {url}", "calendar unreadable: {url}"))
     }
 }
 
 fn day_title(day: NaiveDate, today: NaiveDate) -> String {
-    let date = format!("{} {}", fr::weekday(day), fr::day_month(day));
+    let date = format!("{} {}", i18n::weekday(day), i18n::day_month(day));
     match (day - today).num_days() {
-        0 => format!("Aujourd'hui, {date}"),
-        1 => format!("Demain, {date}"),
-        _ => fr::capitalize(&date),
+        0 => tr!("Aujourd'hui, {date}", "Today, {date}"),
+        1 => tr!("Demain, {date}", "Tomorrow, {date}"),
+        _ => i18n::capitalize(&date),
     }
 }
 
 pub fn build(ctx: &Ctx, calendars: &[String], days: u8, title: Option<&str>) -> Result<Doc> {
-    anyhow::ensure!(!calendars.is_empty(), "indiquer au moins un calendrier (`calendars`)");
+    anyhow::ensure!(
+        !calendars.is_empty(),
+        "{}",
+        i18n::t("indiquer au moins un calendrier (`calendars`)", "give at least one calendar (`calendars`)")
+    );
     let mut events = Vec::new();
     for source in calendars {
         events.extend(parse(&fetch(ctx, source)?));
     }
 
     let mut doc = Doc::new();
-    doc.header(title.unwrap_or("Agenda"));
+    doc.header(title.unwrap_or(i18n::t("Agenda", "Agenda")));
     for k in 0..days.clamp(1, 7) as i64 {
         let day = ctx.today + Duration::days(k);
         let from = day.and_time(NaiveTime::MIN);
@@ -238,11 +242,11 @@ pub fn build(ctx: &Ctx, calendars: &[String], days: u8, title: Option<&str>) -> 
         doc.feed(1);
         doc.text(&day_title(day, ctx.today), Style::default().bold());
         if items.is_empty() {
-            doc.text("Rien de prévu.", Style::default().small());
+            doc.text(i18n::t("Rien de prévu.", "Nothing planned."), Style::default().small());
         }
         for item in items {
             let when = if item.all_day || (item.start <= from && item.end >= from + Duration::days(1)) {
-                "Journée".to_owned()
+                i18n::t("Journée", "All day").to_owned()
             } else {
                 item.start.format("%H:%M").to_string()
             };

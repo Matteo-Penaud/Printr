@@ -1,0 +1,5 @@
+{ "blocks": [{ "type": "bins", "collections": [
+  { "name": "trash", "days": ["monday", "friday"] },
+  { "name": "recycling", "days": ["friday"], "every": 2, "from": "2026-10-09" },
+  { "name": "glass", "days": ["wednesday"], "every": 4, "from": "2026-10-14" }
+] }] }

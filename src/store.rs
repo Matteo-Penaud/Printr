@@ -18,6 +18,8 @@ use chrono::{DateTime, Duration, Local, Utc};
 use rand::RngExt;
 use serde::{Deserialize, Serialize};
 
+use crate::i18n::t;
+
 /// Nombre d'entrées conservées dans l'historique.
 const HISTORY_MAX: usize = 300;
 /// Durée de validité d'une session.
@@ -143,7 +145,7 @@ pub struct Data {
 
 /// Lit les données sur le disque, sans rien créer : pour les blocs (liste de courses, bilan).
 pub fn read_data() -> Result<Data> {
-    let dir = data_dir().context("répertoire de données introuvable (définir PRINTR_DATA_DIR)")?;
+    let dir = data_dir().context(t("répertoire de données introuvable (définir PRINTR_DATA_DIR)", "data directory not found (set PRINTR_DATA_DIR)"))?;
     Ok(Store::open_at(&dir.join("printr.json"))?.data)
 }
 
@@ -168,10 +170,10 @@ fn share_with_group(path: &Path, mode: u32) {
 
 impl Store {
     pub fn open() -> Result<Self> {
-        let dir = data_dir().context("répertoire de données introuvable (définir PRINTR_DATA_DIR)")?;
+        let dir = data_dir().context(t("répertoire de données introuvable (définir PRINTR_DATA_DIR)", "data directory not found (set PRINTR_DATA_DIR)"))?;
         let images = dir.join("images");
         if !images.is_dir() {
-            fs::create_dir_all(&images).with_context(|| format!("impossible de créer {}", images.display()))?;
+            fs::create_dir_all(&images).with_context(|| tr!("impossible de créer {}", "cannot create {}", images.display()))?;
             #[cfg(unix)]
             share_with_group(&images, 0o2770);
         }
@@ -180,9 +182,9 @@ impl Store {
 
     pub fn open_at(path: &Path) -> Result<Self> {
         let data = match fs::read_to_string(path) {
-            Ok(text) => serde_json::from_str(&text).with_context(|| format!("{} illisible", path.display()))?,
+            Ok(text) => serde_json::from_str(&text).with_context(|| tr!("{} illisible", "{} is unreadable", path.display()))?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Data::default(),
-            Err(e) => return Err(e).with_context(|| format!("impossible de lire {}", path.display())),
+            Err(e) => return Err(e).with_context(|| tr!("impossible de lire {}", "cannot read {}", path.display())),
         };
         Ok(Self { path: path.to_owned(), data, modified: modified(path) })
     }
@@ -229,10 +231,10 @@ impl Store {
     pub fn add_user(&mut self, name: &str, password: &str) -> Result<String> {
         let name = name.trim();
         if name.is_empty() {
-            bail!("le prénom est vide");
+            bail!("{}", t("le prénom est vide", "the name is empty"));
         }
         if self.find_by_name(name).is_some() {
-            bail!("{name} existe déjà");
+            bail!("{}", tr!("{name} existe déjà", "{name} already exists"));
         }
         let color = COLORS[self.data.users.len() % COLORS.len()].to_owned();
         let password_hash = hash(password)?;
@@ -253,7 +255,7 @@ impl Store {
     pub fn set_password(&mut self, name: &str, password: &str) -> Result<()> {
         let hash = hash(password)?;
         let user = self.data.users.iter_mut().find(|u| u.name.eq_ignore_ascii_case(name.trim()));
-        let user = user.with_context(|| format!("utilisateur inconnu : {name}"))?;
+        let user = user.with_context(|| tr!("utilisateur inconnu : {name}", "unknown user: {name}"))?;
         user.password_hash = hash;
         let id = user.id.clone();
         self.data.sessions.retain(|s| s.user_id != id);
@@ -261,7 +263,7 @@ impl Store {
     }
 
     pub fn remove_user(&mut self, name: &str) -> Result<()> {
-        let id = self.find_by_name(name).map(|u| u.id.clone()).with_context(|| format!("utilisateur inconnu : {name}"))?;
+        let id = self.find_by_name(name).map(|u| u.id.clone()).with_context(|| tr!("utilisateur inconnu : {name}", "unknown user: {name}"))?;
         self.remove_user_id(&id);
         Ok(())
     }
@@ -322,12 +324,12 @@ pub fn verify_password(hash: &str, password: &str) -> bool {
 
 fn hash(password: &str) -> Result<String> {
     if password.chars().count() < MIN_PASSWORD {
-        bail!("mot de passe trop court ({MIN_PASSWORD} caractères minimum)");
+        bail!("{}", tr!("mot de passe trop court ({MIN_PASSWORD} caractères minimum)", "password too short (at least {MIN_PASSWORD} characters)"));
     }
     Argon2::default()
         .hash_password(password.as_bytes())
         .map(|h| h.to_string())
-        .map_err(|e| anyhow::anyhow!("hachage impossible : {e}"))
+        .map_err(|e| anyhow::anyhow!("{}", tr!("hachage impossible : {e}", "hashing failed: {e}")))
 }
 
 impl Schedule {

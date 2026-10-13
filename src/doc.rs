@@ -261,7 +261,7 @@ impl Doc {
                     }
                 }
                 Op::Qr { data, .. } => {
-                    let label = format!("▣ QR : {data}");
+                    let label = tr!("▣ QR : {data}", "▣ QR: {data}");
                     let label: String = label.chars().take(PAPER).collect();
                     let len = label.chars().count();
                     let pad = (PAPER - len) / 2;

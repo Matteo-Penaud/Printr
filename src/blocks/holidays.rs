@@ -4,7 +4,7 @@ use chrono::{Datelike, Duration, NaiveDate};
 use serde::Deserialize;
 
 use crate::doc::{Doc, Style};
-use crate::fr;
+use crate::i18n;
 
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -38,22 +38,23 @@ fn easter(year: i32) -> NaiveDate {
 pub fn of_year(year: i32, zone: Zone) -> Vec<(NaiveDate, &'static str)> {
     let d = |m, day| NaiveDate::from_ymd_opt(year, m, day).expect("date valide");
     let e = easter(year);
+    use crate::i18n::t;
     let mut days = vec![
-        (d(1, 1), "Jour de l'An"),
-        (e + Duration::days(1), "Lundi de Pâques"),
-        (d(5, 1), "Fête du Travail"),
-        (d(5, 8), "Victoire 1945"),
-        (e + Duration::days(39), "Ascension"),
-        (e + Duration::days(50), "Lundi de Pentecôte"),
-        (d(7, 14), "Fête nationale"),
-        (d(8, 15), "Assomption"),
-        (d(11, 1), "Toussaint"),
-        (d(11, 11), "Armistice 1918"),
-        (d(12, 25), "Noël"),
+        (d(1, 1), t("Jour de l'An", "New Year's Day")),
+        (e + Duration::days(1), t("Lundi de Pâques", "Easter Monday")),
+        (d(5, 1), t("Fête du Travail", "Labour Day")),
+        (d(5, 8), t("Victoire 1945", "Victory in Europe Day")),
+        (e + Duration::days(39), t("Ascension", "Ascension Day")),
+        (e + Duration::days(50), t("Lundi de Pentecôte", "Whit Monday")),
+        (d(7, 14), t("Fête nationale", "Bastille Day")),
+        (d(8, 15), t("Assomption", "Assumption Day")),
+        (d(11, 1), t("Toussaint", "All Saints' Day")),
+        (d(11, 11), t("Armistice 1918", "Armistice Day")),
+        (d(12, 25), t("Noël", "Christmas Day")),
     ];
     if let Zone::AlsaceMoselle = zone {
-        days.push((e - Duration::days(2), "Vendredi saint"));
-        days.push((d(12, 26), "Saint-Étienne"));
+        days.push((e - Duration::days(2), t("Vendredi saint", "Good Friday")));
+        days.push((d(12, 26), t("Saint-Étienne", "St Stephen's Day")));
     }
     days.sort();
     days
@@ -69,7 +70,7 @@ pub fn build(today: NaiveDate, zone: Zone, count: u8) -> Doc {
 
     // « dimanche 1er novembre », avec l'année seulement si ce n'est pas l'année en cours.
     let when = |date: NaiveDate| {
-        let mut s = format!("{} {}", fr::weekday(date), fr::day_month(date));
+        let mut s = format!("{} {}", i18n::weekday(date), i18n::day_month(date));
         if date.year() != today.year() {
             s.push_str(&format!(" {}", date.year()));
         }
@@ -80,13 +81,26 @@ pub fn build(today: NaiveDate, zone: Zone, count: u8) -> Doc {
     for (i, (date, name)) in upcoming.into_iter().enumerate() {
         let days = (date - today).num_days();
         let (line, style) = match days {
-            0 => (format!("Aujourd'hui c'est férié : {name} !"), Style::default().bold().center()),
-            1 => (format!("Demain, {name} : jour férié !"), Style::default().bold().center()),
+            0 => (
+                tr!("Aujourd'hui c'est férié : {name} !", "Today is a public holiday: {name}!"),
+                Style::default().bold().center(),
+            ),
+            1 => (
+                tr!("Demain, {name} : jour férié !", "Tomorrow is a public holiday: {name}!"),
+                Style::default().bold().center(),
+            ),
             _ if i == 0 => (
-                format!("Prochain jour férié : {name}, {} (dans {days} jours)", when(date)),
+                tr!(
+                    "Prochain jour férié : {name}, {} (dans {days} jours)",
+                    "Next public holiday: {name}, {} (in {days} days)",
+                    when(date)
+                ),
                 Style::default().center(),
             ),
-            _ => (format!("{name} : {} (J-{days})", when(date)), Style::default().small().center()),
+            _ => (
+                tr!("{name} : {} (J-{days})", "{name}: {} (in {days} days)", when(date)),
+                Style::default().small().center(),
+            ),
         };
         doc.text(&line, style);
     }
@@ -111,6 +125,14 @@ mod tests {
         assert!(days.contains(&(NaiveDate::from_ymd_opt(2026, 5, 14).unwrap(), "Ascension")));
         assert!(days.contains(&(NaiveDate::from_ymd_opt(2026, 5, 25).unwrap(), "Lundi de Pentecôte")));
         assert_eq!(of_year(2026, Zone::AlsaceMoselle).len(), 13);
+    }
+
+    #[test]
+    fn holiday_names_follow_language() {
+        crate::i18n::with_lang(crate::i18n::Lang::En, || {
+            let days = of_year(2026, Zone::Metropole);
+            assert!(days.contains(&(NaiveDate::from_ymd_opt(2026, 5, 14).unwrap(), "Ascension Day")));
+        });
     }
 }
 

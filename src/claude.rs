@@ -6,6 +6,8 @@ use anyhow::{bail, Context, Result};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
+use crate::i18n::t;
+
 const API_URL: &str = "https://api.anthropic.com/v1/messages";
 const DEFAULT_MODEL: &str = "claude-haiku-5-5";
 
@@ -55,19 +57,19 @@ impl Claude {
             request = request.header("anthropic-beta", "server-side-fallback-2026-07-01");
         }
 
-        let mut response = request.send_json(&body).context("API Claude injoignable")?;
+        let mut response = request.send_json(&body).context(t("API Claude injoignable", "Claude API unreachable"))?;
         let status = response.status();
-        let reply: Value = response.body_mut().read_json().context("réponse de l'API Claude illisible")?;
+        let reply: Value = response.body_mut().read_json().context(t("réponse de l'API Claude illisible", "Claude API response unreadable"))?;
         if std::env::var_os("PRINTR_DEBUG").is_some() {
             eprintln!("[claude] {reply}");
         }
         if !status.is_success() {
-            let message = reply["error"]["message"].as_str().unwrap_or("erreur inconnue");
-            bail!("API Claude ({status}) : {message}");
+            let message = reply["error"]["message"].as_str().unwrap_or(t("erreur inconnue", "unknown error"));
+            bail!("{}", tr!("API Claude ({status}) : {message}", "Claude API ({status}): {message}"));
         }
         match reply["stop_reason"].as_str() {
-            Some("refusal") => bail!("Claude a refusé la requête"),
-            Some("max_tokens") => bail!("réponse de Claude tronquée"),
+            Some("refusal") => bail!("{}", t("Claude a refusé la requête", "Claude refused the request")),
+            Some("max_tokens") => bail!("{}", t("réponse de Claude tronquée", "Claude's response was cut short")),
             _ => {}
         }
 
@@ -78,7 +80,7 @@ impl Claude {
             .filter(|block| block["type"] == "text")
             .filter_map(|block| block["text"].as_str())
             .collect();
-        serde_json::from_str(&text).with_context(|| format!("JSON inattendu de Claude : {text}"))
+        serde_json::from_str(&text).with_context(|| tr!("JSON inattendu de Claude : {text}", "unexpected JSON from Claude: {text}"))
     }
 }
 

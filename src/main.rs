@@ -7,13 +7,15 @@ use anyhow::{Context, Result};
 use clap::builder::styling::{AnsiColor, Styles};
 use clap::{ArgAction, CommandFactory, FromArgMatches, Parser, Subcommand};
 
+// Déclaré en premier :  est visible dans tous les modules qui suivent (macro_use).
+#[macro_use]
+mod i18n;
 mod blocks;
 mod cache;
 mod claude;
 mod cp858;
 mod doc;
 mod draw;
-mod fr;
 mod guard;
 mod net;
 mod output;
@@ -26,6 +28,7 @@ mod update;
 
 use doc::{Doc, Style};
 use output::Target;
+use crate::i18n::t;
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Yellow.on_default().bold())
@@ -165,25 +168,25 @@ fn user_command(action: &UserAction) -> Result<()> {
             std::io::stdin().read_line(&mut line)?;
             return Ok(line.trim_end_matches(['\r', '\n']).to_owned());
         }
-        let first = rpassword::prompt_password(format!("Mot de passe pour {name} : "))?;
-        let again = rpassword::prompt_password("Confirmation : ")?;
-        anyhow::ensure!(first == again, "les deux mots de passe diffèrent");
+        let first = rpassword::prompt_password(tr!("Mot de passe pour {name} : ", "Password for {name}: "))?;
+        let again = rpassword::prompt_password(t("Confirmation : ", "Confirm: "))?;
+        anyhow::ensure!(first == again, "{}", t("les deux mots de passe diffèrent", "the two passwords differ"));
         Ok(first)
     };
     let done = match action {
         UserAction::Add { name } => {
             let password = ask(name)?;
             store.add_user(name, &password)?;
-            format!("compte « {name} » créé")
+            tr!("compte « {name} » créé", "account \"{name}\" created")
         }
         UserAction::Passwd { name } => {
             let password = ask(name)?;
             store.set_password(name, &password)?;
-            format!("mot de passe de « {name} » changé")
+            tr!("mot de passe de « {name} » changé", "password of \"{name}\" changed")
         }
         UserAction::Remove { name } => {
             store.remove_user(name)?;
-            format!("compte « {name} » supprimé")
+            tr!("compte « {name} » supprimé", "account \"{name}\" deleted")
         }
         UserAction::List => {
             for user in store.users() {
@@ -200,22 +203,82 @@ fn user_command(action: &UserAction) -> Result<()> {
 /// Analyse la ligne de commande, avec une aide en français.
 fn parse_cli() -> Cli {
     let heading = STYLES.get_usage();
-    let template = format!("{{about-with-newline}}\n{heading}Utilisation :{heading:#} {{usage}}\n\n{{all-args}}");
+    let template = format!("{{about-with-newline}}\n{heading}{}{heading:#} {{usage}}\n\n{{all-args}}", t("Utilisation :", "Usage:"));
     // Titres de sections à la française : « Options : », « Arguments : ».
-    let french_headings = |cmd: clap::Command| {
+    let headings = |cmd: clap::Command| {
         cmd.help_template(template.clone()).mut_args(|arg| {
             if arg.get_help_heading().is_some() {
                 arg
             } else if arg.is_positional() {
-                arg.help_heading("Arguments ")
+                arg.help_heading(t("Arguments ", "Arguments"))
             } else {
-                arg.help_heading("Options ")
+                arg.help_heading(t("Options ", "Options"))
             }
         })
     };
-    let command = french_headings(Cli::command()).mut_subcommands(french_headings);
+    let mut command = headings(Cli::command()).mut_subcommands(headings);
+    if i18n::en() {
+        command = in_english(command);
+    }
     let matches = command.get_matches();
     Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit())
+}
+
+/// L'aide de clap vient des commentaires `///`, en français : en anglais, on la remplace, commande
+/// par commande et option par option.
+fn in_english(command: clap::Command) -> clap::Command {
+    fn about(name: &str) -> Option<&'static str> {
+        Some(match name {
+            "printr" => "Prints tickets on an Epson TM-T88V (ESC/POS).",
+            "print" => "Prints a ticket described in JSON (file, or standard input if absent or \"-\")",
+            "serve" => "Starts the web app and the API (with the scheduler)",
+            "user" => "Manages the web app accounts",
+            "test" => "Prints a test ticket (styles, accents, QR code)",
+            "text" => "Prints text (reads standard input if no text is given)",
+            "image" => "Prints an image (scaled to 512 px wide, dithered)",
+            "add" => "Creates an account (asks for the password)",
+            "passwd" => "Changes an account's password",
+            "remove" => "Deletes an account and its presets",
+            "list" => "Lists the accounts",
+            _ => return None,
+        })
+    }
+    fn arg(id: &str) -> Option<(&'static str, Option<&'static str>)> {
+        Some(match id {
+            "device" => ("Printer device (default /dev/usb/lp0, or $PRINTR_DEVICE)", Some("PATH")),
+            "dump" => ("Writes the ESC/POS bytes to this file instead of the printer", Some("FILE")),
+            "tcp" => ("Sends over TCP (network printer or emulator), e.g. 127.0.0.1:9100, or $PRINTR_TCP", Some("HOST:PORT")),
+            "preview" => ("Shows a preview in the terminal instead of printing", None),
+            "refresh" => ("Regenerates the news, sun times, horoscope and word of the day", None),
+            "quiet" => ("Only shows errors", None),
+            "help" => ("Shows help", None),
+            "version" => ("Shows the version", None),
+            "file" => ("JSON ticket file", None),
+            "listen" => ("Listening address (default 0.0.0.0:8080, or $PRINTR_LISTEN)", Some("ADDRESS")),
+            "token" => ("Token for scripts: \"Authorization: Bearer <token>\" (or $PRINTR_TOKEN)", Some("TOKEN")),
+            "text" => ("Text to print", Some("TEXT")),
+            "no_cut" => ("Doesn't cut the paper at the end", None),
+            "path" => ("Image file (PNG, JPEG, GIF…)", None),
+            "no_dither" => ("Black/white threshold instead of dithering (logos, line art)", None),
+            "name" => ("", Some("NAME")),
+            _ => return None,
+        })
+    }
+    fn translate(mut cmd: clap::Command) -> clap::Command {
+        if let Some(text) = about(cmd.get_name()) {
+            cmd = cmd.about(text);
+        }
+        cmd = cmd.subcommand_help_heading("Commands").subcommand_value_name("COMMAND").mut_args(|a| {
+            let Some((help, value)) = arg(a.get_id().as_str()) else { return a };
+            let a = if help.is_empty() { a } else { a.help(help) };
+            match value {
+                Some(v) => a.value_name(v),
+                None => a,
+            }
+        });
+        cmd.mut_subcommands(translate)
+    }
+    translate(command)
 }
 
 /// Configuration du service sur le Pi, lue aussi par la commande `printr` : un ticket lancé à la
@@ -294,7 +357,7 @@ fn run(cli: Cli) -> Result<()> {
     let (doc, cut) = match &cli.command {
         Command::Serve { listen, token } => {
             if let Some(token) = token {
-                anyhow::ensure!(token.len() >= 16, "le jeton doit faire au moins 16 caractères");
+                anyhow::ensure!(token.len() >= 16, "{}", t("le jeton doit faire au moins 16 caractères", "the token must be at least 16 characters"));
             }
             return server::serve(listen, token.clone(), target);
         }
@@ -302,10 +365,10 @@ fn run(cli: Cli) -> Result<()> {
         Command::Print { file } => {
             let json = match file {
                 Some(path) if path.as_os_str() != "-" => std::fs::read_to_string(path)
-                    .with_context(|| format!("impossible de lire {}", path.display()))?,
+                    .with_context(|| tr!("impossible de lire {}", "cannot read {}", path.display()))?,
                 _ => read_stdin()?,
             };
-            let ticket: blocks::Ticket = serde_json::from_str(&json).context("ticket JSON invalide")?;
+            let ticket: blocks::Ticket = serde_json::from_str(&json).context(t("ticket JSON invalide", "invalid ticket JSON"))?;
             let mut progress: Box<dyn blocks::Progress> =
                 if cli.quiet { Box::new(blocks::Silent) } else { Box::new(ui::Console::new()) };
             let (doc, ticket_reports) = ticket.build(&blocks::Ctx::new(cli.refresh), progress.as_mut());
@@ -350,19 +413,19 @@ fn test_ticket() -> Doc {
     let base = Style::default();
     let mut doc = Doc::new();
     doc.text("PRINTR", base.bold().center().size(2))
-        .text("Ticket de test", base.center())
+        .text(t("Ticket de test", "Test ticket"), base.center())
         .feed(1)
         .header("Styles")
         .text("Normal", base)
-        .text("Gras", base.bold())
-        .text("Souligné", base.underline())
-        .text(" Inversé ", base.reverse())
-        .text("Police B, plus petite", base.small())
-        .text("Double taille", base.size(2))
+        .text(t("Gras", "Bold"), base.bold())
+        .text(t("Souligné", "Underlined"), base.underline())
+        .text(t(" Inversé ", " Reverse "), base.reverse())
+        .text(t("Police B, plus petite", "Font B, smaller"), base.small())
+        .text(t("Double taille", "Double size"), base.size(2))
         .feed(1)
-        .header("Caractères")
-        .text("Accents : éèêàçùôï ÉÀÇÒ € ° « »", base)
-        .text("Typographie : l’œuf… – fin", base)
+        .header(t("Caractères", "Characters"))
+        .text(t("Accents : éèêàçùôï ÉÀÇÒ € ° « »", "Accents: éèêàçùôï ÉÀÇÒ € ° « »"), base)
+        .text(t("Typographie : l’œuf… – fin", "Typography: l’œuf… – fin"), base)
         .text("123456789012345678901234567890123456789012", base)
         .rule('─')
         .feed(1)

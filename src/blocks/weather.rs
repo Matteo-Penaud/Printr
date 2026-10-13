@@ -5,7 +5,7 @@ use chrono::NaiveDate;
 use serde::Deserialize;
 
 use crate::doc::{Doc, Style};
-use crate::fr;
+use crate::i18n;
 
 #[derive(Deserialize)]
 struct GeoResults {
@@ -45,35 +45,36 @@ struct Daily {
     uv_index_max: Vec<Option<f64>>,
 }
 
-/// Libellé français d'un code météo WMO.
+/// Libellé d'un code météo WMO, en français ou en anglais.
 fn describe(code: u8) -> &'static str {
+    use crate::i18n::t;
     match code {
-        0 => "Ciel dégagé",
-        1 => "Plutôt dégagé",
-        2 => "Partiellement nuageux",
-        3 => "Couvert",
-        45 => "Brouillard",
-        48 => "Brouillard givrant",
-        51 => "Bruine légère",
-        53 => "Bruine",
-        55 => "Bruine dense",
-        56 | 57 => "Bruine verglaçante",
-        61 => "Pluie faible",
-        63 => "Pluie",
-        65 => "Forte pluie",
-        66 | 67 => "Pluie verglaçante",
-        71 => "Neige faible",
-        73 => "Neige",
-        75 => "Forte neige",
-        77 => "Grains de neige",
-        80 => "Averses faibles",
-        81 => "Averses",
-        82 => "Fortes averses",
-        85 => "Averses de neige",
-        86 => "Fortes averses de neige",
-        95 => "Orage",
-        96 | 99 => "Orage et grêle",
-        _ => "Temps indéterminé",
+        0 => t("Ciel dégagé", "Clear sky"),
+        1 => t("Plutôt dégagé", "Mainly clear"),
+        2 => t("Partiellement nuageux", "Partly cloudy"),
+        3 => t("Couvert", "Overcast"),
+        45 => t("Brouillard", "Fog"),
+        48 => t("Brouillard givrant", "Rime fog"),
+        51 => t("Bruine légère", "Light drizzle"),
+        53 => t("Bruine", "Drizzle"),
+        55 => t("Bruine dense", "Dense drizzle"),
+        56 | 57 => t("Bruine verglaçante", "Freezing drizzle"),
+        61 => t("Pluie faible", "Light rain"),
+        63 => t("Pluie", "Rain"),
+        65 => t("Forte pluie", "Heavy rain"),
+        66 | 67 => t("Pluie verglaçante", "Freezing rain"),
+        71 => t("Neige faible", "Light snow"),
+        73 => t("Neige", "Snow"),
+        75 => t("Forte neige", "Heavy snow"),
+        77 => t("Grains de neige", "Snow grains"),
+        80 => t("Averses faibles", "Light showers"),
+        81 => t("Averses", "Showers"),
+        82 => t("Fortes averses", "Heavy showers"),
+        85 => t("Averses de neige", "Snow showers"),
+        86 => t("Fortes averses de neige", "Heavy snow showers"),
+        95 => t("Orage", "Thunderstorm"),
+        96 | 99 => t("Orage et grêle", "Thunderstorm with hail"),
+        _ => t("Temps indéterminé", "Unknown weather"),
     }
 }
 
@@ -88,14 +89,14 @@ pub fn locate(agent: &ureq::Agent, location: &str) -> Result<Place> {
         .get("https://geocoding-api.open-meteo.com/v1/search")
         .query("name", location)
         .query("count", "1")
-        .query("language", "fr")
+        .query("language", i18n::lang().code())
         .call()
-        .context("géocodage injoignable")?
+        .context(i18n::t("géocodage injoignable", "geocoding unreachable"))?
         .body_mut()
         .read_json()?;
     match geo.results.and_then(|r| r.into_iter().next()) {
         Some(place) => Ok(place),
-        None => bail!("lieu introuvable : {location}"),
+        None => bail!("{}", tr!("lieu introuvable : {location}", "place not found: {location}")),
     }
 }
 
@@ -120,23 +121,29 @@ pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
         .query("timezone", "auto")
         .query("forecast_days", days.to_string())
         .call()
-        .context("Open-Meteo injoignable")?
+        .context(i18n::t("Open-Meteo injoignable", "Open-Meteo unreachable"))?
         .body_mut()
         .read_json()?;
     let (c, d) = (&f.current, &f.daily);
     let pct = |v: Option<f64>| v.map_or("-".to_owned(), |p| format!("{p:.0}%"));
 
     let mut doc = Doc::new();
-    doc.header(&format!("Météo · {}", place.name));
+    doc.header(&tr!("Météo · {}", "Weather · {}", place.name));
     doc.text(describe(c.weather_code), Style::default().bold().center());
     doc.text(
-        &format!("{:.0}°C (ressenti {:.0}°C)", c.temperature_2m, c.apparent_temperature),
+        &tr!(
+            "{:.0}°C (ressenti {:.0}°C)",
+            "{:.0}°C (feels {:.0}°C)",
+            c.temperature_2m,
+            c.apparent_temperature
+        ),
         Style::default().size(2).center(),
     );
     doc.feed(1);
     doc.text(
-        &format!(
+        &tr!(
             "Min {:.0}°C · Max {:.0}°C · Pluie {}",
+            "Min {:.0}°C · Max {:.0}°C · Rain {}",
             d.temperature_2m_min[0],
             d.temperature_2m_max[0],
             pct(d.precipitation_probability_max[0])
@@ -144,9 +151,9 @@ pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
         Style::default().center(),
     );
     let uv = d.uv_index_max[0].map_or("-".to_owned(), |u| format!("{u:.0}"));
-    doc.text(&format!("Vent {:.0} km/h · UV {uv}", c.wind_speed_10m), Style::default().center());
+    doc.text(&tr!("Vent {:.0} km/h · UV {uv}", "Wind {:.0} km/h · UV {uv}", c.wind_speed_10m), Style::default().center());
     doc.text(
-        &format!("Soleil {} - {}", hour(&d.sunrise[0]), hour(&d.sunset[0])),
+        &tr!("Soleil {} - {}", "Sun {} - {}", hour(&d.sunrise[0]), hour(&d.sunset[0])),
         Style::default().center(),
     );
 
@@ -156,7 +163,7 @@ pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
             let date = d.time[i];
             let line = format!(
                 "{:<9}{:<24.24}{:>3}/{:>3}° {:>4}",
-                format!("{} {}", fr::weekday_short(date), date.format("%d")),
+                format!("{} {}", i18n::weekday_short(date), date.format("%d")),
                 describe(d.weather_code[i]),
                 format!("{:.0}", d.temperature_2m_min[i]),
                 format!("{:.0}", d.temperature_2m_max[i]),
@@ -166,4 +173,15 @@ pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
         }
     }
     Ok(doc)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn weather_codes_follow_language() {
+        assert_eq!(describe(3), "Couvert");
+        crate::i18n::with_lang(crate::i18n::Lang::En, || assert_eq!(describe(3), "Overcast"));
+    }
 }

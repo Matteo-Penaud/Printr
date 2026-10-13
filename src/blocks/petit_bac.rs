@@ -6,6 +6,40 @@ use rand::seq::{IndexedRandom, SliceRandom};
 use rand::{RngExt, SeedableRng};
 
 use crate::doc::{Align, Doc, Style};
+use crate::i18n::{self, t};
+
+/// Catégories en anglais, pour le jeu des catégories.
+const CATEGORIES_EN: &[&str] = &[
+    "First name",
+    "Animal",
+    "Country",
+    "City",
+    "Job",
+    "Fruit or vegetable",
+    "Object",
+    "Color",
+    "Brand",
+    "Sport",
+    "Dish",
+    "Movie or show",
+    "Singer or band",
+    "Famous person",
+    "Instrument",
+    "Clothing",
+    "Body part",
+    "Means of transport",
+    "Flower or plant",
+    "Cartoon hero",
+    "French word",
+    "Kind insult",
+    "Thing that stings",
+    "Excuse for being late",
+];
+
+/// Lettres en anglais : sans Q, U, V, X, Y, Z, qui bloquent toute la partie.
+const LETTERS_EN: &[char] = &[
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'W',
+];
 
 /// Catégories tirées au hasard quand le ticket n'en précise pas.
 const CATEGORIES: &[&str] = &[
@@ -40,6 +74,11 @@ const LETTERS: &[char] = &[
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'V',
 ];
 
+/// Lettres tirées par défaut, selon la langue en vigueur.
+fn letters() -> &'static [char] {
+    if i18n::en() { LETTERS_EN } else { LETTERS }
+}
+
 /// Ligne « Catégorie ...... » : le reste de la ligne sert à écrire.
 fn line(category: &str, width: usize) -> String {
     let dots = width.saturating_sub(category.chars().count() + 1);
@@ -51,9 +90,9 @@ pub fn build(letter: Option<char>, categories: &[String], count: u8, players: u8
     let mut rng = StdRng::seed_from_u64(seed);
     let letter = letter
         .map(|c| c.to_uppercase().next().unwrap_or(c))
-        .unwrap_or_else(|| *LETTERS.choose(&mut rng).expect("lettres"));
+        .unwrap_or_else(|| *letters().choose(&mut rng).expect("lettres"));
     let categories: Vec<String> = if categories.is_empty() {
-        let mut pool = CATEGORIES.to_vec();
+        let mut pool = if i18n::en() { CATEGORIES_EN.to_vec() } else { CATEGORIES.to_vec() };
         pool.shuffle(&mut rng);
         pool.into_iter().take(count.clamp(3, 12) as usize).map(str::to_owned).collect()
     } else {
@@ -67,17 +106,17 @@ pub fn build(letter: Option<char>, categories: &[String], count: u8, players: u8
             doc.line(&"- ".repeat(21), Style::default());
             doc.feed(1);
         }
-        doc.header("Petit bac");
+        doc.header(t("Petit bac", "Categories"));
         doc.feed(1);
-        doc.text("La lettre est", Style::default().center());
+        doc.text(t("La lettre est", "The letter is"), Style::default().center());
         doc.text(&letter.to_string(), Style::default().bold().center().size(5));
         doc.feed(1);
         for category in &categories {
             doc.line(&line(category, 42), Style::default());
             doc.feed(1);
         }
-        doc.line(&format!("{:>42}", "Points : ......"), Style::default().bold());
-        doc.text(&format!("n° {seed}"), Style::default().small().align(Align::Right));
+        doc.line(&format!("{:>42}", t("Points : ......", "Points: ......")), Style::default().bold());
+        doc.text(&tr!("n° {seed}", "No. {seed}"), Style::default().small().align(Align::Right));
     }
     doc
 }
@@ -105,6 +144,43 @@ mod tests {
                 assert!(text.chars().count() <= style.columns(), "{text}");
             }
         }
+    }
+
+    #[test]
+    fn english_sheets_use_safe_letters() {
+        use crate::i18n::{with_lang, Lang};
+        with_lang(Lang::En, || {
+            for seed in 0..50 {
+                let doc = build(None, &[], 6, 2, Some(seed));
+                let big: Vec<&str> = doc
+                    .ops
+                    .iter()
+                    .filter_map(|op| match op {
+                        Op::Line { text, style } if style.size == 5 => Some(text.as_str()),
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(big.len(), 2);
+                assert!(!"QUVXYZ".contains(big[0].trim()), "{}", big[0]);
+                for op in &doc.ops {
+                    if let Op::Line { text, style } = op {
+                        assert!(text.chars().count() <= style.columns(), "{text}");
+                    }
+                }
+            }
+            let doc = build(None, &[], 3, 1, Some(4));
+            let all: Vec<String> = doc
+                .ops
+                .iter()
+                .filter_map(|op| match op {
+                    Op::Line { text, .. } => Some(text.clone()),
+                    _ => None,
+                })
+                .collect();
+            assert!(all.iter().any(|l| l.contains("The letter is")));
+            assert!(all.iter().any(|l| l.contains("Points: ......")));
+            assert!(all.iter().any(|l| l.contains("No. 4")));
+        });
     }
 
     #[test]

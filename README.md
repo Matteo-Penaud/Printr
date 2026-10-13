@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<p align="center"><strong>Des petits tickets qui font du bien, tous les matins.</strong></p>
+<p align="center"><strong>Little receipts that do you good, every morning.</strong></p>
 
 <p align="center">
   <a href="https://xninety9.github.io/Printr/"><img alt="Site" src="https://img.shields.io/badge/site-xninety9.github.io%2FPrintr-e2600e"></a>
@@ -16,189 +16,194 @@
 
 <p align="center">
   <a href="https://xninety9.github.io/Printr/">Site</a> ·
-  <a href="#tickets-json">Les blocs</a> ·
-  <a href="#interface-web">L'appli</a> ·
-  <a href="#installation">Installer</a>
+  <a href="#json-tickets">Blocks</a> ·
+  <a href="#web-interface">The app</a> ·
+  <a href="#installation">Install</a>
 </p>
 
-Printr transforme une imprimante à tickets **Epson TM-T88V** en gadget familial. On compose un
-ticket à partir de **40 blocs** (météo, horoscope, sudoku, mots mêlés, énigmes, actualités,
-photos…), on l'imprime depuis son téléphone, on le **planifie** pour 7 h 30 en semaine, ou on
-envoie un **petit mot avec une photo** à ceux qui sont restés à la maison. Un seul binaire Rust,
-sur un Raspberry Pi, qui parle ESC/POS directement à l'imprimante.
+<p align="center"><a href="README.fr.md">🇫🇷 Version française</a></p>
+
+Printr turns an **Epson TM-T88V** receipt printer into a family gadget. You compose a ticket from
+**40 blocks** (weather, horoscope, sudoku, word search, riddles, news, photos…), print it from your
+phone, **schedule** it for 7:30 on weekdays, or send a **little note with a photo** to the people
+who stayed home. A single Rust binary, running on a Raspberry Pi, that speaks ESC/POS directly to
+the printer.
 
 <p align="center">
-  <img src="docs/tickets/matin.png" alt="Ticket du matin" width="240">
+  <img src="docs/tickets/en/matin.png" alt="Morning ticket" width="240">
   &nbsp;
-  <img src="docs/tickets/jeux.png" alt="Ticket de jeux : énigme avec sa réponse imprimée à l'envers, sudoku, mots mêlés, défi sportif" width="240">
+  <img src="docs/tickets/en/jeux.png" alt="Games ticket: riddle with its answer printed upside down, sudoku, word search, workout challenge" width="240">
   &nbsp;
-  <img src="docs/tickets/petit-mot.png" alt="Petit mot avec une photo" width="240">
+  <img src="docs/tickets/en/petit-mot.png" alt="Little note with a photo" width="240">
 </p>
 
-- **40 blocs** : météo, agenda, horoscope (sérieux, farfelu, vachard ou franchement insultant),
-  mot du jour, mots fléchés, sudoku, logimage, mots mêlés, petit bac, coloriage, énigmes à
-  réponse imprimée à l'envers, défi sportif, liste de courses, poubelles, Wi-Fi invités, bons à
-  offrir, bilan du mois façon ticket de caisse, actualités par flux RSS, photos…
-- **Une appli web pour la famille** : comptes, tickets enregistrés et partagés, aperçu en direct,
-  planification au format 24 h, historique.
-- **Sobre** : presque tout est calculé localement ou vient d'API gratuites et sans clé. Claude
-  n'écrit que l'horoscope et le mot du jour (un petit appel à Claude Haiku, en cache pour la
-  journée).
-- **Une CLI soignée** : aperçu dans le terminal, progression bloc par bloc, erreurs lisibles.
+- **40 blocks**: weather, calendar, horoscope (serious, whimsical, snarky or downright insulting),
+  word of the day, arrow words, sudoku, nonogram, word search, Categories, coloring, riddles
+  with their answer printed upside down, workout challenge, shopping list, bin collection days,
+  guest Wi-Fi, gift coupons, a receipt-style monthly report, news from RSS feeds, photos…
+- **A web app for the family**: accounts, saved and shared tickets, live preview,
+  scheduling in 24-hour format, history.
+- **Lean**: almost everything is computed locally or comes from free APIs that need no key. Claude
+  only writes the horoscope and the word of the day (one small call to Claude Haiku, cached for
+  the day).
+- **A tidy CLI**: preview in the terminal, progress block by block, readable errors.
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/shots/desktop-compose-dark.png">
-    <img src="docs/shots/desktop-compose-light.png" alt="Le composeur de tickets de l'interface web, avec l'aperçu" width="860">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/shots/en/desktop-compose-dark.png">
+    <img src="docs/shots/en/desktop-compose-light.png" alt="The ticket composer of the web interface, with its preview" width="860">
   </picture>
 </p>
 
-## Démarrage rapide
+## Quick start
 
 ```sh
-cargo run --release -- --preview print examples/complet.json   # aperçu dans le terminal, sans imprimante
-cargo run --release -- --device /dev/usb/lp0 serve             # interface sur http://localhost:8080
-scripts/deploy.sh pi@printer.local                             # installation sur un Raspberry Pi (ou --local)
+export PRINTR_LANG=en                                          # English app and tickets (French by default)
+cargo run --release -- --preview print examples/complet.json   # preview in the terminal, no printer needed
+cargo run --release -- --device /dev/usb/lp0 serve             # interface at http://localhost:8080
+scripts/deploy.sh pi@printer.local                             # install on a Raspberry Pi (or --local)
 ```
 
-Au premier lancement, l'interface propose de créer son compte, puis ceux de la famille.
+On first launch, the interface asks you to create your account, then the accounts of the family.
 
-Pas encore d'imprimante ? `scripts/demo.sh` imprime le ticket complet dans un
-[émulateur](#tester-sans-imprimante-émulateur) et en donne une image PNG.
+No printer yet? `scripts/demo.sh` prints the full ticket in an
+[emulator](#testing-without-a-printer-emulator) and gives you a PNG image of it.
 
-## L'horoscope, en quatre tons
+## The horoscope, in four tones
 
-Rédigé chaque jour par Claude, sur un thème tiré au hasard. Extraits authentiques :
+Written every day by Claude, on a theme picked at random. Real excerpts (translated from the
+French output):
 
-| Ton | Signe | Extrait |
+| Tone | Sign | Excerpt |
 | --- | --- | --- |
-| `serieux` | Scorpion | « Une conversation franche dissipera un malentendu qui pesait depuis plusieurs jours. » |
-| `farfelu` | Gémeaux | « Un pigeon particulièrement élégant pourrait vous saluer d'un hochement de tête : rendez-lui la politesse, il est très influent dans le quartier. » |
-| `vachard` | Vierge | « Votre partenaire rêve d'un dîner romantique. Rien de plus sensuel qu'une balance de cuisine posée entre deux bougies. » |
-| `insultant` | Lion | « Tes baskets neuves, encore raides comme un notaire, se demandent ce qu'elles ont fait au bon Dieu pour tomber sur une feignasse pareille. » |
+| `serieux` | Scorpio | "A frank conversation will clear up a misunderstanding that has been weighing on you for several days." |
+| `farfelu` | Gemini | "A particularly elegant pigeon may greet you with a nod of the head: return the courtesy, it is very influential in the neighborhood." |
+| `vachard` | Virgo | "Your partner dreams of a romantic dinner. Nothing is more sensual than a kitchen scale placed between two candles." |
+| `insultant` | Leo | "Your brand-new sneakers, still as stiff as a notary, are wondering what they ever did to the good Lord to end up with such a slacker." |
 
-## Utilisation
+## Usage
 
 ```sh
-printr print examples/matin.json    # ticket composé de blocs (voir plus bas)
-cat ticket.json | printr print      # idem, depuis l'entrée standard
-printr --preview print ticket.json  # aperçu dans le terminal, sans imprimer
-printr --refresh print ticket.json  # régénère ce qui est en cache : soleil, horoscopes, mot du jour
-printr -q print ticket.json         # silencieux, n'affiche que les erreurs
-printr test                         # ticket de test (styles, accents, QR code)
-printr text "Salut !"               # texte libre, puis coupe
-echo "depuis stdin" | printr text   # lit l'entrée standard
-printr text --no-cut "sans coupe"
-printr image photo.jpg             # image réduite à 512 px, tramée (Floyd–Steinberg)
-printr image --no-dither logo.png   # simple seuil noir/blanc, pour logos et dessins au trait
+printr print examples/matin.json    # ticket made of blocks (see below)
+cat ticket.json | printr print      # same, from standard input
+printr --preview print ticket.json  # preview in the terminal, nothing printed
+printr --refresh print ticket.json  # regenerates what is cached: sun, horoscopes, word of the day
+printr -q print ticket.json         # quiet, only shows errors
+printr test                         # test ticket (styles, accents, QR code)
+printr text "Hi there!"             # free text, then a cut
+echo "from stdin" | printr text     # reads standard input
+printr text --no-cut "no cut"
+printr image photo.jpg              # image scaled down to 512 px, dithered (Floyd–Steinberg)
+printr image --no-dither logo.png   # plain black-and-white threshold, for logos and line drawings
 ```
 
-Destination, au choix :
+Destination, your choice:
 
 | Option | Destination |
 | --- | --- |
-| `--device <chemin>` | imprimante USB (défaut `/dev/usb/lp0`, ou `$PRINTR_DEVICE`) |
-| `--tcp hôte:port` | imprimante réseau ou émulateur |
-| `--dump <fichier>` | écrit les octets ESC/POS bruts dans un fichier |
+| `--device <path>` | USB printer (default `/dev/usb/lp0`, or `$PRINTR_DEVICE`) |
+| `--tcp host:port` | network printer or emulator |
+| `--dump <file>` | writes the raw ESC/POS bytes to a file |
 
-## Tickets JSON
+## JSON tickets
 
-Un ticket est une liste de blocs. Les blocs sont construits en parallèle (requêtes réseau
-comprises) et leur résultat s'affiche dans la CLI dès que chacun est prêt ; le ticket est ensuite
-imprimé dans l'ordre défini. Un bloc en échec imprime un message au lieu de bloquer le ticket.
-Un paramètre inconnu est une erreur, pour repérer les fautes de frappe.
+A ticket is a list of blocks. Blocks are built in parallel (network requests included), and each
+result appears in the CLI as soon as it is ready; the ticket is then printed in the defined order.
+A block that fails prints an error message instead of blocking the ticket. An unknown parameter is
+an error, so typos get caught.
 
 ```json
 {
   "cut": true,
   "spacing": 1,
   "blocks": [
-    { "type": "title", "text": "Bonjour !" },
+    { "type": "title", "text": "Hello!" },
     { "type": "weather", "location": "Lyon", "days": 3 },
     { "type": "horoscope", "sign": "scorpion", "tone": "farfelu" }
   ]
 }
 ```
 
-| Bloc | Paramètres (défaut) | Notes |
+| Block | Parameters (default) | Notes |
 | --- | --- | --- |
-| `title` | `text`, `size` (2) | Gras, centré, agrandi |
-| `text` | `text`, `bold`, `underline`, `reverse`, `small`, `size` (1), `align` (`left`/`center`/`right`) | Coupé aux mots |
-| `separator` | `style` (`-`) | Un caractère répété : `-`, `=`, `═`, `─`, `·`… |
-| `date` | — | « Mercredi 7 octobre 2026 » |
-| `feed` | `lines` (1) | Espace vertical |
-| `image` | `path` ou `url`, `dither` (true) | Réduite à 512 px |
+| `title` | `text`, `size` (2) | Bold, centered, enlarged |
+| `text` | `text`, `bold`, `underline`, `reverse`, `small`, `size` (1), `align` (`left`/`center`/`right`) | Word-wrapped |
+| `separator` | `style` (`-`) | One character repeated: `-`, `=`, `═`, `─`, `·`… |
+| `date` | — | e.g. "Wednesday, October 7, 2026" |
+| `feed` | `lines` (1) | Vertical space |
+| `image` | `path` or `url`, `dither` (true) | Scaled down to 512 px |
 | `qr` | `data`, `size` (6), `caption` | |
-| `weather` | `location`, `days` (1, max 7) | [Open-Meteo](https://open-meteo.com), sans clé. `location` : ville ou `"lat,lon"` |
-| `barnum` | `sign` ou `birth_date` (`AAAA-MM-JJ`), `sky` (false), `variant` | Horoscope hors ligne et gratuit, calculé sur le vrai ciel par [Barnum](https://github.com/XNinety9/Barnum) : jauges par domaine, conseil, et en option la position des planètes |
-| `horoscope` | `sign`, `tone` (`serieux`/`farfelu`/`vachard`/`insultant`) | Généré par Claude, sur un thème tiré au hasard. Signe en français ou en anglais |
-| `saint` | — | Calendrier local, hors ligne |
-| `todo` | `items`, `title` (« À faire ») | Cases à cocher |
-| `sudoku` | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | Le n° imprimé est la graine : même `seed` + `"solution": true` imprime la solution |
-| `word_search` (ou `mots_meles`, `mots_caches`, `mots_en_grille`) | `difficulty` (`facile`/`moyen`/`difficile`), `theme`, `words`, `seed`, `solution` | Mots mêlés en français. `theme` : `animaux`, `fruits_legumes`, `cuisine`, `nature`, `sport`, `metiers`, `maison`, `voyage`, `musique`, `ecole`, `developpement`, `devops`, `reseaux`, `ia` (tiré du n° si absent) ; ou ses propres mots dans `words`. Facile : 10×10, 8 mots, → ↓ ; moyen : 12×12, 12 mots, + diagonales ; difficile : 14×14, 16 mots, dans tous les sens. Même n° + `"solution": true` imprime la solution |
-| `train_tracks` (ou `voie_ferree`, `rails`) | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | Relier A (bord gauche) à B (bord bas) par une seule voie, d'après le nombre de cases de voie de chaque ligne et colonne et quelques pièces posées. Grilles de 6×6, 8×8 et 10×10, à solution unique. Même `seed` + `"solution": true` imprime la solution |
-| `arrow_word` (ou `mots_fleches`) | `level` (1 à 4, défaut 2), `size` (`petit`/`moyen`/`grand` : 7×9, 9×11, 11×13), `seed`, `solution` | Mots fléchés générés par [CrossWords](https://github.com/XNinety9/CrossWords) : grille à numéros et définitions en dessous, rédigées par Claude à l'impression. Même n°, taille et niveau + `"solution": true` imprime la solution |
+| `weather` | `location`, `days` (1, max 7) | [Open-Meteo](https://open-meteo.com), no key. `location`: a city or `"lat,lon"` |
+| `barnum` | `sign` or `birth_date` (`YYYY-MM-DD`), `sky` (false), `variant` | Free offline horoscope, computed from the real sky by [Barnum](https://github.com/XNinety9/Barnum): gauges per area, advice, and optionally the position of the planets |
+| `horoscope` | `sign`, `tone` (`serieux`/`farfelu`/`vachard`/`insultant`) | Generated by Claude, on a random theme. Sign in French or English |
+| `saint` | — | Name day from the local calendar, offline |
+| `todo` | `items`, `title` ("To do") | Checkboxes |
+| `sudoku` | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | The number printed is the seed: same `seed` + `"solution": true` prints the solution |
+| `word_search` (or `mots_meles`, `mots_caches`, `mots_en_grille`) | `difficulty` (`facile`/`moyen`/`difficile`), `theme`, `words`, `seed`, `solution` | Word search in French. `theme`: `animaux`, `fruits_legumes`, `cuisine`, `nature`, `sport`, `metiers`, `maison`, `voyage`, `musique`, `ecole`, `developpement`, `devops`, `reseaux`, `ia` (picked from the number if absent); or your own words in `words`. Easy: 10×10, 8 words, → ↓; medium: 12×12, 12 words, plus diagonals; hard: 14×14, 16 words, in every direction. Same number + `"solution": true` prints the solution |
+| `train_tracks` (or `voie_ferree`, `rails`) | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | Connect A (left edge) to B (bottom edge) with a single track, based on the number of track cells in each row and column and a few pieces already placed. Grids of 6×6, 8×8 and 10×10, each with a unique solution. Same `seed` + `"solution": true` prints the solution |
+| `arrow_word` (or `mots_fleches`) | `level` (1 to 4, default 2), `size` (`petit`/`moyen`/`grand`: 7×9, 9×11, 11×13), `seed`, `solution` | Arrow words generated by [CrossWords](https://github.com/XNinety9/CrossWords): a numbered grid, with the clues written by Claude below it at print time. Same number, size and level + `"solution": true` prints the solution |
 | `maze` | `width` (12), `height` (16), `seed` | |
-| `word_of_the_day` | — | Choisi par Claude, sans répéter les 60 derniers mots |
-| `quote` | — | Citation du jour, liste locale |
-| `holidays` | `zone` (`metropole`/`alsace-moselle`), `count` (1) | Calcul local, vérifié contre calendrier.api.gouv.fr |
-| `countdown` | `label`, `date` (`AAAA-MM-JJ`) | « J-79 avant : Noël » |
-| `moon` | — | Phase, illumination, prochaines pleine et nouvelle lunes. Calcul local |
-| `on_this_day` | `count` (3) | Éphéméride, Wikipédia en français |
-| `air_quality` | `location` | Indice européen, particules, pollens (Open-Meteo) |
-| `crypto` | `coins` (`["bitcoin", "ethereum"]`, identifiants CoinGecko), `currency` (`eur`) | Cours et variation sur 24 h |
-| `sun` | `location` | Lever, coucher et durée du jour via Open-Meteo, sans clé |
-| `riddle` (ou `enigme`) | `kind` (`devinette`/`charade`/`logique`/`calcul`), `number`, `answer` (`envers`/`lendemain`/`dessous`/`aucune`) | 125 énigmes, une par jour sans répétition. Par défaut, la réponse est imprimée à l'envers : on retourne le ticket pour la lire |
-| `workout` (ou `defi_sportif`) | `level` (`facile`/`moyen`/`difficile`), `number` | Défi sportif du jour, sans équipement, 25 défis par niveau |
-| `news` | `title`, `feeds` (URL RSS/Atom), `count` (3, max 5), `qr` (2, max 2), `themes`, `exclude`, `max_age_hours` (24) | Revue de presse sans IA : voir ci-dessous |
-| `petit_bac` | `players` (1), `letter`, `count` (6), `categories`, `seed` | Une lettre et des catégories, une feuille par joueur, toutes avec la même lettre |
-| `mental_math` (ou `calcul_mental`) | `difficulty` (`facile`/`moyen`/`difficile`), `count` (10), `seed` | Fiche d'opérations, résultats imprimés à l'envers |
-| `anagram` (ou `mot_mystere`) | `theme` (comme `word_search`), `count` (3), `seed` | Lettres mélangées, thème et longueur en indice, réponses à l'envers |
-| `nonogram` (ou `logimage`) | `number` (1 à 10), `solution` | Logimage de 10×10 ; chaque dessin a une solution unique, trouvable par déduction (vérifié par les tests) |
-| `cipher` (ou `message_code`) | `message`, `cipher` (`cesar`/`morse`/`nombres`), `shift`, `answer` (true) | Message codé et sa grille de déchiffrement ; message au hasard si absent |
-| `coloring` (ou `coloriage`) | `seed` | Mandala à colorier, différent à chaque numéro |
-| `coupon` (ou `bon`) | `text`, `from`, `to`, `valid_until`, `count` (1) | « Bon pour… » avec frise, numéro de série et ligne de découpe ; idée au hasard si `text` est absent |
-| `shopping` (ou `courses`) | `title`, `clear` (false) | La liste de courses partagée de l'appli ; avec `clear`, le serveur la vide une fois imprimée |
-| `agenda` | `calendars` (liens ICS ou `webcal://`, ou fichiers), `days` (1, max 7), `title` | Rendez-vous du jour, répétitions et fuseaux horaires compris |
-| `bins` (ou `poubelles`) | `collections` (`name`, `days`, `every`, `from`), `when` (`veille`/`jour`), `always` | « Ce soir, on sort le bac jaune » ; rien n'est imprimé les soirs sans ramassage, sauf avec `always` |
-| `wifi` | `ssid`, `password`, `security` (`wpa`/`wep`/`none`), `hidden`, `show_password` (true) | QR code qui connecte directement au réseau |
-| `monthly_report` (ou `bilan`) | `month` (`AAAA-MM`, mois en cours par défaut) | Bilan façon ticket de caisse, tiré de l'historique de l'appli |
+| `word_of_the_day` | — | Picked by Claude, without repeating the last 60 words |
+| `quote` | — | Quote of the day, from a local list |
+| `holidays` | `zone` (`metropole`/`alsace-moselle`), `count` (1) | Computed locally, checked against calendrier.api.gouv.fr |
+| `countdown` | `label`, `date` (`YYYY-MM-DD`) | "J-79 before: Christmas" |
+| `moon` | — | Phase, illumination, next full and new moons. Computed locally |
+| `on_this_day` | `count` (3) | "On this day" entries, from French Wikipedia |
+| `air_quality` | `location` | European air quality index, particles, pollen (Open-Meteo) |
+| `crypto` | `coins` (`["bitcoin", "ethereum"]`, CoinGecko IDs), `currency` (`eur`) | Prices and 24-hour change |
+| `sun` | `location` | Sunrise, sunset and day length via Open-Meteo, no key |
+| `riddle` (or `enigme`) | `kind` (`devinette`/`charade`/`logique`/`calcul`), `number`, `answer` (`envers`/`lendemain`/`dessous`/`aucune`) | 125 riddles, one per day, never repeated. By default the answer is printed upside down: turn the ticket over to read it |
+| `workout` (or `defi_sportif`) | `level` (`facile`/`moyen`/`difficile`), `number` | Workout challenge of the day, no equipment needed, 25 challenges per level |
+| `news` | `title`, `feeds` (RSS/Atom URLs), `count` (3, max 5), `qr` (2, max 2), `themes`, `exclude`, `max_age_hours` (24) | News digest without AI: see below |
+| `petit_bac` | `players` (1), `letter`, `count` (6), `categories`, `seed` | Categories: one letter and a set of categories, one sheet per player, all with the same letter |
+| `mental_math` (or `calcul_mental`) | `difficulty` (`facile`/`moyen`/`difficile`), `count` (10), `seed` | Sheet of arithmetic problems, answers printed upside down |
+| `anagram` (or `mot_mystere`) | `theme` (as in `word_search`), `count` (3), `seed` | Scrambled letters, with the theme and length as hints; answers upside down |
+| `nonogram` (or `logimage`) | `number` (1 to 10), `solution` | 10×10 nonogram; each picture has a unique solution, findable by deduction (checked by the tests) |
+| `cipher` (or `message_code`) | `message`, `cipher` (`cesar`/`morse`/`nombres`), `shift`, `answer` (true) | Coded message and its decoding grid; random message if absent |
+| `coloring` (or `coloriage`) | `seed` | Mandala to color, different for each number |
+| `coupon` (or `bon`) | `text`, `from`, `to`, `valid_until`, `count` (1) | "Good for…" gift coupon with a border strip, serial number and cut line; random idea if `text` is absent |
+| `shopping` (or `courses`) | `title`, `clear` (false) | The app's shared shopping list; with `clear`, the server empties it once printed |
+| `agenda` | `calendars` (ICS links or `webcal://`, or files), `days` (1, max 7), `title` | Today's appointments, recurring events and time zones included |
+| `bins` (or `poubelles`) | `collections` (`name`, `days`, `every`, `from`), `when` (`veille`/`jour`), `always` | "Tonight, put the yellow bin out"; nothing is printed on evenings without collection, unless `always` is set |
+| `wifi` | `ssid`, `password`, `security` (`wpa`/`wep`/`none`), `hidden`, `show_password` (true) | QR code that connects straight to the network |
+| `monthly_report` (or `bilan`) | `month` (`YYYY-MM`, current month by default) | Receipt-style monthly report, drawn from the app's history |
 
-Chaque bloc a son exemple dans [`docs/exemples/`](docs/exemples/) : le ticket JSON et son rendu,
-régénérés par `docs/exemples/generer.sh` (données fictives). Ils sont tous présentés, en images,
-sur la [page des blocs](https://xninety9.github.io/Printr/blocs.html) du site.
+Each block has an example in [`docs/exemples/`](docs/exemples/): the JSON ticket and its rendering,
+regenerated by `docs/exemples/generer.sh` (dummy data). They are all shown as pictures on the
+[blocks page](https://xninety9.github.io/Printr/blocs.html) of the website.
 
 <p align="center">
-  <img src="docs/exemples/logimage.png" alt="Logimage" width="200">
+  <img src="docs/exemples/logimage.png" alt="Nonogram" width="200">
   &nbsp;
-  <img src="docs/exemples/coloriage.png" alt="Mandala à colorier" width="200">
+  <img src="docs/exemples/coloriage.png" alt="Mandala to color" width="200">
   &nbsp;
-  <img src="docs/exemples/bilan.png" alt="Bilan du mois façon ticket de caisse" width="200">
+  <img src="docs/exemples/bilan.png" alt="Monthly report, receipt style" width="200">
 </p>
 
-Exemple de ramassage, avec le bac jaune un vendredi sur deux :
+Bin collection example, with the yellow bin every other Friday:
 
 ```json
 { "type": "poubelles", "collections": [
-  { "name": "ordures ménagères", "days": ["lundi", "vendredi"] },
-  { "name": "bac jaune", "days": ["vendredi"], "every": 2, "from": "2026-10-09" }
+  { "name": "household waste", "days": ["lundi", "vendredi"] },
+  { "name": "yellow bin", "days": ["vendredi"], "every": 2, "from": "2026-10-09" }
 ] }
 ```
 
-### Actualités (`news`)
+### News (`news`)
 
-Le bloc lit les flux RSS ou Atom fournis, sans IA, gratuitement et en moins d'une seconde.
-Les articles sont classés selon :
+The block reads the RSS or Atom feeds you give it, without AI, for free and in under a second.
+Articles are ranked by:
 
-- les **thèmes** demandés : trouvés dans le titre (le plus fort), la rubrique de l'URL ou les
-  catégories, ou le chapô. Un thème se cherche en début de mot (« climat » trouve « climatique ») ;
-- leur **place dans le flux** (la une de la rédaction d'abord) ;
-- les **recoupements** : un sujet traité par plusieurs flux remonte ;
-- leur **fraîcheur** (au-delà de `max_age_hours`, l'article est écarté).
+- the requested **themes**: found in the title (the strongest match), in the URL's section, in the
+  categories, or in the summary. A theme matches at the start of a word ("climat" finds
+  "climatique"; the feeds are in French, so the example themes are too);
+- their **position in the feed** (the newsroom's front page first);
+- **cross-coverage**: a topic covered by several feeds moves up;
+- their **freshness** (beyond `max_age_hours`, the article is dropped).
 
-Les directs, vidéos, podcasts et tribunes sont écartés, ainsi que les articles contenant un mot
-de `exclude`. Deux articles sur le même sujet ne sont jamais retenus ensemble. Les `qr` premiers
-reçoivent un QR code, deux par ligne. `PRINTR_DEBUG=1` affiche le classement complet.
+Live streams, videos, podcasts and opinion pieces are dropped, as are articles containing a word
+from `exclude`. Two articles on the same subject are never kept together. The first `qr` articles
+get a QR code, two per line. `PRINTR_DEBUG=1` shows the full ranking.
 
 ```json
 { "type": "news", "title": "France",
@@ -206,279 +211,291 @@ reçoivent un QR code, deux par ligne. `PRINTR_DEBUG=1` affiche le classement co
   "themes": ["climat", "sciences", "santé"], "exclude": ["football"] }
 ```
 
-Le bloc `barnum` appelle [Barnum](https://github.com/XNinety9/Barnum) en ligne de commande :
-`barnum` s'il est installé, sinon la commande donnée dans `PRINTR_BARNUM`, par exemple
-`PRINTR_BARNUM="python3 /opt/barnum/main.py"` (Barnum ne dépend que de Python 3.10).
+The `barnum` block calls [Barnum](https://github.com/XNinety9/Barnum) on the command line:
+`barnum` if it is installed, otherwise the command given in `PRINTR_BARNUM`, for example
+`PRINTR_BARNUM="python3 /opt/barnum/main.py"` (Barnum only needs Python 3.10).
 
-De temps en temps (une impression sur 20), la machine glisse dans le ticket un message étrange,
-sans en-tête, comme du bruit imprimé : c'est le **glitch**. `PRINTR_GLITCH` règle la fréquence
-(`PRINTR_GLITCH=5` pour une sur cinq, `0` pour jamais) ; `{ "type": "glitch" }` en force un.
-Il n'apparaît jamais dans les aperçus.
+Every now and then (one print in twenty), the machine slips a strange message into the ticket,
+with no header, like printed noise: this is the **glitch**. `PRINTR_GLITCH` sets how often it
+happens (`PRINTR_GLITCH=5` for one in five, `0` for never); `{ "type": "glitch" }` forces one.
+It never appears in previews.
 
-Le bloc `arrow_word` s'appuie sur la bibliothèque [CrossWords](https://github.com/XNinety9/CrossWords)
-(Apache 2.0, © 2026 Pierre, [XNinety9](https://github.com/XNinety9) ; voir [`NOTICE`](NOTICE)).
-Au premier usage, elle télécharge sa liste de mots avec `curl` (une trentaine de secondes, une
-seule fois) dans le cache de printr.
-Les définitions viennent de son cache (`crosswords/definitions.txt`), complété à l'impression
-par Claude pour les mots inconnus : moins d'un centime par grille neuve aux niveaux 1 et 2
-(Claude Haiku), une dizaine aux niveaux 3 et 4 (Claude Opus). L'aperçu n'appelle jamais Claude,
-et un mot que Claude n'a pas su définir n'est pas redemandé : sa longueur est imprimée.
+The `arrow_word` block relies on the [CrossWords](https://github.com/XNinety9/CrossWords) library
+(Apache 2.0, © 2026 Pierre, [XNinety9](https://github.com/XNinety9); see [`NOTICE`](NOTICE)).
+On first use, it downloads its word list with `curl` (about thirty seconds, only once) into
+printr's cache.
+Definitions come from its cache (`crosswords/definitions.txt`), completed at print time by Claude
+for the words it does not know: less than a cent per new grid at levels 1 and 2 (Claude Haiku),
+about ten cents at levels 3 and 4 (Claude Opus). Previews never call Claude, and a word that
+Claude could not define is not asked for again: its length is printed instead.
 
-Les blocs `horoscope` et `word_of_the_day` utilisent l'API Claude : définir `ANTHROPIC_API_KEY`
-(et optionnellement `PRINTR_CLAUDE_MODEL`, `claude-haiku-5-5` par défaut).
+The `horoscope` and `word_of_the_day` blocks use the Claude API: set `ANTHROPIC_API_KEY` (and
+optionally `PRINTR_CLAUDE_MODEL`, `claude-haiku-5-5` by default).
 
-Les contenus dépendant d'une date sont **mis en cache** : réimprimer le même ticket redonne les
-mêmes résultats, sans nouvel appel. `--refresh` force une nouvelle génération. Le cache vit dans
-`~/.cache/printr` (ou `$PRINTR_CACHE_DIR`, ou `/var/cache/printr` avec le service systemd).
-`PRINTR_DEBUG=1` affiche les réponses brutes de l'API.
+Date-dependent content is **cached**: reprinting the same ticket gives the same results, without
+a new API call. `--refresh` forces a new generation. The cache lives in `~/.cache/printr` (or
+`$PRINTR_CACHE_DIR`, or `/var/cache/printr` with the systemd service). `PRINTR_DEBUG=1` shows the
+raw API responses.
 
-## Interface web
+## Language
 
-`printr serve` sert une interface web pensée pour le téléphone comme pour l'ordinateur :
+Printr speaks French by default. Setting `PRINTR_LANG=en` (in `/etc/printr.env` for the service)
+switches the whole installation to English: the web interface, the command line, messages and
+tickets. Blocks with content (riddles, quotes, word searches, workouts, gift coupons…) have their
+own English list, and Claude writes the horoscope and the word of the day in English.
+
+Three blocks stay in French, for lack of an English source: **arrow words** (CrossWords' dictionary
+and definitions), the **Barnum horoscope** and the **name day**. **Public holidays** are the French
+ones, named in English.
+
+## Web interface
+
+`printr serve` serves a web interface designed for phones as well as computers:
 
 <p align="center">
-  <img src="docs/shots/mobile-home.png" alt="Accueil : les tickets de la famille" width="250">
+  <img src="docs/shots/en/mobile-home.png" alt="Home: the family's tickets" width="250">
   &nbsp;
-  <img src="docs/shots/mobile-preview.png" alt="Aperçu d'un ticket avant impression" width="250">
+  <img src="docs/shots/en/mobile-preview.png" alt="Preview of a ticket before printing" width="250">
   &nbsp;
-  <img src="docs/shots/mobile-message.png" alt="Petit mot avec une photo" width="250">
+  <img src="docs/shots/en/mobile-message.png" alt="Little note with a photo" width="250">
 </p>
 
-- **Composer** : ajouter des blocs (à la fin ou entre deux autres), les régler et les réordonner en les faisant glisser par leur poignée, avec l'aperçu du ticket en direct.
-  Les blocs Claude (horoscope, mot du jour) n'appellent pas l'API en aperçu : ils ne coûtent
-  qu'à l'impression.
-- **Mes tickets** : les tickets enregistrés (presets), à imprimer en un geste, à partager avec
-  la famille et à **planifier** (jours et heure). Une échéance manquée de plus de 15 minutes
-  n'est pas rattrapée.
-- **Petit mot** : une photo prise avec le téléphone, un dessin (cœur, étoile…), quelques mots.
-- **Courses** : la liste partagée de la famille ; chacun ajoute ce qui manque, on l'imprime en
-  partant (et elle se vide toute seule). Un raccourci iOS peut aussi y ajouter des articles
-  avec `POST /api/shopping` et le jeton.
-- **Historique** : qui a imprimé quoi, et les éventuelles erreurs.
+- **Compose**: add blocks (at the end or between two others), adjust them, and reorder them by
+  dragging their handle, with a live preview of the ticket.
+  Claude blocks (horoscope, word of the day) don't call the API in preview: they only cost
+  something when printed.
+- **My tickets**: saved tickets (presets), printed in one tap, shared with the family, and
+  **scheduled** (days and time). A missed schedule more than 15 minutes late is not caught up.
+- **Little note**: a photo taken with the phone, a drawing (heart, star…), a few words.
+- **Shopping**: the family's shared list. Everyone adds what is missing, and it gets printed on the
+  way out (then it empties itself). An iOS shortcut can also add items to it with
+  `POST /api/shopping` and the token.
+- **History**: who printed what, and any errors.
 
-Chaque membre de la famille a son compte. Le premier se crée sur l'écran d'accueil de
-l'appli (depuis le réseau de la maison) ; les suivants depuis le menu **Mon compte**, où chacun
-change aussi son mot de passe. Le premier compte est administrateur : lui seul peut en supprimer.
-En ligne de commande, même pendant que le serveur tourne (il relit ses données) :
+Each family member has their own account. The first one is created from the app's home screen
+(from the home network); the others from the **My account** menu, where everyone also changes
+their own password. The first account is the administrator: only they can delete accounts.
+From the command line, even while the server is running (it rereads its data):
 
 ```sh
-printr user add Camille       # demande le mot de passe (ou le lit sur l'entrée standard)
+printr user add Camille       # asks for the password (or reads it from standard input)
 printr user passwd Camille
 printr user remove Camille
 printr user list
 ```
 
-Les données (comptes, presets, historique, photos) vivent dans `$PRINTR_DATA_DIR`, sinon
-`~/.local/share/printr`, ou `/var/lib/printr` avec le service systemd. Pour travailler sur
-l'interface sans recompiler : `PRINTR_WEB_DIR=web printr serve`.
+Data (accounts, presets, history, photos) lives in `$PRINTR_DATA_DIR`, otherwise
+`~/.local/share/printr`, or `/var/lib/printr` with the systemd service. To work on the interface
+without recompiling: `PRINTR_WEB_DIR=web printr serve`.
 
-## Serveur HTTP
+## HTTP server
 
 ```sh
-printr serve --listen 0.0.0.0:8080 --token $(openssl rand -hex 24)   # jeton : optionnel
+printr serve --listen 0.0.0.0:8080 --token $(openssl rand -hex 24)   # token: optional
 ```
 
-| Route | Corps | Effet |
+| Route | Body | Effect |
 | --- | --- | --- |
-| `GET /` | — | Vérifie que le serveur tourne |
-| `POST /print` | Un ticket JSON | Imprime le ticket |
-| `POST /todo` | `{"title"?, "items"?: [...], "text"?: "une\nligne\npar\nélément"}` | Imprime la date et une liste à cocher |
-| `POST /api/shopping` | `{"text": "lait\npain"}` | Ajoute des articles à la liste de courses (un par ligne) |
+| `GET /` | — | Checks that the server is running |
+| `POST /print` | A JSON ticket | Prints the ticket |
+| `POST /todo` | `{"title"?, "items"?: [...], "text"?: "one\nline\nper\nitem"}` | Prints the date and a checklist |
+| `POST /api/shopping` | `{"text": "milk\nbread"}` | Adds items to the shopping list (one per line) |
 
-Pour les scripts, les `POST` exigent l'en-tête `Authorization: Bearer <jeton>` (défini avec `--token`). Ajouter `?preview` renvoie
-l'aperçu texte sans imprimer. La réponse est `{"ok": true, "errors": [...]}`, où `errors` liste
-les blocs en échec. Les requêtes sont traitées une par une : deux impressions ne se mélangent jamais.
+For scripts, `POST` requests require the header `Authorization: Bearer <token>` (set with
+`--token`). Adding `?preview` returns the text preview without printing. The response is
+`{"ok": true, "errors": [...]}`, where `errors` lists the blocks that failed. Requests are handled
+one at a time, so two prints never get mixed up.
 
 ```sh
 curl -X POST http://raspberrypi:8080/print -H "Authorization: Bearer $PRINTR_TOKEN" \
      --data @examples/matin.json
 ```
 
-### Imprimer ses Rappels iOS
+### Printing iOS Reminders
 
-Apple ne propose pas d'API pour Rappels, mais l'app Raccourcis peut envoyer la liste au Pi.
-Dans un nouveau raccourci :
+Apple does not offer an API for Reminders, but the Shortcuts app can send the list to the Pi.
+In a new shortcut:
 
-1. **Rechercher des rappels** : filtre « Liste est *Courses* » et « N'est pas terminé ».
-2. **Combiner le texte** : entrée = les rappels, séparateur = « Nouvelle ligne ».
-3. **Obtenir le contenu de l'URL** :
-   - URL : `http://<ip-du-pi>:8080/todo`, méthode **POST** ;
-   - en-tête `Authorization` = `Bearer <jeton>` ;
-   - corps **JSON** : `title` (texte) = `Courses`, `text` (texte) = *Texte combiné*.
-4. Optionnel : **Afficher la notification** avec le résultat.
+1. **Find Reminders**: filter "List is *Shopping*" (use the name of your own list) and "Is not completed".
+2. **Combine Text**: input = the reminders, separator = "New Line".
+3. **Get Contents of URL**:
+   - URL: `http://<pi-ip>:8080/todo`, method **POST**;
+   - header `Authorization` = `Bearer <token>`;
+   - **JSON** body: `title` (text) = `Shopping`, `text` (text) = *Combined Text*.
+4. Optional: **Show Notification** with the result.
 
-Pour l'automatiser : Raccourcis > Automatisation > Heure de la journée, puis « Exécuter
-immédiatement ». Le téléphone doit pouvoir joindre le Pi (même Wi-Fi, ou un VPN type Tailscale).
+To automate it: Shortcuts > Automation > Time of Day, then "Run Immediately". The phone must be able
+to reach the Pi (same Wi-Fi, or a VPN such as Tailscale).
 
-## Sécurité
+## Security
 
-L'appli peut être ouverte sur Internet derrière un reverse proxy HTTPS (Caddy, nginx…). Elle
-se protège ainsi :
+The app can be opened to the Internet behind an HTTPS reverse proxy (Caddy, nginx…). It protects
+itself as follows:
 
-- **Comptes** : mots de passe hachés avec Argon2 (8 caractères minimum), cookie de session
-  `HttpOnly`, `SameSite=Lax` et `Secure` en HTTPS. Le premier compte, administrateur, ne se crée
-  que depuis le réseau local ; seul l'administrateur peut supprimer un compte.
-- **Essais de mot de passe** : cinq échecs par adresse en quinze minutes, puis blocage ; une
-  seule vérification à la fois, pour que des essais en masse n'épuisent pas la mémoire.
-  Derrière le proxy, l'adresse du client est lue dans `X-Forwarded-For` (dernière entrée).
-- **Requêtes d'un autre site** refusées (en-tête `Origin`), même depuis un sous-domaine voisin.
-- **Réseau local hors d'atteinte** : depuis l'appli ou un script, les blocs (images, flux RSS,
-  agendas…) ne joignent que des adresses publiques, redirections comprises, et ne lisent
-  aucun fichier de la machine. En ligne de commande, tout reste permis.
-- **Abus** : 60 blocs au plus par ticket, images décodées avec des limites de taille, et
-  `PRINTR_MAX_TICKETS_PER_HOUR` impressions par personne et par heure (20 par défaut).
-- **Service** sans privilèges, mémoire plafonnée et système en lecture seule (voir
-  [`deploy/printr.service`](deploy/printr.service)) ; politique de sécurité du contenu (CSP)
-  sur l'interface.
+- **Accounts**: passwords hashed with Argon2 (8 characters minimum), session cookie `HttpOnly`,
+  `SameSite=Lax`, and `Secure` over HTTPS. The first account, the administrator's, can only be
+  created from the local network; only the administrator can delete an account.
+- **Password attempts**: five failures per address within fifteen minutes, then a block; only one
+  check runs at a time, so mass guessing cannot exhaust the memory. Behind the proxy, the client
+  address is read from `X-Forwarded-For` (last entry).
+- **Cross-site requests** are refused (`Origin` header), even from a neighboring subdomain.
+- **Local network out of reach**: from the app or a script, blocks (images, RSS feeds, calendars…)
+  only reach public addresses, redirects included, and never read any file on the machine.
+  From the command line, everything stays allowed.
+- **Abuse**: 60 blocks per ticket at most, images decoded with size limits, and
+  `PRINTR_MAX_TICKETS_PER_HOUR` prints per person per hour (20 by default).
+- **Service** running without privileges, with capped memory and a read-only system (see
+  [`deploy/printr.service`](deploy/printr.service)); a content security policy (CSP) on the interface.
 
-**Mises à jour** : une fois par jour (`PRINTR_UPDATE_INTERVAL` minutes pour changer, 5 au
-minimum), printr regarde sur GitHub si une version plus récente est publiée et le signale à
-l'administrateur (« Mon compte »). Rien n'est téléchargé ni installé
-tout seul : la mise à jour reste un geste humain (`scripts/deploy.sh`), après lecture des
-nouveautés ; un compte GitHub compromis ne peut donc rien exécuter sur les machines.
-`PRINTR_UPDATE_CHECK=off` coupe la vérification.
+**Updates**: once a day (`PRINTR_UPDATE_INTERVAL` minutes to change it, 5 minimum), printr checks
+GitHub to see whether a newer version has been published, and reports it to the administrator
+("My account"). Nothing is downloaded or installed on its own: updating stays a human action
+(`scripts/deploy.sh`), after reading what's new, so a compromised GitHub account cannot run
+anything on the machines. `PRINTR_UPDATE_CHECK=off` turns the check off.
 
-Côté machine, il reste conseillé de n'accepter que les clés en SSH, et de vérifier que le
-pare-feu IPv6 de la box ne laisse pas entrer les connexions vers le réseau local.
+On the machine side, it is still advisable to accept SSH keys only, and to check that your
+router's IPv6 firewall does not let connections into the local network.
 
-## Tester sans imprimante (émulateur)
+## Testing without a printer (emulator)
 
-[emupos](https://pypi.org/project/emupos/) simule l'imprimante et rend chaque ticket en PNG + texte.
-Le dossier `emulator/` contient un profil TM-T88V (512 points, 180 dpi).
+[emupos](https://pypi.org/project/emupos/) simulates the printer and renders each ticket as a PNG
+plus text. The `emulator/` folder contains a TM-T88V profile (512 dots, 180 dpi).
 
-Pour générer le ticket complet (tous les blocs) en une commande :
+To generate the full ticket (all the blocks) in one command:
 
 ```sh
-scripts/demo.sh                          # examples/complet.json par défaut
-scripts/demo.sh examples/extras.json     # ou n'importe quel ticket
-# → affiche le chemin du rendu, emulator/receipts/<id>.png (et .txt)
+scripts/demo.sh                          # examples/complet.json by default
+scripts/demo.sh examples/extras.json     # or any ticket
+# → prints the path of the rendering, emulator/receipts/<id>.png (and .txt)
 ```
 
-Le script lance l'émulateur, imprime le ticket, attend le rendu puis arrête l'émulateur.
-Les blocs Claude demandent `ANTHROPIC_API_KEY` dans l'environnement.
+The script starts the emulator, prints the ticket, waits for the rendering, then stops the
+emulator. Claude blocks need `ANTHROPIC_API_KEY` in the environment.
 
-À la main, dans deux terminaux :
+By hand, in two terminals:
 
 ```sh
 cd emulator && uvx emupos run                # terminal 1
 cargo run -- --tcp 127.0.0.1:9100 test       # terminal 2
-# → emulator/receipts/*.png et *.txt
+# → emulator/receipts/*.png and *.txt
 ```
 
-## Développer sous Windows (dev container)
+## Developing on Windows (dev container)
 
-Le dossier `.devcontainer/` fournit un environnement Linux avec Rust et uv : dans VS Code
-(extension Dev Containers, Docker Desktop lancé), **Reopen in Container**. Tout se fait ensuite
-dans le terminal du conteneur, comme sur le Pi :
+The `.devcontainer/` folder provides a Linux environment with Rust and uv. In VS Code (Dev
+Containers extension, Docker Desktop running), run **Reopen in Container**. Everything is then done
+in the container's terminal, just as on the Pi:
 
 ```sh
-cargo run -- --preview print ticket.json           # aperçu dans le terminal
-scripts/demo.sh ticket.json                         # rendu PNG via l'émulateur
-cargo run -- --tcp host.docker.internal:9101 print ticket.json   # vraie imprimante
+cargo run -- --preview print ticket.json           # preview in the terminal
+scripts/demo.sh ticket.json                         # PNG rendering through the emulator
+cargo run -- --tcp host.docker.internal:9101 print ticket.json   # real printer
 ```
 
-### Relais PowerShell vers l'imprimante USB
+### PowerShell relay to the USB printer
 
-L'imprimante USB reste branchée sur Windows. Pour l'atteindre depuis le conteneur, le script
-[`scripts/windows-relay.ps1`](scripts/windows-relay.ps1) écoute sur `127.0.0.1:9101` côté Windows
-et transmet chaque connexion reçue à la file d'impression, en brut (RAW, sans le rendu du pilote).
-Un ticket = une connexion : il est imprimé à la fermeture de celle-ci.
+The USB printer stays plugged into Windows. To reach it from the container, the script
+[`scripts/windows-relay.ps1`](scripts/windows-relay.ps1) listens on `127.0.0.1:9101` on the
+Windows side and forwards each incoming connection to the print queue, as raw data (RAW, without
+the driver's rendering). One ticket = one connection: it is printed when that connection closes.
 
-Dans un terminal PowerShell **Windows**, à la racine du dépôt, et le laisser ouvert :
+In a **Windows** PowerShell terminal, at the root of the repository, and leave it open:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\windows-relay.ps1
-# Relais 127.0.0.1:9101 -> 'EPSON TM-T88V Receipt' (Ctrl+C pour arrêter)
+# Relay 127.0.0.1:9101 -> 'EPSON TM-T88V Receipt' (Ctrl+C to stop)
 ```
 
-Options : `-Printer "nom"` si la file Windows porte un autre nom (liste : `Get-Printer | Select Name`),
-`-Port 9102` pour un autre port. Chaque ticket reçu s'affiche avec sa taille en octets.
+Options: `-Printer "name"` if the Windows queue has a different name (list them with
+`Get-Printer | Select Name`), `-Port 9102` for another port. Each ticket received is shown with
+its size in bytes.
 
-Puis, dans le conteneur :
+Then, in the container:
 
 ```sh
 cargo run -- --tcp host.docker.internal:9101 print examples/matin.json
 ```
 
-En cas de souci :
+Troubleshooting:
 
-- **`impossible de se connecter à host.docker.internal:9101`** : le relais ne tourne pas (ou sur un
-  autre port). Vérifier côté Windows avec `Test-NetConnection 127.0.0.1 -Port 9101`.
-- **Le script s'arrête au démarrage** : la file `-Printer` n'existe pas ; prendre le nom exact
-  donné par `Get-Printer`.
-- **Connexion acceptée mais rien ne sort** : vérifier que l'imprimante est allumée et que la file
-  Windows n'est pas en pause ou en erreur.
+- **`impossible de se connecter à host.docker.internal:9101`** (the error message is printed in
+  French): the relay is not running, or is on another port. Check on the Windows side with
+  `Test-NetConnection 127.0.0.1 -Port 9101`.
+- **The script stops at startup**: the `-Printer` queue does not exist; use the exact name given
+  by `Get-Printer`.
+- **Connection accepted but nothing comes out**: check that the printer is switched on and that
+  the Windows queue is not paused or in error.
 
-## Site et illustrations
+## Website and illustrations
 
-Le site vit dans [`docs/`](docs/) : la page d'accueil, et des pages de documentation générées
-depuis ce README et le [guide de contribution](CONTRIBUTING.md), pour ne jamais s'en écarter.
-GitHub Actions le construit et le publie sur GitHub Pages à chaque modification sur `master`.
-Pour le voir en local :
+The website lives in [`docs/`](docs/): the home page, and documentation pages generated from this
+README and from the [contribution guide](CONTRIBUTING.md), so they never drift from it.
+GitHub Actions builds it and publishes it on GitHub Pages on every change to `master`.
+To view it locally:
 
 ```sh
 uvx --with markdown --with pymdown-extensions python docs/build.py && python3 -m http.server -d _site
 ```
 
-Ses illustrations sont générées avec des données fictives uniquement :
+Its illustrations are generated with fictional data only:
 
 ```sh
-docs/demo/photo-session.sh                              # captures de l'appli + tickets de l'émulateur
-uv run --with pillow python docs/brand/make-assets.py   # déclinaisons du logo et icônes de l'appli
+docs/demo/photo-session.sh                              # app screenshots + emulator tickets
+uv run --with pillow python docs/brand/make-assets.py   # logo variants and app icons
 ```
 
 ## Installation
 
-printr s'installe comme service systemd sur n'importe quel Linux : Raspberry Pi (Raspberry Pi
-OS Lite 64 bits conseillé), serveur ou PC, en ARM 64 bits, ARM 32 bits ou x86_64. L'imprimante
-peut être en USB ou sur le réseau.
+printr installs as a systemd service on any Linux machine: Raspberry Pi (Raspberry Pi OS Lite 64-bit
+recommended), server or PC, on 64-bit ARM, 32-bit ARM or x86_64. The printer can be connected
+by USB or be on the network.
 
 ```sh
-scripts/deploy.sh pi@printer.local      # machine distante, par SSH (clé) ; --port N si besoin
-scripts/deploy.sh --local               # cette machine
+scripts/deploy.sh pi@printer.local      # remote machine, over SSH (key); --port N if needed
+scripts/deploy.sh --local               # this machine
 ```
 
-Le script détecte l'architecture de la machine, compile pour elle (avec
-[`cross`](https://github.com/cross-rs/cross), pour une glibc compatible), envoie le programme
-et lance [`deploy/install.sh`](deploy/install.sh), qui demande le mot de passe `sudo` **une
-seule fois** et la clé Claude (facultative). L'installation :
+The script detects the machine's architecture, compiles for it (with
+[`cross`](https://github.com/cross-rs/cross), for a compatible glibc), sends the program over and
+runs [`deploy/install.sh`](deploy/install.sh), which asks for the `sudo` password **only once**,
+and for the Claude key (optional). The installation:
 
-- crée l'utilisateur système `printr` et ajoute ton compte aux groupes `printr` et `lp` ;
-- installe le programme dans `/opt/printr` (et la commande `printr`) ;
-- installe la règle udev de l'imprimante USB (lien stable `/dev/tm88`) et charge `usblp` ;
-- clone [Barnum](https://github.com/XNinety9/Barnum) dans `/opt/barnum` (si `python3` et `git`
-  sont là) ;
-- crée `/etc/printr.env` et le service, puis vérifie qu'il répond.
+- creates the `printr` system user and adds your account to the `printr` and `lp` groups;
+- installs the program in `/opt/printr` (and the `printr` command);
+- installs the udev rule for the USB printer (stable link `/dev/tm88`) and loads `usblp`;
+- clones [Barnum](https://github.com/XNinety9/Barnum) into `/opt/barnum` (if `python3` and `git`
+  are available);
+- creates `/etc/printr.env` and the service, then checks that it responds.
 
-**La relancer ne perd rien.** Avant toute modification, elle vérifie que les données sont
-lisibles (sinon elle s'arrête sans rien toucher) et les sauvegarde dans
-`/var/backups/printr` (les cinq dernières). La configuration existante est gardée : seules les
-options nouvelles y sont ajoutées. L'ancien programme reste dans `/opt/printr/printr.old` et les
-anciens fichiers système modifiés rejoignent les sauvegardes. Chaque étape dit ce qui a changé.
+**Running it again loses nothing.** Before any change, it checks that the data is readable
+(otherwise it stops without touching anything), and backs it up to `/var/backups/printr` (the last
+five backups are kept). The existing configuration is kept: only the new options are added.
+The old program stays in `/opt/printr/printr.old`, and the old system files that were modified
+join the backups. Each step says what changed.
 
-Ensuite, **plus besoin de sudo** (après s'être déconnecté et reconnecté, pour le groupe) :
+Then, **no more sudo needed** (after logging out and back in, for the group):
 
 ```sh
-scripts/deploy.sh pi@printer.local      # depuis le PC : mise à jour du programme et redémarrage
-nano /etc/printr.env                    # configuration (clé Claude, imprimante, port…)
-systemctl restart printr                # redémarrage
-journalctl -u printr -f                 # suivre les impressions
+scripts/deploy.sh pi@printer.local      # from the PC: update the program and restart
+nano /etc/printr.env                    # configuration (Claude key, printer, port…)
+systemctl restart printr                # restart
+journalctl -u printr -f                 # follow the prints
 ```
 
-`--install` relance l'installation complète (nouveau fichier de service, nouvelle règle udev…).
-Pour une imprimante réseau, définir `PRINTR_TCP=adresse:9100` dans `/etc/printr.env`. Sur la
-machine, la commande `printr` lit aussi ce fichier : un ticket lancé à la main utilise la même
-imprimante et la même clé que le serveur.
+`--install` runs the full installation again (new service file, new udev rule…).
+For an English installation, set `PRINTR_LANG=en` in `/etc/printr.env` and restart the service.
+For a network printer, set `PRINTR_TCP=address:9100` in `/etc/printr.env`. On the machine, the
+`printr` command also reads this file: a ticket launched by hand uses the same printer and the
+same key as the server.
 
-Pour tout faire à la main, compiler pour la machine visée, avec
-[`cross`](https://github.com/cross-rs/cross) (Docker) depuis un autre ordinateur, puis lancer
-l'installation sur la machine (`--help` pour les options) :
+To do everything by hand, build for the target machine with [`cross`](https://github.com/cross-rs/cross)
+(Docker) from another computer, then run the installation on the machine (`--help` lists the
+options):
 
 ```sh
-cross build --release --target aarch64-unknown-linux-gnu     # Pi 3, Pi 4, Pi 5, Zero 2 W (64 bits)
-cross build --release --target armv7-unknown-linux-gnueabihf # Pi 2, Pi 3 en 32 bits
+cross build --release --target aarch64-unknown-linux-gnu     # Pi 3, Pi 4, Pi 5, Zero 2 W (64-bit)
+cross build --release --target armv7-unknown-linux-gnueabihf # Pi 2, Pi 3 in 32-bit
 cross build --release --target arm-unknown-linux-gnueabihf   # Pi Zero W, Pi 1 (ARMv6)
-cargo build --release                                        # cette machine
-sudo deploy/install.sh --binary chemin/vers/printr
+cargo build --release                                        # this machine
+sudo deploy/install.sh --binary path/to/printr
 ```
-

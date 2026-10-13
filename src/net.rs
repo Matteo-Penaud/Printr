@@ -105,7 +105,7 @@ impl Resolver for PublicOnly {
             let host = uri.host().unwrap_or("?");
             return Err(ureq::Error::Io(std::io::Error::new(
                 std::io::ErrorKind::PermissionDenied,
-                format!("{host} : adresse du réseau local, refusée depuis l'appli"),
+                tr!("{host} : adresse du réseau local, refusée depuis l'appli", "{host}: local network address, refused by the app"),
             )));
         }
         Ok(allowed)

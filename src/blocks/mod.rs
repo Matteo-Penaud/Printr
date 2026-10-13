@@ -47,7 +47,7 @@ use serde::Deserialize;
 use crate::cache::Cache;
 use crate::claude::Claude;
 use crate::doc::{Align, Doc, Style};
-use crate::{fr, raster};
+use crate::{i18n, raster};
 
 fn yes() -> bool {
     true
@@ -477,7 +477,11 @@ impl Ctx {
     pub fn check_local_file(&self, path: &str) -> Result<()> {
         anyhow::ensure!(
             self.local,
-            "fichier local refusé depuis l'appli ({path}) : utilise une adresse web ou une photo envoyée"
+            "{}",
+            tr!(
+                "fichier local refusé depuis l'appli ({path}) : utilise une adresse web ou une photo envoyée",
+                "local file refused from the app ({path}): use a web address or an uploaded photo"
+            )
         );
         Ok(())
     }
@@ -493,7 +497,7 @@ pub fn ai_placeholder(title: &str, what: &str) -> Doc {
     let mut doc = Doc::new();
     doc.header(title);
     doc.feed(1);
-    doc.text(&format!("{what} sera rédigé par Claude au moment de l'impression."), Style::default().center());
+    doc.text(&tr!("{what} sera rédigé par Claude au moment de l'impression.", "{what} will be written by Claude when printing."), Style::default().center());
     doc
 }
 
@@ -508,49 +512,49 @@ pub struct Report {
 impl Block {
     pub fn name(&self) -> &'static str {
         match self {
-            Block::PetitBac { .. } => "petit bac",
-            Block::MentalMath { .. } => "calcul mental",
-            Block::Anagram { .. } => "mot mystère",
-            Block::Nonogram { .. } => "logimage",
-            Block::Cipher { .. } => "message codé",
-            Block::Shopping { .. } => "liste de courses",
-            Block::Coupon { .. } => "bon à offrir",
+            Block::PetitBac { .. } => i18n::t("petit bac", "categories"),
+            Block::MentalMath { .. } => i18n::t("calcul mental", "mental math"),
+            Block::Anagram { .. } => i18n::t("mot mystère", "mystery word"),
+            Block::Nonogram { .. } => i18n::t("logimage", "nonogram"),
+            Block::Cipher { .. } => i18n::t("message codé", "secret message"),
+            Block::Shopping { .. } => i18n::t("liste de courses", "shopping list"),
+            Block::Coupon { .. } => i18n::t("bon à offrir", "gift coupon"),
             Block::Wifi { .. } => "Wi-Fi",
-            Block::Bins { .. } => "poubelles",
-            Block::Agenda { .. } => "agenda",
-            Block::MonthlyReport { .. } => "bilan du mois",
-            Block::Coloring { .. } => "coloriage",
-            Block::ArrowWord { .. } => "mots fléchés",
-            Block::Title { .. } => "titre",
-            Block::Text { .. } => "texte",
+            Block::Bins { .. } => i18n::t("poubelles", "trash day"),
+            Block::Agenda { .. } => i18n::t("agenda", "calendar"),
+            Block::MonthlyReport { .. } => i18n::t("bilan du mois", "monthly report"),
+            Block::Coloring { .. } => i18n::t("coloriage", "coloring page"),
+            Block::ArrowWord { .. } => i18n::t("mots fléchés", "arrow words"),
+            Block::Title { .. } => i18n::t("titre", "title"),
+            Block::Text { .. } => i18n::t("texte", "text"),
             Block::Glitch { .. } => "glitch",
-            Block::Separator { .. } => "séparateur",
+            Block::Separator { .. } => i18n::t("séparateur", "separator"),
             Block::Date {} => "date",
-            Block::Feed { .. } => "espace",
+            Block::Feed { .. } => i18n::t("espace", "space"),
             Block::Image { .. } => "image",
             Block::Qr { .. } => "QR code",
-            Block::Weather { .. } => "météo",
+            Block::Weather { .. } => i18n::t("météo", "weather"),
             Block::Horoscope { .. } => "horoscope",
-            Block::Saint {} => "saint du jour",
-            Block::Todo { .. } => "à faire",
+            Block::Saint {} => i18n::t("saint du jour", "name day"),
+            Block::Todo { .. } => i18n::t("à faire", "to-do"),
             Block::Sudoku { .. } => "sudoku",
-            Block::WordSearch { .. } => "mots mêlés",
-            Block::TrainTracks { .. } => "voie ferrée",
-            Block::Maze { .. } => "labyrinthe",
-            Block::WordOfTheDay {} => "mot du jour",
-            Block::Holidays { .. } => "jours fériés",
-            Block::Moon {} => "lune",
-            Block::Countdown { .. } => "compte à rebours",
-            Block::OnThisDay { .. } => "éphéméride",
-            Block::AirQuality { .. } => "qualité de l'air",
-            Block::Quote {} => "citation",
+            Block::WordSearch { .. } => i18n::t("mots mêlés", "word search"),
+            Block::TrainTracks { .. } => i18n::t("voie ferrée", "train tracks"),
+            Block::Maze { .. } => i18n::t("labyrinthe", "maze"),
+            Block::WordOfTheDay {} => i18n::t("mot du jour", "word of the day"),
+            Block::Holidays { .. } => i18n::t("jours fériés", "public holidays"),
+            Block::Moon {} => i18n::t("lune", "moon"),
+            Block::Countdown { .. } => i18n::t("compte à rebours", "countdown"),
+            Block::OnThisDay { .. } => i18n::t("éphéméride", "on this day"),
+            Block::AirQuality { .. } => i18n::t("qualité de l'air", "air quality"),
+            Block::Quote {} => i18n::t("citation", "quote"),
             Block::Crypto { .. } => "crypto",
-            Block::Sun { .. } => "lever/coucher du soleil",
-            Block::Riddle { .. } => "énigme",
-            Block::Workout { .. } => "défi sportif",
-            Block::Picto { .. } => "pictogramme",
-            Block::Barnum { .. } => "horoscope Barnum",
-            Block::News { .. } => "actualités",
+            Block::Sun { .. } => i18n::t("lever/coucher du soleil", "sunrise/sunset"),
+            Block::Riddle { .. } => i18n::t("énigme", "riddle"),
+            Block::Workout { .. } => i18n::t("défi sportif", "workout"),
+            Block::Picto { .. } => i18n::t("pictogramme", "pictogram"),
+            Block::Barnum { .. } => i18n::t("horoscope Barnum", "Barnum horoscope"),
+            Block::News { .. } => i18n::t("actualités", "news"),
         }
     }
 
@@ -565,7 +569,7 @@ impl Block {
             }
             Block::WordSearch { difficulty, theme, words, solution, .. } => {
                 let subject = match (words.is_empty(), theme) {
-                    (false, _) => "mes mots, ",
+                    (false, _) => i18n::t("mes mots, ", "my words, "),
                     (true, Some(t)) => &format!("{}, ", t.label()),
                     (true, None) => "",
                 };
@@ -577,10 +581,11 @@ impl Block {
             Block::Wifi { ssid, .. } => Some(ssid.clone()),
             Block::Agenda { title, .. } => title.clone(),
             Block::MonthlyReport { month, .. } => month.clone(),
-            Block::Nonogram { number, .. } => number.map(|n| format!("n° {n}")),
+            Block::Nonogram { number, .. } => number.map(|n| tr!("n° {n}", "No. {n}")),
             Block::ArrowWord { size, level, solution, .. } => Some(format!(
-                "{}, grille {}{}",
+                "{}, {} {}{}",
                 arrow_word::level_label(*level),
+                i18n::t("grille", "grid"),
                 size.label(),
                 if *solution { ", solution" } else { "" }
             )),
@@ -591,7 +596,7 @@ impl Block {
             Block::Workout { level, .. } => Some(level.label().to_owned()),
             Block::Picto { shape, .. } => Some(shape.label().to_owned()),
             Block::Barnum { sign, birth_date, .. } => {
-                birth_date.map(|d| format!("né le {d}")).or_else(|| sign.clone())
+                birth_date.map(|d| tr!("né le {d}", "born {d}")).or_else(|| sign.clone())
             }
             Block::Image { path, url, upload, .. } => path.as_ref().or(url.as_ref()).or(upload.as_ref()).map(|p| {
                 p.rsplit('/').next().unwrap_or(p).to_owned()
@@ -619,7 +624,7 @@ impl Block {
                 doc.rule(style.unwrap_or('-'));
             }
             Block::Date {} => {
-                doc.text(&fr::capitalize(&fr::long_date(ctx.today)), Style::default().bold().center());
+                doc.text(&i18n::capitalize(&i18n::long_date(ctx.today)), Style::default().bold().center());
             }
             Block::Feed { lines } => {
                 doc.feed(*lines);
@@ -627,8 +632,8 @@ impl Block {
             Block::Image { path, url, upload, dither } => {
                 let img = match (path, url, upload) {
                     (None, None, Some(id)) => {
-                        anyhow::ensure!(id.chars().all(|c| c.is_ascii_hexdigit()), "photo invalide");
-                        let dir = crate::store::uploads_dir().context("répertoire de données introuvable")?;
+                        anyhow::ensure!(id.chars().all(|c| c.is_ascii_hexdigit()), i18n::t("photo invalide", "invalid photo"));
+                        let dir = crate::store::uploads_dir().context(i18n::t("répertoire de données introuvable", "data directory not found"))?;
                         raster::load(&dir.join(format!("{id}.png")), *dither)?
                     }
                     (Some(path), None, None) => {
@@ -640,14 +645,14 @@ impl Block {
                             .http
                             .get(url)
                             .call()
-                            .context("image injoignable")?
+                            .context(i18n::t("image injoignable", "image unreachable"))?
                             .body_mut()
                             .with_config()
                             .limit(20 * 1024 * 1024)
                             .read_to_vec()?;
                         raster::prepare(&raster::decode(&bytes)?, *dither)
                     }
-                    _ => anyhow::bail!("indiquer `path`, `url` ou `upload` (un seul)"),
+                    _ => anyhow::bail!(i18n::t("indiquer `path`, `url` ou `upload` (un seul)", "give `path`, `url` or `upload` (only one)")),
                 };
                 doc.image(img);
             }
@@ -661,7 +666,7 @@ impl Block {
             Block::Horoscope { sign, tone } => doc = horoscope::build(ctx, sign, *tone)?,
             Block::Saint {} => doc = saint::build(ctx.today),
             Block::Todo { title, items } => {
-                doc.header(title.as_deref().unwrap_or("À faire"));
+                doc.header(title.as_deref().unwrap_or(i18n::t("À faire", "To do")));
                 for item in items {
                     doc.hanging("[ ] ", item, Style::default());
                 }
@@ -682,9 +687,9 @@ impl Block {
             Block::Countdown { label, date } => {
                 let days = (*date - ctx.today).num_days();
                 let (big, small) = match days {
-                    0 => ("C'est aujourd'hui !".to_owned(), label.clone()),
-                    d if d > 0 => (format!("J-{d}"), format!("avant : {label}")),
-                    d => (format!("J+{}", -d), format!("depuis : {label}")),
+                    0 => (i18n::t("C'est aujourd'hui !", "It's today!").to_owned(), label.clone()),
+                    d if d > 0 => (tr!("J-{d}", "D-{d}"), tr!("avant : {label}", "until: {label}")),
+                    d => (tr!("J+{}", "D+{}", -d), tr!("depuis : {label}", "since: {label}")),
                 };
                 let size = if big.chars().count() <= 14 { 3 } else { 1 };
                 doc.text(&big, Style::default().bold().center().size(size));
@@ -702,7 +707,7 @@ impl Block {
                 let who = match (birth_date, sign) {
                     (Some(birth), _) => barnum::Who::Birth(*birth),
                     (None, Some(sign)) => barnum::Who::Sign(sign.clone()),
-                    (None, None) => anyhow::bail!("indiquer `sign` ou `birth_date`"),
+                    (None, None) => anyhow::bail!(i18n::t("indiquer `sign` ou `birth_date`", "give `sign` or `birth_date`")),
                 };
                 doc = barnum::build(who, ctx.today, *sky, variant.as_deref())?;
             }
@@ -768,7 +773,7 @@ impl Ticket {
                 s.spawn(move || {
                     let start = Instant::now();
                     let result = std::panic::catch_unwind(AssertUnwindSafe(|| block.build(ctx)))
-                        .unwrap_or_else(|_| Err(anyhow::anyhow!("erreur interne")))
+                        .unwrap_or_else(|_| Err(anyhow::anyhow!(i18n::t("erreur interne", "internal error"))))
                         .map_err(|e| format!("{e:#}"));
                     let _ = tx.send((i, result, start.elapsed()));
                 });
@@ -783,7 +788,7 @@ impl Ticket {
                             Ok(doc) => (doc, None),
                             Err(error) => {
                                 let mut doc = Doc::new();
-                                let message = format!("({} indisponible : {error})", block.name());
+                                let message = tr!("({} indisponible : {error})", "({} unavailable: {error})", block.name());
                                 doc.text(&message, Style::default().small().center());
                                 (doc, Some(error))
                             }

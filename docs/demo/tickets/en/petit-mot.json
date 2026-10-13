@@ -1,0 +1,8 @@
+{ "blocks": [
+  { "type": "picto", "shape": "heart", "count": 3, "size": "small" },
+  { "type": "title", "text": "For you" },
+  { "type": "image", "path": "docs/demo/cafe.jpg" },
+  { "type": "text", "text": "A little coffee to start the day right. Thinking of you!", "align": "center" },
+  { "type": "text", "text": "- Alex", "align": "right", "bold": true },
+  { "type": "date" }
+] }

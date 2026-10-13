@@ -9,7 +9,7 @@ use rand::{RngExt, SeedableRng};
 
 use super::picto::Shape;
 use crate::doc::{Doc, Style};
-use crate::{draw, fr};
+use crate::{draw, i18n};
 
 /// Idées de bons, quand le ticket n'en précise pas.
 const IDEAS: &[&str] = &[
@@ -27,6 +27,24 @@ const IDEAS: &[&str] = &[
     "un chocolat chaud avec chantilly",
     "une journée où c'est toi qui décides",
     "un pique-nique",
+];
+
+/// Mêmes idées, en anglais.
+const IDEAS_EN: &[&str] = &[
+    "breakfast in bed",
+    "one dishwashing session without complaining",
+    "an unlimited hug",
+    "a movie night of your choice",
+    "a shoulder massage",
+    "a long lie-in",
+    "a homemade dessert",
+    "a walk, just the two of you",
+    "a chore joker",
+    "an evening with no screens",
+    "one game of your choice",
+    "a hot chocolate with whipped cream",
+    "a day where you make all the calls",
+    "a picnic",
 ];
 
 const CUT: &str = "- - - - - - - - - - 8< - - - - - - - - - -";
@@ -70,7 +88,7 @@ pub struct Coupon<'a> {
 pub fn build(coupon: &Coupon, today: NaiveDate) -> Doc {
     let mut rng = StdRng::from_rng(&mut rand::rng());
     let count = coupon.count.clamp(1, 6) as usize;
-    let mut ideas = IDEAS.to_vec();
+    let mut ideas = if i18n::en() { IDEAS_EN.to_vec() } else { IDEAS.to_vec() };
     ideas.shuffle(&mut rng);
     let texts: Vec<&str> = match coupon.text.filter(|t| !t.trim().is_empty()) {
         Some(text) => vec![text; count],
@@ -84,27 +102,33 @@ pub fn build(coupon: &Coupon, today: NaiveDate) -> Doc {
         doc.image(frieze());
         doc.feed(1);
         // `line` et non `text` : les espaces entre les lettres sont gardés tels quels.
-        doc.line("B O N   P O U R", Style::default().bold().center().size(2));
+        doc.line(i18n::t("B O N   P O U R", "C O U P O N   F O R"), Style::default().bold().center().size(2));
         doc.feed(1);
         doc.text(text.trim(), Style::default().bold().center().size(2));
         doc.feed(1);
         let people = match (coupon.from, coupon.to) {
-            (Some(from), Some(to)) => Some(format!("Offert par {from} à {to}")),
-            (Some(from), None) => Some(format!("Offert par {from}")),
-            (None, Some(to)) => Some(format!("Pour {to}")),
+            (Some(from), Some(to)) => Some(tr!("Offert par {from} à {to}", "Given by {from} to {to}")),
+            (Some(from), None) => Some(tr!("Offert par {from}", "Given by {from}")),
+            (None, Some(to)) => Some(tr!("Pour {to}", "For {to}")),
             (None, None) => None,
         };
         if let Some(people) = people {
             doc.text(&people, Style::default().center());
         }
         let validity = match coupon.valid_until {
-            Some(date) => format!("Valable jusqu'au {} {}", fr::day_month(date), date.format("%Y")),
-            None => "Valable pour toujours (ou presque)".to_owned(),
+            Some(date) => tr!("Valable jusqu'au {} {}", "Valid until {}, {}", i18n::day_month(date), date.format("%Y")),
+            None => i18n::t("Valable pour toujours (ou presque)", "Valid forever (or almost)").to_owned(),
         };
         doc.text(&validity, Style::default().center());
         doc.feed(1);
-        doc.text("Non remboursable, non échangeable, à utiliser sans modération.", Style::default().small().center());
-        doc.text(&format!("Bon n° {}", serial(today, &mut rng)), Style::default().small().center());
+        doc.text(
+            i18n::t(
+                "Non remboursable, non échangeable, à utiliser sans modération.",
+                "Non-refundable, non-exchangeable, use without moderation.",
+            ),
+            Style::default().small().center(),
+        );
+        doc.text(&tr!("Bon n° {}", "Coupon No. {}", serial(today, &mut rng)), Style::default().small().center());
         doc.feed(1);
         doc.image(frieze());
         doc.feed(1);
@@ -136,5 +160,30 @@ mod tests {
             .collect();
         assert_eq!(lines.iter().filter(|l| l.contains("8<")).count(), 4);
         assert_eq!(lines.iter().filter(|l| l.contains("Offert par Alex à Camille")).count(), 3);
+    }
+
+    #[test]
+    fn english_coupons_fit() {
+        use crate::i18n::{with_lang, Lang};
+        let today = NaiveDate::from_ymd_opt(2026, 10, 8).unwrap();
+        let coupon = Coupon { text: None, from: Some("Alex"), to: Some("Camille"), valid_until: NaiveDate::from_ymd_opt(2026, 10, 31), count: 3 };
+        with_lang(Lang::En, || {
+            let doc = build(&coupon, today);
+            let lines: Vec<&str> = doc
+                .ops
+                .iter()
+                .filter_map(|op| match op {
+                    Op::Line { text, style } => {
+                        assert!(text.chars().count() <= style.columns(), "{text}");
+                        Some(text.as_str())
+                    }
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(lines.iter().filter(|l| l.contains("C O U P O N   F O R")).count(), 3);
+            assert_eq!(lines.iter().filter(|l| l.contains("Given by Alex to Camille")).count(), 3);
+            assert!(lines.iter().any(|l| l.contains("Valid until October 31, 2026")));
+            assert!(lines.iter().any(|l| l.contains("Coupon No. 2026-")));
+        });
     }
 }

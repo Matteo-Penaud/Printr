@@ -3,6 +3,7 @@
 use serde::Deserialize;
 
 use crate::doc::{Doc, Style};
+use crate::i18n;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -45,23 +46,34 @@ fn payload(ssid: &str, password: Option<&str>, security: Security, hidden: bool)
 }
 
 pub fn build(ssid: &str, password: Option<&str>, security: Security, hidden: bool, show_password: bool) -> anyhow::Result<Doc> {
-    anyhow::ensure!(!ssid.trim().is_empty(), "indiquer le nom du réseau (`ssid`)");
+    anyhow::ensure!(
+        !ssid.trim().is_empty(),
+        "{}",
+        i18n::t("indiquer le nom du réseau (`ssid`)", "give the network name (`ssid`)")
+    );
     let password = password.filter(|p| !p.is_empty());
     anyhow::ensure!(
         security == Security::None || password.is_some(),
-        "indiquer le mot de passe (`password`), ou `\"security\": \"none\"` pour un réseau ouvert"
+        "{}",
+        i18n::t(
+            "indiquer le mot de passe (`password`), ou `\"security\": \"none\"` pour un réseau ouvert",
+            "give the password (`password`), or `\"security\": \"none\"` for an open network"
+        )
     );
 
     let mut doc = Doc::new();
-    doc.header("Wi-Fi invités");
+    doc.header(i18n::t("Wi-Fi invités", "Guest Wi-Fi"));
     doc.feed(1);
     doc.qr(&payload(ssid, password, security, hidden), 8);
     doc.feed(1);
-    doc.text("Scanne avec l'appareil photo pour te connecter", Style::default().small().center());
+    doc.text(
+        i18n::t("Scanne avec l'appareil photo pour te connecter", "Scan with your camera to connect"),
+        Style::default().small().center(),
+    );
     doc.feed(1);
-    doc.hanging("Réseau : ", ssid, Style::default().bold());
+    doc.hanging(i18n::t("Réseau : ", "Network: "), ssid, Style::default().bold());
     if let (Some(password), true) = (password, show_password) {
-        doc.hanging("Mot de passe : ", password, Style::default().bold());
+        doc.hanging(i18n::t("Mot de passe : ", "Password: "), password, Style::default().bold());
     }
     Ok(doc)
 }

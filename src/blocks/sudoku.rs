@@ -31,9 +31,9 @@ impl Difficulty {
     }
     pub fn label(self) -> &'static str {
         match self {
-            Difficulty::Easy => "facile",
-            Difficulty::Medium => "moyen",
-            Difficulty::Hard => "difficile",
+            Difficulty::Easy => crate::i18n::t("facile", "easy"),
+            Difficulty::Medium => crate::i18n::t("moyen", "medium"),
+            Difficulty::Hard => crate::i18n::t("difficile", "hard"),
         }
     }
 }
@@ -151,11 +151,15 @@ pub fn build(difficulty: Difficulty, seed: Option<u64>, solution: bool) -> Doc {
     let (puzzle, solved) = generate(seed, difficulty);
 
     let mut doc = Doc::new();
-    let title = if solution { "Solution du sudoku" } else { "Sudoku" };
+    let title = if solution {
+        crate::i18n::t("Solution du sudoku", "Sudoku solution")
+    } else {
+        crate::i18n::t("Sudoku", "Sudoku")
+    };
     doc.header(&format!("{title} · {}", difficulty.label()));
     doc.feed(1);
     doc.image(render(if solution { &solved } else { &puzzle }));
-    doc.text(&format!("n° {seed}"), Style::default().small().align(crate::doc::Align::Right));
+    doc.text(&tr!("n° {seed}", "No. {seed}"), Style::default().small().align(crate::doc::Align::Right));
     doc
 }
 

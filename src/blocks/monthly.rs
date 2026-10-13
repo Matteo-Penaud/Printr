@@ -11,11 +11,14 @@ use rand::{RngExt, SeedableRng};
 
 use crate::doc::{Doc, Style};
 use crate::store::{self, HistoryEntry};
-use crate::{draw, fr};
+use crate::{draw, i18n};
 
 const WIDTH: usize = 42;
 /// Blocs de mise en page : ils ne comptent pas pour le « bloc star ».
-const LAYOUT: &[&str] = &["titre", "texte", "séparateur", "date", "espace", "glitch"];
+// L'historique garde le nom du bloc dans la langue du moment : les deux langues comptent.
+const LAYOUT: &[&str] = &[
+    "titre", "texte", "séparateur", "date", "espace", "glitch", "title", "text", "separator", "space",
+];
 /// Longueur supposée d'un ticket dont l'historique ne garde pas la taille.
 const DEFAULT_MM: f64 = 150.0;
 /// Une baguette de pain, pour donner une idée de la longueur.
@@ -29,14 +32,16 @@ fn leader(left: &str, right: &str) -> String {
 
 fn who(by: &str) -> String {
     match by {
-        "planification" => "Planifications".to_owned(),
+        "planification" => i18n::t("Planifications", "Schedules").to_owned(),
         "script" => "Scripts".to_owned(),
         name => name.to_owned(),
     }
 }
 
 fn plural(n: usize, word: &str) -> String {
-    format!("{n} {word}{}", if n > 1 { "s" } else { "" })
+    // Pluriel à la française dès 2, à l'anglaise sauf pour 1 (« 0 tickets »).
+    let many = if i18n::en() { n != 1 } else { n > 1 };
+    format!("{n} {word}{}", if many { "s" } else { "" })
 }
 
 /// Code-barres décoratif, tiré du contenu du bilan.
@@ -59,32 +64,33 @@ fn barcode(seed: u64) -> GrayImage {
 /// Mois « AAAA-MM » (ou le mois en cours) : (premier jour, premier jour du mois suivant).
 fn period(month: Option<&str>, today: NaiveDate) -> Result<(NaiveDate, NaiveDate)> {
     let first = match month {
-        Some(m) => NaiveDate::parse_from_str(&format!("{m}-01"), "%Y-%m-%d").with_context(|| format!("mois invalide : {m} (AAAA-MM)"))?,
+        Some(m) => NaiveDate::parse_from_str(&format!("{m}-01"), "%Y-%m-%d").with_context(|| tr!("mois invalide : {m} (AAAA-MM)", "invalid month: {m} (YYYY-MM)"))?,
         None => today.with_day(1).expect("premier du mois"),
     };
-    let next = first.checked_add_months(chrono::Months::new(1)).context("mois hors limites")?;
+    let next = first.checked_add_months(chrono::Months::new(1)).context(i18n::t("mois hors limites", "month out of range"))?;
     Ok((first, next))
 }
 
 fn render(entries: &[HistoryEntry], first: NaiveDate, today: NaiveDate, now: DateTime<Local>) -> Doc {
     let local = |e: &HistoryEntry| e.at.with_timezone(&Local);
-    let month = fr::day_month(first).split_once(' ').map(|(_, m)| m.to_owned()).unwrap_or_default();
+    let month = i18n::month(first.month0()).to_owned();
 
     let mut doc = Doc::new();
-    doc.header("Printr · bilan du mois");
+    doc.header(i18n::t("Printr · bilan du mois", "Printr · monthly report"));
     doc.feed(1);
     doc.text(&format!("{} {}", month.to_uppercase(), first.year()), Style::default().bold().center().size(2));
     let until = if today < first.checked_add_months(chrono::Months::new(1)).unwrap_or(today) && today >= first {
-        format!("arrêté au {}", fr::day_month(today))
+        tr!("arrêté au {}", "as of {}", i18n::day_month(today))
     } else {
-        "mois complet".to_owned()
+        i18n::t("mois complet", "full month").to_owned()
     };
-    doc.text(&format!("{until} · édité le {}", now.format("%d/%m/%Y à %H:%M")), Style::default().small().center());
+    let printed = if i18n::en() { now.format("%m/%d/%Y at %H:%M") } else { now.format("%d/%m/%Y à %H:%M") };
+    doc.text(&tr!("{until} · édité le {printed}", "{until} · printed {printed}"), Style::default().small().center());
     doc.feed(1);
     doc.rule('-');
 
     if entries.is_empty() {
-        doc.text("Aucun ticket ce mois-ci. La machine s'ennuie.", Style::default().center());
+        doc.text(i18n::t("Aucun ticket ce mois-ci. La machine s'ennuie.", "No tickets this month. The machine is bored."), Style::default().center());
         doc.rule('-');
         return doc;
     }
@@ -110,11 +116,12 @@ fn render(entries: &[HistoryEntry], first: NaiveDate, today: NaiveDate, now: Dat
     let average = if known.is_empty() { DEFAULT_MM } else { known.iter().sum::<f64>() / known.len() as f64 };
     let total_mm = known.iter().sum::<f64>() + average * (entries.len() - known.len()) as f64;
     let approx = if known.len() < entries.len() { "~ " } else { "" };
-    let meters = format!("{approx}{:.2} m", total_mm / 1000.0).replace('.', ",");
-    doc.line(&leader("Papier consommé", &meters), Style::default());
+    let meters = format!("{approx}{:.2} m", total_mm / 1000.0);
+    let meters = if i18n::en() { meters } else { meters.replace('.', ",") };
+    doc.line(&leader(i18n::t("Papier consommé", "Paper used"), &meters), Style::default());
     let baguettes = (total_mm / BAGUETTE_MM).round() as usize;
     if baguettes >= 1 {
-        doc.line(&leader("  soit", &plural(baguettes, "baguette")), Style::default().small());
+        doc.line(&leader(i18n::t("  soit", "  or"), &plural(baguettes, "baguette")), Style::default().small());
     }
 
     let mut blocks: HashMap<&str, usize> = HashMap::new();
@@ -122,7 +129,7 @@ fn render(entries: &[HistoryEntry], first: NaiveDate, today: NaiveDate, now: Dat
         *blocks.entry(name).or_default() += 1;
     }
     if let Some((name, n)) = blocks.iter().max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0))) {
-        doc.line(&leader("Bloc star", &format!("{name} ×{n}")), Style::default());
+        doc.line(&leader(i18n::t("Bloc star", "Star block"), &format!("{name} ×{n}")), Style::default());
     }
 
     let mut days: HashMap<NaiveDate, usize> = HashMap::new();
@@ -134,31 +141,31 @@ fn render(entries: &[HistoryEntry], first: NaiveDate, today: NaiveDate, now: Dat
     if let Some((day, n)) = days.iter().max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0)))
         && *n > 1
     {
-        doc.line(&leader("Jour de rush", &format!("{} {}", fr::weekday(*day), fr::day_month(*day))), Style::default());
+        doc.line(&leader(i18n::t("Jour de rush", "Busiest day"), &tr!("{} {}", "{}, {}", i18n::weekday(*day), i18n::day_month(*day))), Style::default());
     }
     let peak = (0..24).max_by_key(|&h| (hours[h], std::cmp::Reverse(h))).unwrap_or(0);
-    doc.line(&leader("Heure de pointe", &format!("{peak} h")), Style::default());
+    doc.line(&leader(i18n::t("Heure de pointe", "Rush hour"), &tr!("{peak} h", "{peak}:00")), Style::default());
     let failed = entries.iter().filter(|e| !e.ok).count();
-    doc.line(&leader("Bourrages et ratés", &failed.to_string()), Style::default());
+    doc.line(&leader(i18n::t("Bourrages et ratés", "Jams and misprints"), &failed.to_string()), Style::default());
     doc.rule('-');
 
     // Le client fidèle : une vraie personne, pas le planificateur.
     if let Some((name, n)) = by.iter().find(|(name, _)| name != "planification" && name != "script") {
         doc.feed(1);
-        doc.text("Client fidèle du mois", Style::default().bold().center());
+        doc.text(i18n::t("Client fidèle du mois", "Loyal customer of the month"), Style::default().bold().center());
         doc.text(&name.to_uppercase(), Style::default().bold().center().size(2));
-        doc.text(&format!("avec {}. Bravo !", plural(*n, "ticket")), Style::default().small().center());
+        doc.text(&tr!("avec {}. Bravo !", "with {}. Well done!", plural(*n, "ticket")), Style::default().small().center());
         doc.feed(1);
         doc.rule('-');
     }
-    doc.line(&leader("Payé en", "bonne humeur"), Style::default());
-    doc.line(&leader("Rendu", "0,00 €"), Style::default());
+    doc.line(&leader(i18n::t("Payé en", "Paid in"), i18n::t("bonne humeur", "good vibes")), Style::default());
+    doc.line(&leader(i18n::t("Rendu", "Change"), i18n::t("0,00 €", "$0.00")), Style::default());
     doc.feed(1);
     let seed = first.year() as u64 * 100 + first.month() as u64 + entries.len() as u64 * 1_000_000;
     doc.image(barcode(seed));
     doc.text(&format!("{} {:02} {:04} {:05}", first.year(), first.month(), entries.len(), total_mm as u64), Style::default().small().center());
     doc.feed(1);
-    doc.text("Merci de votre fidélité, à bientôt !", Style::default().center());
+    doc.text(i18n::t("Merci de votre fidélité, à bientôt !", "Thank you for your loyalty, see you soon!"), Style::default().center());
     doc
 }
 

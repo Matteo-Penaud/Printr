@@ -12,7 +12,7 @@ use chrono::NaiveDate;
 use serde::Deserialize;
 
 use crate::doc::{Doc, Style};
-use crate::fr;
+use crate::i18n;
 
 const TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -81,7 +81,7 @@ pub fn available() -> bool {
 
 /// Lance Barnum et lit sa réponse JSON.
 fn run(command: &[String], who: &Who, date: NaiveDate, variant: Option<&str>) -> Result<Reading> {
-    let (program, base) = command.split_first().context("commande Barnum vide")?;
+    let (program, base) = command.split_first().context(i18n::t("commande Barnum vide", "empty Barnum command"))?;
     let mut cmd = Command::new(program);
     cmd.args(base);
     // Options d'abord, sous la forme `--option=valeur`, puis `--` : un signe ou une variante
@@ -100,9 +100,13 @@ fn run(command: &[String], who: &Who, date: NaiveDate, variant: Option<&str>) ->
         .spawn()
         .map_err(|e| match e.kind() {
             std::io::ErrorKind::NotFound => anyhow::anyhow!(
-                "Barnum introuvable (« {program} ») : installe-le ou définis PRINTR_BARNUM"
+                "{}",
+                tr!(
+                    "Barnum introuvable (« {program} ») : installe-le ou définis PRINTR_BARNUM",
+                    "Barnum not found (\"{program}\"): install it or set PRINTR_BARNUM"
+                )
             ),
-            _ => anyhow::anyhow!("impossible de lancer Barnum : {e}"),
+            _ => anyhow::anyhow!("{}", tr!("impossible de lancer Barnum : {e}", "could not start Barnum: {e}")),
         })?;
 
     // Barnum répond en quelques dizaines de millisecondes ; au-delà de TIMEOUT, on abandonne.
@@ -113,7 +117,7 @@ fn run(command: &[String], who: &Who, date: NaiveDate, variant: Option<&str>) ->
         }
         if start.elapsed() > TIMEOUT {
             let _ = child.kill();
-            bail!("Barnum ne répond pas");
+            bail!("{}", i18n::t("Barnum ne répond pas", "Barnum is not responding"));
         }
         std::thread::sleep(Duration::from_millis(10));
     };
@@ -123,10 +127,10 @@ fn run(command: &[String], who: &Who, date: NaiveDate, variant: Option<&str>) ->
     child.stderr.take().map(|mut s| s.read_to_string(&mut stderr));
     if !status.success() {
         // « barnum: error: signe inconnu : … » : on garde le message utile.
-        let message = stderr.lines().last().unwrap_or("erreur inconnue");
+        let message = stderr.lines().last().unwrap_or(i18n::t("erreur inconnue", "unknown error"));
         bail!("{}", message.trim_start_matches("barnum: error: "));
     }
-    serde_json::from_str(&stdout).context("réponse de Barnum illisible")
+    serde_json::from_str(&stdout).context(i18n::t("réponse de Barnum illisible", "Barnum response unreadable"))
 }
 
 pub enum Who {
@@ -140,17 +144,22 @@ fn gauge(note: u8) -> String {
     format!("{}{}", "█".repeat(note), "░".repeat(5 - note))
 }
 
+/// Le ticket reste en français dans les deux langues : Barnum n'écrit qu'en français, et un
+/// ticket mi-anglais mi-français se lit mal.
 fn render(r: &Reading, sky: bool) -> Doc {
     let mut doc = Doc::new();
     doc.header(&format!("Horoscope · {}", r.signe));
     if let Some(moon) = &r.lune {
-        doc.text(&format!("Lune : {} en {}", moon.phase, moon.signe), Style::default().small().center());
+        doc.text(
+            &format!("Lune : {} en {}", moon.phase, moon.signe),
+            Style::default().small().center(),
+        );
     }
     doc.feed(1);
     doc.text(&r.climat, Style::default());
     for d in &r.domaines {
         doc.feed(1);
-        doc.line(&format!("{:<14}{}", fr::capitalize(&d.cle), gauge(d.note)), Style::default().bold());
+        doc.line(&format!("{:<14}{}", i18n::capitalize(&d.cle), gauge(d.note)), Style::default().bold());
         doc.text(&d.texte, Style::default());
     }
     if !r.conseil.is_empty() {
@@ -168,7 +177,7 @@ fn render(r: &Reading, sky: bool) -> Doc {
         extras.push(format!("humeur {}", r.humeur));
     }
     if !extras.is_empty() {
-        doc.text(&fr::capitalize(&extras.join(" · ")), Style::default().small().center());
+        doc.text(&i18n::capitalize(&extras.join(" · ")), Style::default().small().center());
     }
     if sky && !r.ciel.is_empty() {
         doc.feed(1);

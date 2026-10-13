@@ -190,8 +190,8 @@
       <a class="optional" href="#blocks"><span class="fr">Blocs</span><span class="en">Blocks</span></a>
       <a class="optional" href="#app"><span class="fr">Appli</span><span class="en">App</span></a>
       <a class="optional" href="#install"><span class="fr">Installer</span><span class="en">Install</span></a>
-      <a class="optional" href="blocs.html"><span class="fr">Les blocs</span><span class="en">Blocks</span></a>
-      <a href="guide.html">Documentation</a>
+      <a class="optional" href="blocs.html"><span class="fr">Les blocs</span><span class="en">Gallery</span></a>
+      <a class="fr" href="guide.html">Documentation</a><a class="en" href="guide.en.html">Docs</a>
       <a href="https://github.com/XNinety9/Printr">GitHub</a>
       <button class="toggle" type="button" onclick="toggleLang()" aria-label="Français / English"><span class="fr">EN</span><span class="en">FR</span></button>
     </div>
@@ -253,8 +253,8 @@
         <p class="en">Almost everything is local and free: RSS, riddles, sudoku, word searches, calendar. Claude only writes the horoscope and the word of the day, cached for the day.</p></div>
       <div class="card"><div class="emoji">🦀</div>
         <h3 class="fr">Un seul binaire Rust</h3><h3 class="en">A single Rust binary</h3>
-        <p class="fr">ESC/POS natif pour l'Epson TM-T88V, sur un Raspberry Pi. CLI soignée, serveur, planificateur et interface web dans le même exécutable.</p>
-        <p class="en">Native ESC/POS for the Epson TM-T88V, on a Raspberry Pi. Polished CLI, server, scheduler and web app in one executable.</p></div>
+        <p class="fr">ESC/POS natif pour l'Epson TM-T88V, sur un Raspberry Pi. CLI soignée, serveur, planificateur et interface web dans le même exécutable, en français ou en anglais.</p>
+        <p class="en">Native ESC/POS for the Epson TM-T88V, on a Raspberry Pi. Polished CLI, server, scheduler and web app in one executable, in English or French.</p></div>
     </div>
   </div>
 </section>
@@ -331,7 +331,7 @@
       <div class="group"><h3><span class="fr">Jeux &amp; défis</span><span class="en">Games &amp; challenges</span></h3><div class="chips">
         <a class="chip" href="blocs.html#enigme">🧩 <span class="fr">Énigme</span><span class="en">Riddle</span></a><a class="chip" href="blocs.html#defi_sportif">💪 <span class="fr">Défi sportif</span><span class="en">Workout</span></a>
         <a class="chip" href="blocs.html#sudoku">🔢 Sudoku</a><a class="chip" href="blocs.html#labyrinthe">🌀 <span class="fr">Labyrinthe</span><span class="en">Maze</span></a><a class="chip" href="blocs.html#mots_meles">🔤 <span class="fr">Mots mêlés</span><span class="en">Word search</span></a><a class="chip" href="blocs.html#voie_ferree">🚂 <span class="fr">Voie ferrée</span><span class="en">Train tracks</span></a><a class="chip ai" href="blocs.html#mots_fleches">✍️ <span class="fr">Mots fléchés</span><span class="en">Arrow words</span></a>
-        <a class="chip" href="blocs.html#logimage">🖍️ <span class="fr">Logimage</span><span class="en">Nonogram</span></a><a class="chip" href="blocs.html#petit_bac">✏️ <span class="fr">Petit bac</span><span class="en">Scattergories</span></a>
+        <a class="chip" href="blocs.html#logimage">🖍️ <span class="fr">Logimage</span><span class="en">Nonogram</span></a><a class="chip" href="blocs.html#petit_bac">✏️ <span class="fr">Petit bac</span><span class="en">Categories</span></a>
         <a class="chip" href="blocs.html#calcul_mental">➗ <span class="fr">Calcul mental</span><span class="en">Mental math</span></a><a class="chip" href="blocs.html#mot_mystere">🔀 <span class="fr">Mot mystère</span><span class="en">Anagram</span></a>
         <a class="chip" href="blocs.html#message_code">🕵️ <span class="fr">Message codé</span><span class="en">Secret message</span></a><a class="chip" href="blocs.html#coloriage">🎨 <span class="fr">Coloriage</span><span class="en">Coloring</span></a>
         <a class="chip" href="blocs.html#bon">🎟️ <span class="fr">Bon à offrir</span><span class="en">Gift coupon</span></a></div></div>
@@ -388,7 +388,7 @@ scripts/deploy.sh pi@printer.local   <span class="c"># mise à jour / update</sp
         <p class="en">On first launch, the app offers to create your account, then the family's. The Claude key is optional.</p>
         <pre>http://printer.local:8080</pre></div></div>
     </div>
-    <p class="intro" style="margin-top:30px"><a href="guide.html#installation"><span class="fr">Le guide d'installation complet →</span><span class="en">Full installation guide (in French) →</span></a></p>
+    <p class="intro" style="margin-top:30px"><a class="fr" href="guide.html#installation">Le guide d'installation complet →</a><a class="en" href="guide.en.html#installation">Full installation guide →</a></p>
   </div>
 </section>
 
@@ -403,10 +403,21 @@ scripts/deploy.sh pi@printer.local   <span class="c"># mise à jour / update</sp
 
 <script>
   function save(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+  // Tickets et captures existent dans les deux langues : tickets/en/, shots/en/.
+  function localizeImages() {
+    var en = document.documentElement.lang === "en";
+    document.querySelectorAll('img[src^="tickets/"], img[src^="shots/"]').forEach(function (img) {
+      var fr = img.getAttribute("data-fr") || img.getAttribute("src");
+      img.setAttribute("data-fr", fr);
+      img.setAttribute("src", en ? fr.replace(/^(tickets|shots)\//, "$1/en/") : fr);
+    });
+  }
+  localizeImages();
   function toggleLang() {
     var root = document.documentElement;
     root.lang = root.lang === "fr" ? "en" : "fr";
     save("printr-lang", root.lang);
+    localizeImages();
   }
   function toggleTheme() {
     var root = document.documentElement;

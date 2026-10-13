@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 # Régénère les exemples de blocs (docs/exemples/*.png) dans l'émulateur, avec des données
 # fictives uniquement (liste de courses et historique de Camille, Alex et Léo).
-# Usage : docs/exemples/generer.sh [bloc…]   (défaut : tous les .json du dossier)
+# Usage : docs/exemples/generer.sh [--en] [bloc…]   (défaut : tous les .json du dossier)
+#   --en : tickets en anglais (PRINTR_LANG=en) dans docs/exemples/en/, à partir de en/<bloc>.json
+#          s'il existe (textes libres traduits), sinon du même exemple que le français.
 # Prérequis : uv et l'émulateur (uvx emupos).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+
+OUT=docs/exemples
+if [ "${1:-}" = "--en" ]; then
+  shift
+  OUT=docs/exemples/en
+  export PRINTR_LANG=en
+else
+  export PRINTR_LANG=fr
+fi
 
 PORT=9100
 DEMO=$(mktemp -d)
@@ -20,19 +31,28 @@ export CROSSWORDS_CACHE="${CROSSWORDS_CACHE:-$HOME/.cache/crosswords}"
 mkdir -p "$PRINTR_DATA_DIR"
 
 # Données fictives : une liste de courses et un mois d'impressions.
-python3 -I - "$PRINTR_DATA_DIR/printr.json" <<'EOF'
+python3 -I - "$PRINTR_DATA_DIR/printr.json" "$PRINTR_LANG" <<'EOF'
 import json, random, sys
 from datetime import datetime, timedelta, timezone
 
 rng = random.Random(42)
 now = datetime.now(timezone.utc)
+en = sys.argv[2] == "en"
 shopping = [
     ("Lait", "Camille"), ("Pain de mie", "Léo"), ("Pommes", "Camille"), ("Café", "Alex"),
     ("Céréales au chocolat", "Léo"), ("Lessive", "Alex"), ("Tomates", "Camille"), ("Rouleaux de papier thermique", "Alex"),
 ]
+if en:
+    shopping = [
+        ("Milk", "Camille"), ("Sandwich bread", "Léo"), ("Apples", "Camille"), ("Coffee", "Alex"),
+        ("Chocolate cereal", "Léo"), ("Laundry detergent", "Alex"), ("Tomatoes", "Camille"), ("Thermal paper rolls", "Alex"),
+    ]
 people = ["Camille"] * 9 + ["Alex"] * 6 + ["Léo"] * 5 + ["planification"] * 7
 tickets = [["date", "météo", "saint du jour", "citation"], ["sudoku"], ["énigme", "défi sportif"],
            ["horoscope Barnum"], ["image", "texte"], ["mots mêlés"], ["liste de courses"], ["sudoku", "énigme"]]
+if en:
+    tickets = [["date", "weather", "name day", "quote"], ["sudoku"], ["riddle", "workout"],
+               ["Barnum horoscope"], ["image", "text"], ["word search"], ["shopping list"], ["sudoku", "riddle"]]
 first = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 history = []
 for _ in range(40):
@@ -54,15 +74,17 @@ EOF
 if nc -z 127.0.0.1 $PORT 2>/dev/null; then echo "le port $PORT est déjà utilisé" >&2; exit 1; fi
 (cd emulator && exec uvx emupos run >"$DEMO/emupos.log" 2>&1) &
 until nc -z 127.0.0.1 $PORT 2>/dev/null; do sleep 0.3; done
-mkdir -p emulator/receipts
+mkdir -p emulator/receipts "$OUT"
 
 names=("$@")
-[ ${#names[@]} -eq 0 ] && names=($(ls docs/exemples/*.json | xargs -n1 basename | sed 's/\.json$//'))
+[ ${#names[@]} -eq 0 ] && names=($(ls docs/exemples/*.json | xargs -n1 basename | grep -v '^catalogue.json$' | sed 's/\.json$//'))
 for name in "${names[@]}"; do
   before=$(find emulator/receipts -name '*.png' | wc -l)
-  $BIN -q --tcp "127.0.0.1:$PORT" print "docs/exemples/$name.json"
+  source="docs/exemples/$name.json"
+  [ -f "$OUT/$name.json" ] && source="$OUT/$name.json"
+  $BIN -q --tcp "127.0.0.1:$PORT" print "$source"
   until [ "$(find emulator/receipts -name '*.png' | wc -l)" -gt "$before" ]; do sleep 0.3; done
-  cp "$(ls -t emulator/receipts/*.png | head -1)" "docs/exemples/$name.png"
-  chmod 644 "docs/exemples/$name.png"
-  echo "docs/exemples/$name.png"
+  cp "$(ls -t emulator/receipts/*.png | head -1)" "$OUT/$name.png"
+  chmod 644 "$OUT/$name.png"
+  echo "$OUT/$name.png"
 done

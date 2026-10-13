@@ -9,6 +9,7 @@ use anstyle::{AnsiColor, Style};
 
 use crate::blocks::{Progress, Report};
 use crate::doc::Doc;
+use crate::i18n::t;
 
 const OK: Style = AnsiColor::Green.on_default().bold();
 const FAIL: Style = AnsiColor::Red.on_default().bold();
@@ -22,7 +23,7 @@ pub fn duration(d: Duration) -> String {
     if d < Duration::from_secs(1) {
         format!("{} ms", d.as_millis())
     } else {
-        format!("{:.1} s", d.as_secs_f64()).replace('.', ",")
+        decimal(format!("{:.1} s", d.as_secs_f64()))
     }
 }
 
@@ -32,8 +33,13 @@ fn paper_length(dots: u32) -> String {
     if cm < 100.0 {
         format!("{cm:.0} cm")
     } else {
-        format!("{:.1} m", cm / 100.0).replace('.', ",")
+        decimal(format!("{:.1} m", cm / 100.0))
     }
+}
+
+/// Virgule décimale en français, point en anglais.
+fn decimal(text: String) -> String {
+    if crate::i18n::en() { text } else { text.replace('.', ",") }
 }
 
 fn plural(n: usize, word: &str) -> String {
@@ -111,7 +117,7 @@ impl Console {
             return self.clear_status();
         }
         let spinner = SPINNER[self.frame % SPINNER.len()];
-        let text = format!("en cours ({}) · {} · {}", pending.len(), duration(self.started.elapsed()), pending.join(", "));
+        let text = tr!("en cours ({}) · {} · {}", "running ({}) · {} · {}", pending.len(), duration(self.started.elapsed()), pending.join(", "));
         // La ligne ne doit jamais déborder, sinon l'effacement laisserait des restes.
         let columns = terminal_size::terminal_size().map_or(80, |(w, _)| w.0 as usize);
         let max = columns.saturating_sub(5);
@@ -155,24 +161,24 @@ impl Progress for Console {
 pub fn summary(doc: &Doc, blocks: usize, destination: Option<&str>, elapsed: Duration, failures: usize) {
     let mut details = Vec::new();
     if blocks > 0 {
-        details.push(plural(blocks, "bloc"));
+        details.push(plural(blocks, t("bloc", "block")));
     }
-    details.push(format!("≈ {} de papier", paper_length(doc.height_dots())));
+    details.push(tr!("≈ {} de papier", "≈ {} of paper", paper_length(doc.height_dots())));
     if failures > 0 {
-        details.push(format!("{WARN}{} en échec{WARN:#}", failures));
+        details.push(format!("{WARN}{}{WARN:#}", tr!("{} en échec", "{} failed", failures)));
     }
     details.push(duration(elapsed));
     let details = details.join(&format!(" {DIM}·{DIM:#} "));
     let mark = if failures > 0 { format!("{WARN}!{WARN:#}") } else { format!("{OK}✓{OK:#}") };
     match destination {
-        Some(dest) => eprintln!("{mark} Imprimé sur {ACCENT}{dest}{ACCENT:#}  {DIM}│{DIM:#} {details}"),
-        None => eprintln!("{mark} Aperçu  {DIM}│{DIM:#} {details}"),
+        Some(dest) => eprintln!("{mark} {} {ACCENT}{dest}{ACCENT:#}  {DIM}│{DIM:#} {details}", t("Imprimé sur", "Printed to")),
+        None => eprintln!("{mark} {}  {DIM}│{DIM:#} {details}", t("Aperçu", "Preview")),
     }
 }
 
 /// Erreur fatale, avec la chaîne des causes.
 pub fn error(e: &anyhow::Error) {
-    eprintln!("{FAIL}✗ Erreur :{FAIL:#} {BOLD}{e}{BOLD:#}");
+    eprintln!("{FAIL}✗ {}{FAIL:#} {BOLD}{e}{BOLD:#}", t("Erreur :", "Error:"));
     for cause in e.chain().skip(1) {
         eprintln!("  {DIM}↳{DIM:#} {cause}");
     }
@@ -181,44 +187,44 @@ pub fn error(e: &anyhow::Error) {
 /// Bannière de démarrage du serveur.
 pub fn banner(listen: &str, destination: &str, claude: Option<&str>, cache: Option<&str>, data: &str, users: usize) {
     let row = |key: &str, value: String| eprintln!("  {DIM}{key:<11}{DIM:#} {value}");
-    eprintln!("{BOLD}printr {}{BOLD:#} {DIM}·{DIM:#} serveur prêt", env!("CARGO_PKG_VERSION"));
+    eprintln!("{BOLD}printr {}{BOLD:#} {DIM}·{DIM:#} {}", env!("CARGO_PKG_VERSION"), t("serveur prêt", "server ready"));
     let shown = listen.replace("0.0.0.0", "localhost");
     row("interface", format!("{ACCENT}http://{shown}{ACCENT:#}"));
-    row("imprimante", destination.to_owned());
+    row(t("imprimante", "printer"), destination.to_owned());
     row(
         "claude",
         match claude {
             Some(model) => format!("{OK}✓{OK:#} {model}"),
-            None => format!("{WARN}✗{WARN:#} ANTHROPIC_API_KEY absente (horoscope et mot du jour indisponibles)"),
+            None => format!("{WARN}✗{WARN:#} {}", t("ANTHROPIC_API_KEY absente (horoscope et mot du jour indisponibles)", "ANTHROPIC_API_KEY missing (horoscope and word of the day unavailable)")),
         },
     );
-    row("cache", cache.map_or_else(|| format!("{WARN}désactivé{WARN:#}"), str::to_owned));
+    row("cache", cache.map_or_else(|| format!("{WARN}{}{WARN:#}", t("désactivé", "disabled")), str::to_owned));
     row(
         "barnum",
         if crate::blocks::barnum::available() {
             format!("{OK}✓{OK:#} {}", crate::blocks::barnum::command().join(" "))
         } else {
-            format!("{WARN}✗{WARN:#} introuvable : bloc « Horoscope » indisponible (voir PRINTR_BARNUM)")
+            tr!("{WARN}✗{WARN:#} introuvable : bloc « Horoscope » indisponible (voir PRINTR_BARNUM)", "{WARN}✗{WARN:#} not found: \"Horoscope\" block unavailable (see PRINTR_BARNUM)")
         },
     );
-    row("données", data.to_owned());
+    row(t("données", "data"), data.to_owned());
     row(
         "versions",
         if crate::update::enabled() {
             match crate::update::interval_minutes() {
-                1440 => "vérification quotidienne sur GitHub (rien n'est installé tout seul)".to_owned(),
-                m => format!("vérification toutes les {m} min sur GitHub (rien n'est installé tout seul)"),
+                1440 => t("vérification quotidienne sur GitHub (rien n'est installé tout seul)", "daily check on GitHub (nothing is installed automatically)").to_owned(),
+                m => tr!("vérification toutes les {m} min sur GitHub (rien n'est installé tout seul)", "checking every {m} min on GitHub (nothing is installed automatically)"),
             }
         } else {
-            format!("{WARN}vérification désactivée{WARN:#} (PRINTR_UPDATE_CHECK)")
+            format!("{WARN}{}{WARN:#} (PRINTR_UPDATE_CHECK)", t("vérification désactivée", "update check disabled"))
         },
     );
     row(
-        "comptes",
+        t("comptes", "accounts"),
         if users == 0 {
-            format!("{WARN}aucun{WARN:#} : ouvre l'interface pour créer le premier")
+            tr!("{WARN}aucun{WARN:#} : ouvre l'interface pour créer le premier", "{WARN}none{WARN:#}: open the interface to create the first")
         } else {
-            plural(users, "utilisateur")
+            plural(users, t("utilisateur", "user"))
         },
     );
     eprintln!();

@@ -5,6 +5,7 @@ use serde::Deserialize;
 
 use super::weather;
 use crate::doc::{Doc, Style};
+use crate::i18n;
 
 #[derive(Deserialize)]
 struct Response {
@@ -29,12 +30,12 @@ struct Current {
 /// Qualificatif de l'indice européen de qualité de l'air.
 fn aqi_label(aqi: f64) -> &'static str {
     match aqi {
-        a if a <= 20.0 => "Bonne",
-        a if a <= 40.0 => "Correcte",
-        a if a <= 60.0 => "Moyenne",
-        a if a <= 80.0 => "Médiocre",
-        a if a <= 100.0 => "Très médiocre",
-        _ => "Extrêmement médiocre",
+        a if a <= 20.0 => i18n::t("Bonne", "Good"),
+        a if a <= 40.0 => i18n::t("Correcte", "Fair"),
+        a if a <= 60.0 => i18n::t("Moyenne", "Moderate"),
+        a if a <= 80.0 => i18n::t("Médiocre", "Poor"),
+        a if a <= 100.0 => i18n::t("Très médiocre", "Very poor"),
+        _ => i18n::t("Extrêmement médiocre", "Extremely poor"),
     }
 }
 
@@ -51,7 +52,7 @@ pub fn build(agent: &ureq::Agent, location: &str) -> Result<Doc> {
         )
         .query("timezone", "auto")
         .call()
-        .context("Open-Meteo injoignable")?
+        .context(i18n::t("Open-Meteo injoignable", "Open-Meteo unreachable"))?
         .body_mut()
         .read_json()?;
     let c = r.current;
@@ -60,29 +61,36 @@ pub fn build(agent: &ureq::Agent, location: &str) -> Result<Doc> {
     let mut doc = Doc::new();
     doc.header(&format!("Air · {}", place.name));
     if let Some(aqi) = c.european_aqi {
-        doc.text(&format!("Qualité de l'air : {}", aqi_label(aqi)), Style::default().bold().center());
-        doc.text(&format!("Indice européen {aqi:.0}"), Style::default().small().center());
+        doc.text(&tr!("Qualité de l'air : {}", "Air quality: {}", aqi_label(aqi)), Style::default().bold().center());
+        doc.text(&tr!("Indice européen {aqi:.0}", "European AQI {aqi:.0}"), Style::default().small().center());
     }
     doc.text(
-        &format!("PM2,5 {} · PM10 {} · O3 {} · NO2 {} µg/m³", v(c.pm2_5), v(c.pm10), v(c.ozone), v(c.nitrogen_dioxide)),
+        &tr!(
+            "PM2,5 {} · PM10 {} · O3 {} · NO2 {} µg/m³",
+            "PM2.5 {} · PM10 {} · O3 {} · NO2 {} µg/m³",
+            v(c.pm2_5),
+            v(c.pm10),
+            v(c.ozone),
+            v(c.nitrogen_dioxide)
+        ),
         Style::default().small().center(),
     );
 
     let pollens: Vec<String> = [
-        ("Aulne", c.alder_pollen),
-        ("Bouleau", c.birch_pollen),
-        ("Graminées", c.grass_pollen),
-        ("Armoise", c.mugwort_pollen),
-        ("Olivier", c.olive_pollen),
-        ("Ambroisie", c.ragweed_pollen),
+        (i18n::t("Aulne", "Alder"), c.alder_pollen),
+        (i18n::t("Bouleau", "Birch"), c.birch_pollen),
+        (i18n::t("Graminées", "Grass"), c.grass_pollen),
+        (i18n::t("Armoise", "Mugwort"), c.mugwort_pollen),
+        (i18n::t("Olivier", "Olive"), c.olive_pollen),
+        (i18n::t("Ambroisie", "Ragweed"), c.ragweed_pollen),
     ]
     .into_iter()
     .filter_map(|(name, value)| value.filter(|&g| g >= 1.0).map(|g| format!("{name} {g:.0}")))
     .collect();
     let pollen_line = if pollens.is_empty() {
-        "Pollens : rien à signaler".to_owned()
+        i18n::t("Pollens : rien à signaler", "Pollen: nothing to report").to_owned()
     } else {
-        format!("Pollens (grains/m³) : {}", pollens.join(" · "))
+        tr!("Pollens (grains/m³) : {}", "Pollen (grains/m³): {}", pollens.join(" · "))
     };
     doc.text(&pollen_line, Style::default().small().center());
     Ok(doc)

@@ -22,10 +22,10 @@ pub enum Kind {
 impl Kind {
     fn label(self) -> &'static str {
         match self {
-            Kind::Devinette => "devinette",
+            Kind::Devinette => crate::i18n::t("devinette", "classic"),
             Kind::Charade => "charade",
-            Kind::Logique => "logique",
-            Kind::Calcul => "calcul",
+            Kind::Logique => crate::i18n::t("logique", "logic"),
+            Kind::Calcul => crate::i18n::t("calcul", "math"),
         }
     }
 }
@@ -183,10 +183,84 @@ const RIDDLES: &[(Kind, &str, &str)] = &[
     (Calcul, "Si 1 = 5, 2 = 25, 3 = 125, 4 = 625, alors 5 = ?", "1 : puisque 1 = 5, alors 5 = 1."),
 ];
 
+/// Les énigmes en anglais : les jeux de mots ne se traduisent pas, la liste est écrite à part.
+/// Les charades anglaises assemblent des mots composés (car + pet = carpet).
+const RIDDLES_EN: &[(Kind, &str, &str)] = &[
+    (Devinette, "What has keys but can't open locks?", "A piano."),
+    (Devinette, "What gets wetter the more it dries?", "A towel."),
+    (Devinette, "What has hands but can't clap?", "A clock."),
+    (Devinette, "What has a neck but no head?", "A bottle."),
+    (Devinette, "What can you catch but not throw?", "A cold."),
+    (Devinette, "What has many teeth but can't bite?", "A comb."),
+    (Devinette, "What goes up but never comes down?", "Your age."),
+    (Devinette, "The more you take, the more you leave behind. What are they?", "Footsteps."),
+    (Devinette, "What has an eye but cannot see?", "A needle."),
+    (Devinette, "What is full of holes but still holds water?", "A sponge."),
+    (Devinette, "What can travel around the world while staying in a corner?", "A stamp."),
+    (Devinette, "What has one head, one foot and four legs?", "A bed."),
+    (Devinette, "What belongs to you, but other people use it more than you do?", "Your name."),
+    (Devinette, "What has words but never speaks?", "A book."),
+    (Devinette, "What runs but never walks, and has a mouth but never talks?", "A river."),
+    (Devinette, "What can you break without touching it?", "A promise."),
+    (Devinette, "What has a thumb and four fingers but is not alive?", "A glove."),
+    (Devinette, "I'm tall when I'm young and short when I'm old. What am I?", "A candle."),
+    (Devinette, "What comes once in a minute, twice in a moment, but never in a thousand years?", "The letter M."),
+    (Devinette, "What building has the most stories?", "A library."),
+    (Devinette, "Forward I am heavy, backward I am not. What am I?", "A ton (backward: not)."),
+    (Devinette, "What kind of room has no doors or windows?", "A mushroom."),
+    (Devinette, "What has to be broken before you can use it?", "An egg."),
+    (Devinette, "What can fill a room but takes up no space?", "Light."),
+    (Devinette, "Why did the scarecrow win an award?", "Because he was outstanding in his field."),
+    (Devinette, "What has a head and a tail but no body?", "A coin."),
+    (Charade, "My first drives you around, my second sleeps on your lap. My whole covers the floor.", "Carpet (car + pet)."),
+    (Charade, "My first lights up the day, my second grows in the garden. My whole turns to follow my first.", "Sunflower (sun + flower)."),
+    (Charade, "My first is spread on toast, my second buzzes around the kitchen. My whole flutters from flower to flower.", "Butterfly (butter + fly)."),
+    (Charade, "My first is used for frying, my second is eaten at birthdays. My whole gets flipped on Sunday mornings.", "Pancake (pan + cake)."),
+    (Charade, "My first is at the end of your leg, my second bounces. My whole is played by two teams of eleven.", "Football (foot + ball)."),
+    (Charade, "My first falls from the clouds, my second shoots arrows. My whole appears after the storm.", "Rainbow (rain + bow)."),
+    (Charade, "My first opens the door, my second is a plank of wood. My whole is under your fingers when you type.", "Keyboard (key + board)."),
+    (Charade, "My first shines at night, my second swims. My whole lives on the seabed with five arms.", "Starfish (star + fish)."),
+    (Charade, "My first hears, my second goes on a finger. My whole dangles from my first.", "Earring (ear + ring)."),
+    (Charade, "My first falls in winter, my second is a grown-up boy. My whole melts in spring.", "Snowman (snow + man)."),
+    (Logique, "A rooster lays an egg on the very top of a barn roof. Which way does it roll?", "Neither: roosters don't lay eggs."),
+    (Logique, "If you have me, you want to share me. If you share me, you no longer have me. What am I?", "A secret."),
+    (Logique, "Mary's father has five daughters: Nana, Nene, Nini and Nono. What is the fifth daughter's name?", "Mary."),
+    (Logique, "How many animals of each kind did Moses take on the ark?", "None: it was Noah's ark."),
+    (Logique, "A plane crashes right on the border between two countries. Where do they bury the survivors?", "Nowhere: you don't bury survivors."),
+    (Logique, "There are three apples and you take away two. How many apples do you have?", "Two: the ones you took."),
+    (Logique, "What can you hold in your right hand but never in your left hand?", "Your left elbow."),
+    (Logique, "A man walked in the rain with no umbrella and no hat, yet not a single hair on his head got wet. How?", "He was bald."),
+    (Logique, "Which is heavier: a kilo of feathers or a kilo of bricks?", "Neither: they both weigh a kilo."),
+    (Logique, "You're running a race and you pass the person in second place. What place are you in now?", "Second."),
+    (Logique, "What occurs twice in a week, once in a year, but never in a day?", "The letter E."),
+    (Logique, "Some months have 31 days, others have 30. How many have 28?", "All twelve of them."),
+    (Logique, "I am an odd number. Take away one letter and I become even. What number am I?", "Seven (s-even)."),
+    (Logique, "What is always in front of you but can't be seen?", "The future."),
+    (Logique, "A girl has as many brothers as sisters, but each brother has only half as many brothers as sisters. How many children in the family?", "Seven: four girls and three boys."),
+    (Logique, "Two fathers and two sons go fishing. Each catches one fish, yet they bring home only three. How?", "There are only three of them: a grandfather, his son and his grandson."),
+    (Calcul, "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much is the ball?", "5 cents (the bat costs $1.05)."),
+    (Calcul, "If 5 machines take 5 minutes to make 5 widgets, how long do 100 machines take to make 100 widgets?", "5 minutes."),
+    (Calcul, "A patch of lily pads doubles in size every day. It covers the whole lake in 48 days. When did it cover half of it?", "On day 47."),
+    (Calcul, "Divide 30 by one half and add 10. What do you get?", "70 (30 ÷ 0.5 = 60)."),
+    (Calcul, "I'm a three-digit number. My tens digit is five more than my ones digit, and my hundreds digit is eight less than my tens digit. What am I?", "194."),
+    (Calcul, "How many times can you subtract 10 from 100?", "Once: after that, it's 90."),
+    (Calcul, "A farmer has 17 sheep. All but 9 run away. How many are left?", "9."),
+    (Calcul, "What is half of two plus two?", "3 (half of two is 1, plus 2)."),
+    (Calcul, "A clock strikes six in 5 seconds. How long does it take to strike twelve?", "11 seconds: 5 gaps take 5 s, 12 strikes have 11 gaps."),
+    (Calcul, "Using only addition, how can you add eight 8s to get 1,000?", "888 + 88 + 8 + 8 + 8 = 1,000."),
+    (Calcul, "A snail at the bottom of a 10 m well climbs 3 m each day and slips back 2 m each night. On which day does it get out?", "On day 8."),
+    (Calcul, "When I was 6, my sister was half my age. Now I'm 70. How old is she?", "67."),
+];
+
+/// La liste de la langue en vigueur.
+fn riddles() -> &'static [(Kind, &'static str, &'static str)] {
+    if crate::i18n::en() { RIDDLES_EN } else { RIDDLES }
+}
+
 /// Ordre de passage des énigmes : mélange fixe, pour éviter les répétitions.
 fn order(kind: Option<Kind>) -> Vec<usize> {
     let mut indices: Vec<usize> =
-        (0..RIDDLES.len()).filter(|&i| kind.is_none_or(|k| RIDDLES[i].0 == k)).collect();
+        (0..riddles().len()).filter(|&i| kind.is_none_or(|k| riddles()[i].0 == k)).collect();
     indices.shuffle(&mut StdRng::seed_from_u64(2026));
     indices
 }
@@ -200,32 +274,32 @@ fn of_day(date: NaiveDate, kind: Option<Kind>) -> usize {
 
 pub fn build(today: NaiveDate, kind: Option<Kind>, number: Option<usize>, answer: Answer) -> Result<Doc> {
     let index = match number {
-        Some(n) if (1..=RIDDLES.len()).contains(&n) => n - 1,
-        Some(n) => bail!("énigme n° {n} inconnue (1 à {})", RIDDLES.len()),
+        Some(n) if (1..=riddles().len()).contains(&n) => n - 1,
+        Some(n) => bail!("{}", tr!("énigme n° {n} inconnue (1 à {})", "riddle No. {n} unknown (1 to {})", riddles().len())),
         None => of_day(today, kind),
     };
-    let (riddle_kind, question, solution) = RIDDLES[index];
+    let (riddle_kind, question, solution) = riddles()[index];
 
     let mut doc = Doc::new();
-    doc.header(&format!("Énigme · {}", riddle_kind.label()));
+    doc.header(&tr!("Énigme · {}", "Riddle · {}", riddle_kind.label()));
     doc.feed(1);
     doc.text(question, Style::default().bold());
-    doc.text(&format!("n° {}", index + 1), Style::default().small().align(Align::Right));
+    doc.text(&tr!("n° {}", "No. {}", index + 1), Style::default().small().align(Align::Right));
     match answer {
         Answer::UpsideDown => {
             doc.feed(1);
-            doc.text(&format!("Réponse : {solution}"), Style::default().small().upside_down());
+            doc.text(&tr!("Réponse : {solution}", "Answer: {solution}"), Style::default().small().upside_down());
         }
         Answer::Below => {
             doc.feed(1);
-            doc.hanging("Réponse : ", solution, Style::default().small());
+            doc.hanging(crate::i18n::t("Réponse : ", "Answer: "), solution, Style::default().small());
         }
         Answer::NextDay => {
             let yesterday = today.pred_opt().unwrap_or(today);
-            let (_, previous, previous_solution) = RIDDLES[of_day(yesterday, kind)];
+            let (_, previous, previous_solution) = riddles()[of_day(yesterday, kind)];
             doc.feed(1);
-            doc.text(&format!("Hier : {previous}"), Style::default().small());
-            doc.hanging("Réponse : ", previous_solution, Style::default().small().bold());
+            doc.text(&tr!("Hier : {previous}", "Yesterday: {previous}"), Style::default().small());
+            doc.hanging(crate::i18n::t("Réponse : ", "Answer: "), previous_solution, Style::default().small().bold());
         }
         Answer::None => {}
     }
@@ -239,20 +313,20 @@ mod tests {
     #[test]
     fn every_riddle_comes_before_any_repeat() {
         let start = NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
-        let mut seen: Vec<usize> = (0..RIDDLES.len() as i64)
+        let mut seen: Vec<usize> = (0..riddles().len() as i64)
             .map(|d| of_day(start + chrono::Duration::days(d), None))
             .collect();
         seen.sort();
         seen.dedup();
-        assert_eq!(seen.len(), RIDDLES.len());
+        assert_eq!(seen.len(), riddles().len());
     }
 
     #[test]
     fn kind_filter_and_numbers() {
         let day = NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
-        assert_eq!(RIDDLES[of_day(day, Some(Charade))].0, Charade);
+        assert_eq!(riddles()[of_day(day, Some(Charade))].0, Charade);
         assert!(build(day, None, Some(1), Answer::Below).is_ok());
-        assert!(build(day, None, Some(RIDDLES.len() + 1), Answer::Below).is_err());
+        assert!(build(day, None, Some(riddles().len() + 1), Answer::Below).is_err());
     }
 
     #[test]
@@ -269,5 +343,16 @@ mod tests {
             .collect();
         assert!(flipped.len() > 1);
         assert!(flipped.last().unwrap().starts_with("Réponse"));
+    }
+
+    #[test]
+    fn english_list_has_every_kind_and_no_repeat() {
+        crate::i18n::with_lang(crate::i18n::Lang::En, || {
+            for kind in [Devinette, Charade, Logique, Calcul] {
+                assert_eq!(riddles()[of_day(NaiveDate::from_ymd_opt(2026, 10, 7).unwrap(), Some(kind))].0, kind);
+            }
+            let doc = build(NaiveDate::from_ymd_opt(2026, 10, 7).unwrap(), None, Some(1), Answer::Below).unwrap();
+            assert!(doc.ops.iter().any(|op| matches!(op, crate::doc::Op::Line { text, .. } if text.contains("What has keys"))));
+        });
     }
 }

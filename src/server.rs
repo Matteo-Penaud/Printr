@@ -19,6 +19,7 @@ use tiny_http::{Header, Method, Request, Response, Server};
 
 use crate::blocks::{Block, Ctx, Silent, Ticket};
 use crate::guard::{self, LoginGuard};
+use crate::i18n::t;
 use crate::output::Target;
 use crate::store::{self, HistoryEntry, Preset, Schedule, Store, User};
 use crate::ui;
@@ -67,7 +68,7 @@ impl App {
             return None;
         }
         let wait = (recent[0].at + chrono::Duration::hours(1) - Utc::now()).num_minutes().max(1);
-        Some(Reply::error(429, format!("{} impressions dans l'heure, c'est le maximum : réessaie dans {wait} min", self.max_per_hour)))
+        Some(Reply::error(429, tr!("{} impressions dans l'heure, c'est le maximum : réessaie dans {wait} min", "limit is {} prints per hour: try again in {wait} min", self.max_per_hour)))
     }
 
     /// Verrouille les données, après les avoir relues si le fichier a changé sur le disque
@@ -75,7 +76,7 @@ impl App {
     pub fn lock_store(&self) -> std::sync::MutexGuard<'_, Store> {
         let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
         if let Err(e) = store.reload_if_changed() {
-            eprintln!("données non relues : {e:#}");
+            eprintln!("{}", tr!("données non relues : {e:#}", "data not reloaded: {e:#}"));
         }
         store
     }
@@ -106,7 +107,7 @@ impl App {
             store.data.shopping.retain(|item| item.added > started);
         }
         if let Err(e) = store.save() {
-            eprintln!("historique non enregistré : {e:#}");
+            eprintln!("{}", tr!("historique non enregistré : {e:#}", "history not saved: {e:#}"));
         }
         Printed { errors, failure }
     }
@@ -179,16 +180,16 @@ fn read_body(request: &mut Request, limit: u64) -> Result<Vec<u8>, Reply> {
         .as_reader()
         .take(limit + 1)
         .read_to_end(&mut body)
-        .map_err(|e| Reply::error(400, format!("corps illisible : {e}")))?;
+        .map_err(|e| Reply::error(400, tr!("corps illisible : {e}", "unreadable body: {e}")))?;
     if body.len() as u64 > limit {
-        return Err(Reply::error(413, "contenu trop volumineux"));
+        return Err(Reply::error(413, t("contenu trop volumineux", "content too large")));
     }
     Ok(body)
 }
 
 fn json_body<T: for<'de> Deserialize<'de>>(request: &mut Request) -> Result<T, Reply> {
     let body = read_body(request, MAX_JSON)?;
-    serde_json::from_slice(&body).map_err(|e| Reply::error(400, format!("JSON invalide : {e}")))
+    serde_json::from_slice(&body).map_err(|e| Reply::error(400, tr!("JSON invalide : {e}", "invalid JSON: {e}")))
 }
 
 /// Nombre de blocs maximal d'un ticket venu du réseau : chacun peut lancer des requêtes et du
@@ -197,13 +198,13 @@ const MAX_BLOCKS: usize = 60;
 
 fn check_ticket(ticket: Ticket) -> Result<Ticket, Reply> {
     if ticket.blocks.len() > MAX_BLOCKS {
-        return Err(Reply::error(400, format!("ticket trop long ({} blocs, {MAX_BLOCKS} au plus)", ticket.blocks.len())));
+        return Err(Reply::error(400, tr!("ticket trop long ({} blocs, {MAX_BLOCKS} au plus)", "ticket too long ({} blocks, {MAX_BLOCKS} max)", ticket.blocks.len())));
     }
     Ok(ticket)
 }
 
 fn parse_ticket(value: &Value) -> Result<Ticket, Reply> {
-    let ticket = serde_json::from_value(value.clone()).map_err(|e| Reply::error(400, format!("ticket invalide : {e}")))?;
+    let ticket = serde_json::from_value(value.clone()).map_err(|e| Reply::error(400, tr!("ticket invalide : {e}", "invalid ticket: {e}")))?;
     check_ticket(ticket)
 }
 
@@ -256,7 +257,7 @@ fn asset(app: &App, path: &str) -> Option<(Vec<u8>, &'static str)> {
     };
     // En développement, `PRINTR_WEB_DIR` sert les fichiers depuis le disque (rechargement à chaud).
     if let Some(dir) = &app.web_dir {
-        return std::fs::read(dir.join(name)).ok().map(|b| (b, content_type));
+        return std::fs::read(dir.join(name)).ok().map(|b| (localize(name, b), content_type));
     }
     let bytes: &[u8] = match name {
         "index.html" => include_bytes!("../web/index.html"),
@@ -270,7 +271,26 @@ fn asset(app: &App, path: &str) -> Option<(Vec<u8>, &'static str)> {
         "apple-touch-icon.png" => include_bytes!("../web/apple-touch-icon.png"),
         _ => include_bytes!("../web/manifest.webmanifest"),
     };
-    Some((bytes.to_vec(), content_type))
+    Some((localize(name, bytes.to_vec()), content_type))
+}
+
+/// La page et le manifeste sont écrits en français ; en anglais, le serveur change `<html lang>`
+/// (l'interface s'en sert pour choisir sa langue) et les quelques textes vus avant son chargement.
+fn localize(name: &str, bytes: Vec<u8>) -> Vec<u8> {
+    if !crate::i18n::en() || !matches!(name, "index.html" | "manifest.webmanifest") {
+        return bytes;
+    }
+    let mut text = String::from_utf8_lossy(&bytes).into_owned();
+    for (fr, en) in [
+        (r#"<html lang="fr">"#, r#"<html lang="en">"#),
+        ("Composer, imprimer et planifier des tickets sur l'imprimante de la maison.",
+         "Compose, print and schedule tickets on the household receipt printer."),
+        ("Printr a besoin de JavaScript.", "Printr needs JavaScript."),
+        (r#""lang": "fr""#, r#""lang": "en""#),
+    ] {
+        text = text.replace(fr, en);
+    }
+    text.into_bytes()
 }
 
 // ---- Corps des requêtes ----
@@ -361,7 +381,7 @@ impl TodoRequest {
             items.extend(text.lines().map(str::trim).filter(|l| !l.is_empty()).map(str::to_owned));
         }
         if items.is_empty() {
-            bail!("aucune chose à faire (`items` ou `text`)");
+            bail!("{}", t("aucune chose à faire (`items` ou `text`)", "nothing to do (`items` or `text`)"));
         }
         Ok(Ticket { cut: true, spacing: 1, blocks: vec![Block::Date {}, Block::Todo { title: self.title, items }] })
     }
@@ -375,7 +395,7 @@ fn validate_schedules(inputs: Vec<ScheduleInput>, previous: &[Schedule]) -> Resu
             days.sort_unstable();
             days.dedup();
             if days.is_empty() || days.iter().any(|d| !(1..=7).contains(d)) {
-                bail!("jours de planification invalides");
+                bail!("{}", t("jours de planification invalides", "invalid schedule days"));
             }
             let valid_time = s
                 .time
@@ -383,7 +403,7 @@ fn validate_schedules(inputs: Vec<ScheduleInput>, previous: &[Schedule]) -> Resu
                 .and_then(|(h, m)| Some((h.parse::<u32>().ok()?, m.parse::<u32>().ok()?)))
                 .is_some_and(|(h, m)| h < 24 && m < 60);
             if !valid_time {
-                bail!("heure invalide : {}", s.time);
+                bail!("{}", tr!("heure invalide : {}", "invalid time: {}", s.time));
             }
             let id = s.id.unwrap_or_else(|| store::new_id(6));
             let last_run = previous.iter().find(|p| p.id == id).and_then(|p| p.last_run);
@@ -413,7 +433,7 @@ fn save_upload(bytes: &[u8]) -> Result<String> {
     } else {
         img
     };
-    let dir = store::uploads_dir().context("répertoire de données introuvable")?;
+    let dir = store::uploads_dir().context(t("répertoire de données introuvable", "data directory not found"))?;
     std::fs::create_dir_all(&dir)?;
     let id = store::new_id(12);
     img.save_with_format(dir.join(format!("{id}.png")), image::ImageFormat::Png)?;
@@ -442,7 +462,7 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                 .header("Content-Security-Policy", CSP.split_whitespace().collect::<Vec<_>>().join(" "));
         }
     } else if !guard::same_origin(header(request, "Origin"), header(request, "Host")) {
-        return Reply::error(403, "requête venue d'un autre site, refusée");
+        return Reply::error(403, t("requête venue d'un autre site, refusée", "request from another site, refused"));
     }
 
     let segments: Vec<&str> = path.trim_matches('/').split('/').collect();
@@ -457,13 +477,13 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             let ip = client.unwrap_or(std::net::IpAddr::from([0, 0, 0, 0]));
             if let Err(wait) = app.guard.check(ip) {
                 let minutes = wait.as_secs().div_ceil(60).max(1);
-                return Reply::error(429, format!("trop d'essais : réessaie dans {minutes} min")).note(format!("connexion bloquée pour {ip}"));
+                return Reply::error(429, tr!("trop d'essais : réessaie dans {minutes} min", "too many attempts: try again in {minutes} min")).note(tr!("connexion bloquée pour {ip}", "login blocked for {ip}"));
             }
             // Argon2 est lent : la vérification se fait sans bloquer les données des autres.
             let hash = app.lock_store().password_hash(&login.user_id);
             if !hash.is_some_and(|h| app.guard.verify(&h, &login.password)) {
                 app.guard.failed(ip);
-                return Reply::error(401, "mot de passe incorrect");
+                return Reply::error(401, t("mot de passe incorrect", "wrong password"));
             }
             app.guard.succeeded(ip);
             let mut store = app.lock_store();
@@ -475,18 +495,18 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             let name = user.as_ref().and_then(|u| u["name"].as_str()).unwrap_or("?").to_owned();
             return Reply::ok(json!({ "ok": true, "user": user }))
                 .header("Set-Cookie", session_cookie(&token, https))
-                .note(format!("connexion de {name}"));
+                .note(tr!("connexion de {name}", "login: {name}"));
         }
         // Premier lancement : tant qu'aucun compte n'existe, l'écran d'accueil crée le premier.
         (Method::Post, ["api", "setup"]) => {
             // Depuis Internet, personne ne doit pouvoir s'approprier une installation vide.
             if client.is_some_and(crate::net::is_public) {
-                return Reply::error(403, "le premier compte se crée depuis le réseau de la maison");
+                return Reply::error(403, t("le premier compte se crée depuis le réseau de la maison", "the first account must be created from the home network"));
             }
             let input: NewUser = try_reply!(json_body(request));
             let mut store = app.lock_store();
             if !store.users().is_empty() {
-                return Reply::error(403, "des comptes existent déjà : connecte-toi");
+                return Reply::error(403, t("des comptes existent déjà : connecte-toi", "accounts already exist: log in"));
             }
             let id = match store.add_user(&input.name, &input.password) {
                 Ok(id) => id,
@@ -499,16 +519,16 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             }
             return Reply::ok(json!({ "ok": true, "user": user }))
                 .header("Set-Cookie", session_cookie(&token, https))
-                .note(format!("premier compte : {}", input.name.trim()));
+                .note(tr!("premier compte : {}", "first account: {}", input.name.trim()));
         }
         _ => {}
     }
 
     let Some(caller) = caller(app, request) else {
         return if path.starts_with("/api/") || path == "/print" || path == "/todo" {
-            Reply::error(401, "connexion requise")
+            Reply::error(401, t("connexion requise", "login required"))
         } else {
-            Reply::error(404, "page inconnue")
+            Reply::error(404, t("page inconnue", "unknown page"))
         };
     };
     let by = caller.name();
@@ -529,7 +549,7 @@ fn handle(app: &App, request: &mut Request) -> Reply {
         // Comptes de la famille : tout membre connecté peut en ajouter ou en retirer.
         (Method::Post, ["api", "users"]) => {
             if user_id.is_none() {
-                return Reply::error(403, "réservé aux membres de la famille");
+                return Reply::error(403, t("réservé aux membres de la famille", "reserved for family members"));
             }
             let input: NewUser = try_reply!(json_body(request));
             let mut store = app.lock_store();
@@ -539,30 +559,30 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             };
             let user = store.user(&id).map(|u| user_json(&store, u));
             match store.save() {
-                Ok(()) => Reply::ok(json!({ "ok": true, "user": user })).note(format!("compte créé par {by} : {}", input.name.trim())),
+                Ok(()) => Reply::ok(json!({ "ok": true, "user": user })).note(tr!("compte créé par {by} : {}", "account created by {by}: {}", input.name.trim())),
                 Err(e) => Reply::error(500, format!("{e:#}")),
             }
         }
         (Method::Delete, ["api", "users", id]) => {
             if user_id.is_none() {
-                return Reply::error(403, "réservé aux membres de la famille");
+                return Reply::error(403, t("réservé aux membres de la famille", "reserved for family members"));
             }
             if user_id.as_deref() == Some(*id) {
-                return Reply::error(400, "tu ne peux pas supprimer ton propre compte");
+                return Reply::error(400, t("tu ne peux pas supprimer ton propre compte", "you cannot delete your own account"));
             }
             let mut store = app.lock_store();
             if !user_id.as_deref().is_some_and(|me| store.is_admin(me)) {
-                return Reply::error(403, "seul l'administrateur peut supprimer un compte");
+                return Reply::error(403, t("seul l'administrateur peut supprimer un compte", "only the administrator can delete an account"));
             }
-            let Some(name) = store.user(id).map(|u| u.name.clone()) else { return Reply::error(404, "compte inconnu") };
+            let Some(name) = store.user(id).map(|u| u.name.clone()) else { return Reply::error(404, t("compte inconnu", "unknown account")) };
             store.remove_user_id(id);
             match store.save() {
-                Ok(()) => Reply::ok(json!({ "ok": true })).note(format!("compte {name} supprimé par {by}")),
+                Ok(()) => Reply::ok(json!({ "ok": true })).note(tr!("compte {name} supprimé par {by}", "account {name} deleted by {by}")),
                 Err(e) => Reply::error(500, format!("{e:#}")),
             }
         }
         (Method::Put, ["api", "me", "password"]) => {
-            let Caller::User(me) = &caller else { return Reply::error(403, "réservé aux membres de la famille") };
+            let Caller::User(me) = &caller else { return Reply::error(403, t("réservé aux membres de la famille", "reserved for family members")) };
             let input: NewPassword = try_reply!(json_body(request));
             let mut store = app.lock_store();
             if let Err(e) = store.set_password(&me.name, &input.password) {
@@ -571,7 +591,7 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             // `set_password` ferme toutes les sessions : on en rouvre une pour cet appareil.
             let token = store.open_session(&me.id);
             match store.save() {
-                Ok(()) => Reply::ok(json!({ "ok": true })).header("Set-Cookie", session_cookie(&token, https)).note(format!("mot de passe changé : {by}")),
+                Ok(()) => Reply::ok(json!({ "ok": true })).header("Set-Cookie", session_cookie(&token, https)).note(tr!("mot de passe changé : {by}", "password changed: {by}")),
                 Err(e) => Reply::error(500, format!("{e:#}")),
             }
         }
@@ -601,12 +621,12 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                 .iter()
                 .map(|r| json!({ "label": r.label, "error": r.error, "ms": r.elapsed.as_millis() as u64 }))
                 .collect::<Vec<_>>());
-            Reply::ok(out).note(format!("aperçu · {} blocs", reports.len()))
+            Reply::ok(out).note(tr!("aperçu · {} blocs", "preview · {} blocks", reports.len()))
         }
         (Method::Post, ["api", "print"]) => {
             let input: PrintRequest = try_reply!(json_body(request));
             let ticket = try_reply!(parse_ticket(&input.ticket));
-            let label = input.label.unwrap_or_else(|| "Ticket composé".to_owned());
+            let label = input.label.unwrap_or_else(|| t("Ticket composé", "Composed ticket").to_owned());
             if let Some(refused) = app.quota_exceeded(&by) {
                 return refused;
             }
@@ -615,18 +635,18 @@ fn handle(app: &App, request: &mut Request) -> Reply {
         (Method::Post, ["api", "images"]) => {
             let body = try_reply!(read_body(request, MAX_IMAGE));
             match save_upload(&body) {
-                Ok(id) => Reply::ok(json!({ "id": id })).note(format!("photo de {} Ko", body.len() / 1024)),
+                Ok(id) => Reply::ok(json!({ "id": id })).note(tr!("photo de {} Ko", "photo of {} KB", body.len() / 1024)),
                 Err(e) => e.into(),
             }
         }
         (Method::Get, ["api", "images", id]) => {
             if !id.chars().all(|c| c.is_ascii_hexdigit()) {
-                return Reply::error(404, "photo inconnue");
+                return Reply::error(404, t("photo inconnue", "unknown photo"));
             }
             match store::uploads_dir().map(|d| d.join(format!("{id}.png"))).and_then(|p| std::fs::read(p).ok()) {
                 Some(body) => Reply { status: 200, content_type: "image/png", body, headers: Vec::new(), note: String::new() }
                     .header("Cache-Control", "private, max-age=31536000, immutable".to_owned()),
-                None => Reply::error(404, "photo inconnue"),
+                None => Reply::error(404, t("photo inconnue", "unknown photo")),
             }
         }
         (Method::Get, ["api", "presets"]) => {
@@ -641,11 +661,11 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             Reply::ok(json!(visible))
         }
         (Method::Post, ["api", "presets"]) => {
-            let Some(owner) = user_id else { return Reply::error(403, "réservé aux utilisateurs") };
+            let Some(owner) = user_id else { return Reply::error(403, t("réservé aux utilisateurs", "reserved for users")) };
             let input: PresetInput = try_reply!(json_body(request));
             try_reply!(parse_ticket(&input.ticket));
             if input.name.trim().is_empty() {
-                return Reply::error(400, "donne un nom à ton preset");
+                return Reply::error(400, t("donne un nom à ton preset", "give your preset a name"));
             }
             let schedules = match validate_schedules(input.schedules, &[]) {
                 Ok(s) => s,
@@ -663,7 +683,7 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             };
             let mut store = app.lock_store();
             let out = preset_json(&preset, &store);
-            let note = format!("preset « {} » créé", preset.name);
+            let note = tr!("preset « {} » créé", "preset \"{}\" created", preset.name);
             store.data.presets.push(preset);
             match store.save() {
                 Ok(()) => Reply::ok(out).note(note),
@@ -675,16 +695,16 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                 if method == Method::Put { Some(try_reply!(json_body(request))) } else { None };
             let mut store = app.lock_store();
             let Some(index) = store.data.presets.iter().position(|p| p.id == *id) else {
-                return Reply::error(404, "preset inconnu");
+                return Reply::error(404, t("preset inconnu", "unknown preset"));
             };
             if Some(&store.data.presets[index].owner) != user_id.as_ref() {
-                return Reply::error(403, "seul son auteur peut modifier ce preset");
+                return Reply::error(403, t("seul son auteur peut modifier ce preset", "only its author can edit this preset"));
             }
             let note;
             let out = match input {
                 None => {
                     let removed = store.data.presets.remove(index);
-                    note = format!("preset « {} » supprimé", removed.name);
+                    note = tr!("preset « {} » supprimé", "preset \"{}\" deleted", removed.name);
                     json!({ "ok": true })
                 }
                 Some(input) => {
@@ -701,7 +721,7 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                     preset.ticket = input.ticket;
                     preset.schedules = schedules;
                     preset.updated = Utc::now();
-                    note = format!("preset « {} » modifié", preset.name);
+                    note = tr!("preset « {} » modifié", "preset \"{}\" edited", preset.name);
                     let preset = preset.clone();
                     preset_json(&preset, &store)
                 }
@@ -716,7 +736,7 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                 let store = app.lock_store();
                 store.data.presets.iter().find(|p| p.id == *id && (p.shared || Some(&p.owner) == user_id.as_ref())).cloned()
             };
-            let Some(preset) = preset else { return Reply::error(404, "preset inconnu") };
+            let Some(preset) = preset else { return Reply::error(404, t("preset inconnu", "unknown preset")) };
             let ticket = try_reply!(parse_ticket(&preset.ticket));
             if let Some(refused) = app.quota_exceeded(&by) {
                 return refused;
@@ -731,7 +751,7 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             let input: ShoppingInput = try_reply!(json_body(request));
             let items: Vec<&str> = input.text.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
             if items.is_empty() {
-                return Reply::error(400, "rien à ajouter");
+                return Reply::error(400, t("rien à ajouter", "nothing to add"));
             }
             let mut store = app.lock_store();
             for text in &items {
@@ -739,7 +759,7 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                 store.data.shopping.push(store::ShoppingItem { id: store::new_id(6), text, by: by.clone(), added: Utc::now() });
             }
             match store.save() {
-                Ok(()) => Reply::ok(shopping_json(&store)).note(format!("courses : {}", items.join(", "))),
+                Ok(()) => Reply::ok(shopping_json(&store)).note(tr!("courses : {}", "shopping: {}", items.join(", "))),
                 Err(e) => Reply::error(500, format!("{e:#}")),
             }
         }
@@ -748,13 +768,13 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             let note = match rest {
                 [] => {
                     store.data.shopping.clear();
-                    "liste de courses vidée".to_owned()
+                    t("liste de courses vidée", "shopping list cleared").to_owned()
                 }
                 [id] => {
                     store.data.shopping.retain(|i| i.id != *id);
-                    "article retiré".to_owned()
+                    t("article retiré", "item removed").to_owned()
                 }
-                _ => return Reply::error(404, "route inconnue"),
+                _ => return Reply::error(404, t("route inconnue", "unknown route")),
             };
             match store.save() {
                 Ok(()) => Reply::ok(shopping_json(&store)).note(note),
@@ -771,10 +791,10 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             let preview = query.split('&').any(|p| p == "preview" || p.starts_with("preview="));
             let body = try_reply!(read_body(request, MAX_JSON));
             let ticket: Result<Ticket> = if segments == ["print"] {
-                serde_json::from_slice(&body).context("ticket JSON invalide")
+                serde_json::from_slice(&body).context(t("ticket JSON invalide", "invalid ticket JSON"))
             } else {
                 serde_json::from_slice::<TodoRequest>(&body)
-                    .context("liste JSON invalide")
+                    .context(t("liste JSON invalide", "invalid list JSON"))
                     .and_then(TodoRequest::into_ticket)
             };
             let ticket = match ticket {
@@ -784,15 +804,15 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             if preview {
                 let (doc, _) = ticket.build(&Ctx::web(false).for_preview(), &mut Silent);
                 let body = doc.preview(ticket.cut).into_bytes();
-                return Reply { status: 200, content_type: "text/plain; charset=utf-8", body, headers: Vec::new(), note: "aperçu".into() };
+                return Reply { status: 200, content_type: "text/plain; charset=utf-8", body, headers: Vec::new(), note: t("aperçu", "preview").into() };
             }
-            let label = if segments == ["todo"] { "Liste à faire" } else { "Ticket (script)" };
+            let label = if segments == ["todo"] { t("Liste à faire", "To-do list") } else { t("Ticket (script)", "Script ticket") };
             if let Some(refused) = app.quota_exceeded(&by) {
                 return refused;
             }
             printed_reply(app.print(&ticket, &by, label), label)
         }
-        _ => Reply::error(404, "route inconnue"),
+        _ => Reply::error(404, t("route inconnue", "unknown route")),
     }
 }
 
@@ -802,9 +822,9 @@ fn printed_reply(printed: Printed, label: &str) -> Reply {
             let failed = if printed.errors.is_empty() {
                 String::new()
             } else {
-                format!(" · {} bloc(s) en échec", printed.errors.len())
+                tr!(" · {} bloc(s) en échec", " · {} block(s) failed", printed.errors.len())
             };
-            Reply::ok(json!({ "ok": true, "errors": printed.errors })).note(format!("« {label} » imprimé{failed}"))
+            Reply::ok(json!({ "ok": true, "errors": printed.errors })).note(tr!("« {label} » imprimé{failed}", "\"{label}\" printed{failed}"))
         }
         Some(failure) => Reply::error(503, failure),
     }
@@ -827,7 +847,7 @@ pub fn serve(listen: &str, token: Option<String>, target: Target) -> Result<()> 
         latest: Arc::new(Mutex::new(None)),
     });
     crate::update::spawn(Arc::clone(&app.latest));
-    let server = Server::http(listen).map_err(|e| anyhow::anyhow!("impossible d'écouter sur {listen} : {e}"))?;
+    let server = Server::http(listen).map_err(|e| anyhow::anyhow!("{}", tr!("impossible d'écouter sur {listen} : {e}", "cannot listen on {listen}: {e}")))?;
 
     let ctx = Ctx::web(false);
     let cache = ctx.cache.as_ref().map(|c| c.dir().display().to_string());

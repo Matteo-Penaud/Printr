@@ -49,19 +49,19 @@ impl Size {
 
     pub fn label(self) -> &'static str {
         match self {
-            Size::Small => "petite",
-            Size::Medium => "moyenne",
-            Size::Large => "grande",
+            Size::Small => crate::i18n::t("petite", "small"),
+            Size::Medium => crate::i18n::t("moyenne", "medium"),
+            Size::Large => crate::i18n::t("grande", "large"),
         }
     }
 }
 
 pub fn level_label(level: u8) -> &'static str {
     match level {
-        1 => "facile",
-        2 => "moyen",
-        3 => "difficile",
-        _ => "très difficile",
+        1 => crate::i18n::t("facile", "easy"),
+        2 => crate::i18n::t("moyen", "medium"),
+        3 => crate::i18n::t("difficile", "hard"),
+        _ => crate::i18n::t("très difficile", "very hard"),
     }
 }
 
@@ -150,7 +150,7 @@ fn dictionary(min_score: u32) -> Result<Arc<Dictionary>> {
     if let Some(dict) = dicts.get(&min_score) {
         return Ok(Arc::clone(dict));
     }
-    let path = wordlist::french(|_| {}).context("liste de mots de CrossWords indisponible (premier téléchargement)")?;
+    let path = wordlist::french(|_| {}).context(crate::i18n::t("liste de mots de CrossWords indisponible (premier téléchargement)", "CrossWords word list unavailable (first download)"))?;
     let file = File::open(&path).with_context(|| format!("{} illisible", path.display()))?;
     let dict = Arc::new(Dictionary::from_reader(BufReader::new(file), min_score)?);
     dicts.insert(min_score, Arc::clone(&dict));
@@ -187,7 +187,7 @@ fn generate(width: usize, height: usize, level: u8, seed: u64) -> Result<Grille>
     let dict = dictionary(level_settings(level).min_score)?;
     let mut options = FlechesOptions::new(width, height).with_level(level);
     options.seed = seed;
-    let (fleches, _) = generate_fleches(&dict, &options).map_err(|e| anyhow!("grille impossible : {e}"))?;
+    let (fleches, _) = generate_fleches(&dict, &options).map_err(|e| anyhow!("{}", tr!("grille impossible : {e}", "could not build the grid: {e}")))?;
     let defs = known_definitions().at_level(level);
     parse(&fleches.to_json(Some(&defs), Some(seed), Some(level)))
 }
@@ -200,7 +200,7 @@ fn complete(grille: &mut Grille, level: u8) -> Result<usize> {
         return Ok(0);
     }
     let report = autodefs::generate(&missing, &known_definitions(), level, |_| {})
-        .map_err(|e| anyhow!("définitions par Claude impossibles : {e}"))?;
+        .map_err(|e| anyhow!("{}", tr!("définitions par Claude impossibles : {e}", "Claude could not write the clues: {e}")))?;
     remember(&report.definitions, level, &report.model)?;
     let written: HashMap<&str, &str> = report.definitions.iter().map(|(w, d)| (w.as_str(), d.as_str())).collect();
     for def in grille.definitions.iter_mut().filter(|d| d.texte.is_none()) {
@@ -334,13 +334,13 @@ pub fn build(ctx: &Ctx, options: &Options) -> Result<Doc> {
     if !grille.missing().is_empty() && !claude_tried && !ctx.preview && !options.solution {
         match complete(&mut grille, level) {
             Ok(_) => claude_tried = true,
-            Err(e) => note = Some(format!("Définitions indisponibles ({e}) : la longueur est indiquée.")),
+            Err(e) => note = Some(tr!("Définitions indisponibles ({e}) : la longueur est indiquée.", "Clues unavailable ({e}): the word length is shown.")),
         }
         changed = true;
     }
     if claude_tried && !grille.missing().is_empty() && !options.solution {
         let n = grille.missing().len();
-        note = Some(format!("{n} définition(s) n'ont pas pu être rédigées : la longueur est indiquée."));
+        note = Some(tr!("{n} définition(s) n'ont pas pu être rédigées : la longueur est indiquée.", "{n} clue(s) could not be written: the word length is shown."));
     }
     if let Some(cache) = cache
         && changed
@@ -351,10 +351,10 @@ pub fn build(ctx: &Ctx, options: &Options) -> Result<Doc> {
     let mut doc = Doc::new();
     doc.from_cache = from_cache && grille.missing().is_empty();
     if options.solution {
-        doc.header("Solution des mots fléchés");
+        doc.header(crate::i18n::t("Solution des mots fléchés", "Arrow words solution"));
     } else {
-        doc.header(&format!("Mots fléchés · {}", level_label(level)));
-        doc.text("Chaque numéro renvoie à sa définition ; la flèche montre où part le mot.", Style::default().small().center());
+        doc.header(&tr!("Mots fléchés · {}", "Arrow words (French) · {}", level_label(level)));
+        doc.text(crate::i18n::t("Chaque numéro renvoie à sa définition ; la flèche montre où part le mot.", "Each number points to its clue; the arrow shows where the word starts."), Style::default().small().center());
     }
     doc.feed(1);
     doc.image(render(&grille, options.solution));
@@ -366,13 +366,13 @@ pub fn build(ctx: &Ctx, options: &Options) -> Result<Doc> {
         for d in defs {
             let text = match &d.texte {
                 Some(t) => t.clone(),
-                None => format!("({} lettres)", grille.mots[d.mot].longueur),
+                None => tr!("({} lettres)", "({} letters)", grille.mots[d.mot].longueur),
             };
             doc.hanging(&format!("{:>width$}. ", d.numero), &text, Style::default());
         }
         if ctx.preview && !grille.missing().is_empty() {
             doc.feed(1);
-            doc.text("Les définitions manquantes seront rédigées par Claude à l'impression.", Style::default().small().center());
+            doc.text(crate::i18n::t("Les définitions manquantes seront rédigées par Claude à l'impression.", "Missing clues will be written by Claude when printing."), Style::default().small().center());
         }
         if let Some(note) = note {
             doc.feed(1);
@@ -380,7 +380,7 @@ pub fn build(ctx: &Ctx, options: &Options) -> Result<Doc> {
         }
     }
     doc.text(
-        &format!("n° {seed} · grille {} · niveau {level}", options.size.label()),
+        &tr!("n° {seed} · grille {} · niveau {level}", "No. {seed} · {} grid · level {level}", options.size.label()),
         Style::default().small().align(Align::Right),
     );
     Ok(doc)

@@ -69,9 +69,9 @@ fn problem(difficulty: Difficulty, rng: &mut StdRng) -> Problem {
 
 fn title(difficulty: Difficulty) -> &'static str {
     match difficulty {
-        Difficulty::Easy => "Calcul mental · facile",
-        Difficulty::Medium => "Calcul mental · moyen",
-        Difficulty::Hard => "Calcul mental · difficile",
+        Difficulty::Easy => crate::i18n::t("Calcul mental · facile", "Mental math · easy"),
+        Difficulty::Medium => crate::i18n::t("Calcul mental · moyen", "Mental math · medium"),
+        Difficulty::Hard => crate::i18n::t("Calcul mental · difficile", "Mental math · hard"),
     }
 }
 
@@ -98,11 +98,13 @@ pub fn build(difficulty: Difficulty, count: u8, seed: Option<u64>) -> Doc {
         doc.line(&format!("{left:<21}{right}"), Style::default());
         doc.feed(1);
     }
-    doc.line(&format!("{:>42}", "Score : ...... / ".to_owned() + &count.to_string()), Style::default().bold());
-    doc.text(&format!("n° {seed}"), Style::default().small().align(Align::Right));
+    let score = tr!("Score : ...... / {count}", "Score: ...... / {count}");
+    doc.line(&format!("{score:>42}"), Style::default().bold());
+    doc.text(&tr!("n° {seed}", "No. {seed}"), Style::default().small().align(Align::Right));
     doc.feed(1);
     let answers: Vec<String> = problems.iter().enumerate().map(|(i, p)| format!("{}) {}", i + 1, p.answer)).collect();
-    doc.text(&format!("Réponses : {}", answers.join("  ")), Style::default().small().upside_down());
+    let answers = answers.join("  ");
+    doc.text(&tr!("Réponses : {answers}", "Answers: {answers}"), Style::default().small().upside_down());
     doc
 }
 
