@@ -1,11 +1,14 @@
 //! Mots fléchés, générés par CrossWords (https://github.com/XNinety9/CrossWords).
 //!
-//! La bibliothèque remplit la grille ; on la relit dans son format JSON documenté (version 1,
+//! La bibliothèque remplit la grille ; on la relit dans son format JSON documenté (version 2,
 //! `docs/format-json.md`), qui reste le contrat entre les deux projets. Rendu « à numéros »,
 //! adapté au papier de 80 mm : la grille en image, cases définitions noires numérotées et
 //! flèches de départ, puis les définitions numérotées en texte.
 //!
-//! Définitions : le cache de CrossWords (`definitions.txt`), complété à l'impression par Claude
+//! Grilles en français, ou en anglais pour une installation en anglais (CrossWords 1.1) : chaque
+//! langue a son dictionnaire, ses définitions et ses grilles en cache.
+//!
+//! Définitions : le cache de CrossWords (`definitions.txt`, `definitions-en.txt` en anglais), complété à l'impression par Claude
 //! pour les mots inconnus (jamais en aperçu). Grille et définitions sont gardées par numéro :
 //! la solution se réimprime à l'identique, sans nouvel appel.
 
@@ -16,7 +19,10 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
 
 use anyhow::{Context, Result, anyhow, ensure};
-use crosswords::{Definitions, Dictionary, FlechesOptions, JSON_FORMAT_VERSION, autodefs, generate_fleches, level_settings, wordlist};
+use crosswords::{
+    Definitions, Dictionary, FlechesOptions, JSON_FORMAT_VERSION, Language, autodefs, generate_fleches, level_settings,
+    wordlist,
+};
 use image::GrayImage;
 use rand::RngExt;
 use serde::{Deserialize, Serialize};
@@ -65,7 +71,7 @@ pub fn level_label(level: u8) -> &'static str {
     }
 }
 
-// ---- Format JSON de CrossWords, version 1 ----
+// ---- Format JSON de CrossWords, version 2 ----
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct Grille {
@@ -75,6 +81,9 @@ struct Grille {
     kind: String,
     largeur: usize,
     hauteur: usize,
+    /// « fr » ou « en » (version 2 du format) ; absente des grilles gardées avant, toutes françaises.
+    #[serde(default)]
+    langue: Option<String>,
     graine: Option<u64>,
     niveau: Option<u8>,
     grille: Vec<String>,
@@ -142,36 +151,46 @@ impl Grille {
 
 // ---- Dictionnaire et définitions de CrossWords ----
 
+/// Langue des grilles : celle de l'installation.
+fn language() -> Language {
+    if crate::i18n::en() { Language::En } else { Language::Fr }
+}
+
 /// Dictionnaire par seuil de fréquence, chargé une fois (la liste est téléchargée par curl au
 /// tout premier usage, dans le cache de CrossWords).
-fn dictionary(min_score: u32) -> Result<Arc<Dictionary>> {
-    static DICTS: OnceLock<Mutex<HashMap<u32, Arc<Dictionary>>>> = OnceLock::new();
+fn dictionary(lang: Language, min_score: u32) -> Result<Arc<Dictionary>> {
+    static DICTS: OnceLock<Mutex<HashMap<(&'static str, u32), Arc<Dictionary>>>> = OnceLock::new();
     let mut dicts = DICTS.get_or_init(Default::default).lock().unwrap_or_else(|e| e.into_inner());
-    if let Some(dict) = dicts.get(&min_score) {
+    if let Some(dict) = dicts.get(&(lang.code(), min_score)) {
         return Ok(Arc::clone(dict));
     }
-    let path = wordlist::french(|_| {}).context(crate::i18n::t("liste de mots de CrossWords indisponible (premier téléchargement)", "CrossWords word list unavailable (first download)"))?;
+    let path = wordlist::for_language(lang, |_| {}).context(crate::i18n::t("liste de mots de CrossWords indisponible (premier téléchargement)", "CrossWords word list unavailable (first download)"))?;
     let file = File::open(&path).with_context(|| format!("{} illisible", path.display()))?;
     let dict = Arc::new(Dictionary::from_reader(BufReader::new(file), min_score)?);
-    dicts.insert(min_score, Arc::clone(&dict));
+    dicts.insert((lang.code(), min_score), Arc::clone(&dict));
     Ok(dict)
 }
 
-fn definitions_path() -> Option<PathBuf> {
-    wordlist::cache_dir().map(|dir| dir.join("definitions.txt"))
+/// Le cache de définitions de CrossWords, un fichier par langue (comme sa commande).
+fn definitions_path(lang: Language) -> Option<PathBuf> {
+    let name = match lang {
+        Language::En => "definitions-en.txt",
+        _ => "definitions.txt",
+    };
+    wordlist::cache_dir().map(|dir| dir.join(name))
 }
 
 /// Toutes les définitions connues (tous niveaux) : le cache de CrossWords.
-fn known_definitions() -> Definitions {
-    definitions_path()
+fn known_definitions(lang: Language) -> Definitions {
+    definitions_path(lang)
         .and_then(|p| File::open(p).ok())
         .and_then(|f| Definitions::from_reader(BufReader::new(f)).ok())
         .unwrap_or_default()
 }
 
 /// Ajoute des définitions rédigées au cache de CrossWords, au même format que sa commande.
-fn remember(defs: &[(String, String)], level: u8, model: &str) -> Result<()> {
-    let Some(path) = definitions_path() else { return Ok(()) };
+fn remember(lang: Language, defs: &[(String, String)], level: u8, model: &str) -> Result<()> {
+    let Some(path) = definitions_path(lang) else { return Ok(()) };
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
@@ -183,25 +202,25 @@ fn remember(defs: &[(String, String)], level: u8, model: &str) -> Result<()> {
     Ok(())
 }
 
-fn generate(width: usize, height: usize, level: u8, seed: u64) -> Result<Grille> {
-    let dict = dictionary(level_settings(level).min_score)?;
+fn generate(lang: Language, width: usize, height: usize, level: u8, seed: u64) -> Result<Grille> {
+    let dict = dictionary(lang, level_settings(level).min_score)?;
     let mut options = FlechesOptions::new(width, height).with_level(level);
     options.seed = seed;
     let (fleches, _) = generate_fleches(&dict, &options).map_err(|e| anyhow!("{}", tr!("grille impossible : {e}", "could not build the grid: {e}")))?;
-    let defs = known_definitions().at_level(level);
-    parse(&fleches.to_json(Some(&defs), Some(seed), Some(level)))
+    let defs = known_definitions(lang).at_level(level);
+    parse(&fleches.to_json_in(Some(&defs), Some(seed), Some(level), lang))
 }
 
 /// Fait rédiger par Claude les définitions qui manquent. Renvoie le nombre de mots restés
 /// sans définition.
-fn complete(grille: &mut Grille, level: u8) -> Result<usize> {
+fn complete(lang: Language, grille: &mut Grille, level: u8) -> Result<usize> {
     let missing = grille.missing();
     if missing.is_empty() {
         return Ok(0);
     }
-    let report = autodefs::generate(&missing, &known_definitions(), level, |_| {})
+    let report = autodefs::generate_for(lang, &missing, &known_definitions(lang), level, |_| {})
         .map_err(|e| anyhow!("{}", tr!("définitions par Claude impossibles : {e}", "Claude could not write the clues: {e}")))?;
-    remember(&report.definitions, level, &report.model)?;
+    remember(lang, &report.definitions, level, &report.model)?;
     let written: HashMap<&str, &str> = report.definitions.iter().map(|(w, d)| (w.as_str(), d.as_str())).collect();
     for def in grille.definitions.iter_mut().filter(|d| d.texte.is_none()) {
         if let Some(text) = written.get(grille.mots[def.mot].mot.as_str()) {
@@ -319,20 +338,25 @@ pub fn build(ctx: &Ctx, options: &Options) -> Result<Doc> {
     let level = options.level.clamp(1, 4);
     let seed = options.seed.unwrap_or_else(|| rand::rng().random_range(1..100_000));
     let (width, height) = options.size.dims();
-    let key = format!("mots-fleches-v2-{width}x{height}-n{level}-{seed}");
+    let lang = language();
+    // Clé française inchangée : les grilles déjà gardées restent valables.
+    let key = match lang {
+        Language::En => format!("arrow-words-v2-{width}x{height}-n{level}-{seed}-en"),
+        _ => format!("mots-fleches-v2-{width}x{height}-n{level}-{seed}"),
+    };
     let cache = ctx.cache.as_ref();
 
     let cached: Option<Saved> = cache.filter(|_| !ctx.refresh).and_then(|c| c.get(&key));
     let from_cache = cached.is_some();
     let Saved { mut grille, mut claude_tried } = match cached {
         Some(saved) => saved,
-        None => Saved { grille: generate(width, height, level, seed)?, claude_tried: false },
+        None => Saved { grille: generate(lang, width, height, level, seed)?, claude_tried: false },
     };
     // Définitions manquantes : Claude, une seule fois, à l'impression (l'aperçu ne coûte rien).
     let mut note = None;
     let mut changed = !from_cache;
     if !grille.missing().is_empty() && !claude_tried && !ctx.preview && !options.solution {
-        match complete(&mut grille, level) {
+        match complete(lang, &mut grille, level) {
             Ok(_) => claude_tried = true,
             Err(e) => note = Some(tr!("Définitions indisponibles ({e}) : la longueur est indiquée.", "Clues unavailable ({e}): the word length is shown.")),
         }
@@ -353,7 +377,7 @@ pub fn build(ctx: &Ctx, options: &Options) -> Result<Doc> {
     if options.solution {
         doc.header(crate::i18n::t("Solution des mots fléchés", "Arrow words solution"));
     } else {
-        doc.header(&tr!("Mots fléchés · {}", "Arrow words (French) · {}", level_label(level)));
+        doc.header(&tr!("Mots fléchés · {}", "Arrow words · {}", level_label(level)));
         doc.text(crate::i18n::t("Chaque numéro renvoie à sa définition ; la flèche montre où part le mot.", "Each number points to its clue; the arrow shows where the word starts."), Style::default().small().center());
     }
     doc.feed(1);
@@ -393,7 +417,7 @@ mod tests {
 
     /// L'exemple de la documentation de CrossWords (`docs/format-json.md`).
     const SAMPLE: &str = r####"{
-      "format": "crosswords", "version": 1, "type": "fleches", "largeur": 6, "hauteur": 6, "graine": 2, "niveau": 1,
+      "format": "crosswords", "version": 2, "type": "fleches", "langue": "fr", "largeur": 6, "hauteur": 6, "graine": 2, "niveau": 1,
       "grille": ["#C#G#D", "PAGE#E", "###NON", "PAPIER", "#CRAIE", "REELLE"],
       "mots": [
         {"id": 0, "mot": "PAGE", "sens": "horizontal", "ligne": 1, "colonne": 0, "longueur": 4},
@@ -433,8 +457,8 @@ mod tests {
 
     #[test]
     fn unknown_format_versions_are_refused() {
-        let other = SAMPLE.replace("\"version\": 1", "\"version\": 2");
-        assert!(parse(&other).unwrap_err().to_string().contains("version 2"));
+        let other = SAMPLE.replace("\"version\": 2", "\"version\": 3");
+        assert!(parse(&other).unwrap_err().to_string().contains("version 3"));
         let croises = SAMPLE.replace("\"fleches\"", "\"croises\"");
         assert!(parse(&croises).is_err());
     }

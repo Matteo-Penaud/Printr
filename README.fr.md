@@ -221,7 +221,8 @@ Le bloc `arrow_word` s'appuie sur la bibliothèque [CrossWords](https://github.c
 (Apache 2.0, © 2026 Pierre, [XNinety9](https://github.com/XNinety9) ; voir [`NOTICE`](NOTICE)).
 Au premier usage, elle télécharge sa liste de mots avec `curl` (une trentaine de secondes, une
 seule fois) dans le cache de printr.
-Les définitions viennent de son cache (`crosswords/definitions.txt`), complété à l'impression
+Les définitions viennent de son cache (`crosswords/definitions.txt`, ou `definitions-en.txt` en
+anglais), complété à l'impression
 par Claude pour les mots inconnus : moins d'un centime par grille neuve aux niveaux 1 et 2
 (Claude Haiku), une dizaine aux niveaux 3 et 4 (Claude Opus). L'aperçu n'appelle jamais Claude,
 et un mot que Claude n'a pas su définir n'est pas redemandé : sa longueur est imprimée.
@@ -241,10 +242,11 @@ toute l'installation en anglais : l'interface web, la ligne de commande, les mes
 tickets. Les blocs à contenu (énigmes, citations, mots mêlés, défis sportifs, bons à offrir…) ont
 leur propre liste anglaise, et Claude écrit l'horoscope et le mot du jour en anglais.
 
-L'**horoscope Barnum**, hors ligne, s'écrit aussi en anglais à partir de Barnum 0.3 (un Barnum
-plus ancien l'imprime en français). Deux blocs restent en français, faute de source anglaise : les
-**mots fléchés** (dictionnaire et définitions de CrossWords) et la **fête du jour**. Les **jours
-fériés** sont ceux de France, nommés en anglais.
+Les **mots fléchés** viennent du dictionnaire anglais de CrossWords, avec des définitions anglaises
+(son cache `definitions-en.txt`, complété par Claude). L'**horoscope Barnum**, hors ligne, s'écrit
+aussi en anglais à partir de Barnum 0.3 (un Barnum plus ancien l'imprime en français). Seule la
+**fête du jour** reste en français, faute de source anglaise ; les **jours fériés** sont ceux de
+France, nommés en anglais.
 
 ## Interface web
 

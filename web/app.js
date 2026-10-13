@@ -364,7 +364,7 @@ const BLOCKS = [
     summary: (b) => `${b.width} × ${b.height}`,
   },
   {
-    type: 'arrow_word', label: T('Mots fléchés', 'Arrow words'), emoji: '✍️', group: G.fun, desc: T('Une grille de mots fléchés, définitions par Claude', 'A French arrow-word grid, clues by Claude'), ai: true,
+    type: 'arrow_word', label: T('Mots fléchés', 'Arrow words'), emoji: '✍️', group: G.fun, desc: T('Une grille de mots fléchés, définitions par Claude', 'An arrow-word grid, clues written by Claude'), ai: true,
     defaults: { level: 2, size: 'moyen' },
     fields: [
       { key: 'level', label: T('Niveau', 'Level'), kind: 'segmented', options: [[1, T('Facile', 'Easy')], [2, T('Moyen', 'Medium')], [3, T('Difficile', 'Hard')], [4, 'Expert']],

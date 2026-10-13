@@ -224,7 +224,8 @@ The `arrow_word` block relies on the [CrossWords](https://github.com/XNinety9/Cr
 (Apache 2.0, © 2026 Pierre, [XNinety9](https://github.com/XNinety9); see [`NOTICE`](NOTICE)).
 On first use, it downloads its word list with `curl` (about thirty seconds, only once) into
 printr's cache.
-Definitions come from its cache (`crosswords/definitions.txt`), completed at print time by Claude
+Definitions come from its cache (`crosswords/definitions.txt`, or `definitions-en.txt` in
+English), completed at print time by Claude
 for the words it does not know: less than a cent per new grid at levels 1 and 2 (Claude Haiku),
 about ten cents at levels 3 and 4 (Claude Opus). Previews never call Claude, and a word that
 Claude could not define is not asked for again: its length is printed instead.
@@ -244,10 +245,11 @@ switches the whole installation to English: the web interface, the command line,
 tickets. Blocks with content (riddles, quotes, word searches, workouts, gift coupons…) have their
 own English list, and Claude writes the horoscope and the word of the day in English.
 
-The offline **Barnum horoscope** is written in English too, with Barnum 0.3 or later (an older
-Barnum prints it in French). Two blocks stay in French, for lack of an English source:
-**arrow words** (CrossWords' dictionary and definitions) and the **name day**. **Public holidays**
-are the French ones, named in English.
+**Arrow words** come from CrossWords' English dictionary, with English clues (its
+`definitions-en.txt` cache, completed by Claude). The offline **Barnum horoscope** is written in
+English too, with Barnum 0.3 or later (an older Barnum prints it in French). Only the **name day**
+stays in French, for lack of an English source; **public holidays** are the French ones, named in
+English.
 
 ## Web interface
 
