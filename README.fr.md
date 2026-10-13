@@ -498,3 +498,9 @@ cargo build --release                                        # cette machine
 sudo deploy/install.sh --binary chemin/vers/printr
 ```
 
+
+## Licence
+
+Printr est distribué sous [licence Apache 2.0](LICENSE) : vous pouvez le réutiliser, le modifier et le
+redistribuer, à condition de conserver le fichier [NOTICE](NOTICE), qui cite l'auteur original et la
+bibliothèque CrossWords incluse.

@@ -2,6 +2,7 @@
 name = "printr"
 version = "1.6.0"
 edition = "2024"
+license = "Apache-2.0"
 
 [dependencies]
 anstream = "1.0.0"

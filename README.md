@@ -502,3 +502,9 @@ cross build --release --target arm-unknown-linux-gnueabihf   # Pi Zero W, Pi 1 (
 cargo build --release                                        # this machine
 sudo deploy/install.sh --binary path/to/printr
 ```
+
+## License
+
+Printr is licensed under the [Apache License 2.0](LICENSE): you can reuse, modify and redistribute it,
+as long as you keep the [NOTICE](NOTICE) file, which credits the original author and the bundled
+CrossWords library.
