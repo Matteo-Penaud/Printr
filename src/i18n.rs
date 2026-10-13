@@ -62,7 +62,6 @@ pub fn en() -> bool {
 }
 
 /// Exécute `f` dans la langue donnée, sur ce fil seulement.
-#[cfg(test)]
 pub fn with_lang<T>(lang: Lang, f: impl FnOnce() -> T) -> T {
     let before = FORCED.replace(Some(lang));
     let out = f();

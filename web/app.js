@@ -257,7 +257,7 @@ const BLOCKS = [
     summary: (b) => b.location,
   },
   {
-    type: 'barnum', label: T('Horoscope', 'Horoscope'), emoji: '🌟', group: G.daily, desc: T('Le vrai ciel du jour, hors ligne et gratuit', 'The real sky of the day, offline (in French)'),
+    type: 'barnum', label: T('Horoscope', 'Horoscope'), emoji: '🌟', group: G.daily, desc: T('Le vrai ciel du jour, hors ligne et gratuit', 'The real sky of the day, offline and free'),
     defaults: { sign: 'lion', sky: false },
     fields: [
       { key: 'sign', label: T('Signe', 'Sign'), kind: 'select', options: SIGNS },

@@ -241,9 +241,10 @@ toute l'installation en anglais : l'interface web, la ligne de commande, les mes
 tickets. Les blocs à contenu (énigmes, citations, mots mêlés, défis sportifs, bons à offrir…) ont
 leur propre liste anglaise, et Claude écrit l'horoscope et le mot du jour en anglais.
 
-Trois blocs restent en français, faute de source anglaise : les **mots fléchés** (dictionnaire et
-définitions de CrossWords), l'**horoscope Barnum** et la **fête du jour**. Les **jours fériés** sont
-ceux de France, nommés en anglais.
+L'**horoscope Barnum**, hors ligne, s'écrit aussi en anglais à partir de Barnum 0.3 (un Barnum
+plus ancien l'imprime en français). Deux blocs restent en français, faute de source anglaise : les
+**mots fléchés** (dictionnaire et définitions de CrossWords) et la **fête du jour**. Les **jours
+fériés** sont ceux de France, nommés en anglais.
 
 ## Interface web
 

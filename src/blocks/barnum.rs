@@ -2,6 +2,10 @@
 //! (https://github.com/XNinety9/Barnum), appelé en ligne de commande avec `--json`.
 //!
 //! Commande : `$PRINTR_BARNUM` (par exemple `python3 /opt/barnum/main.py`), sinon `barnum`.
+//!
+//! Barnum écrit en français, et en anglais depuis sa version 0.3 (`--lang en`). En anglais, un
+//! Barnum plus ancien refuse l'option : on redemande alors la lecture en français, et tout le
+//! ticket reste en français plutôt que mi-anglais, mi-français.
 
 use std::io::Read;
 use std::process::{Command, Stdio};
@@ -18,6 +22,9 @@ const TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Deserialize)]
 struct Reading {
+    /// Langue de rédaction (« fr », « en ») ; absente avant Barnum 0.3, qui n'écrit qu'en français.
+    #[serde(default)]
+    langue: Option<String>,
     signe: String,
     #[serde(default)]
     lune: Option<Moon>,
@@ -46,6 +53,9 @@ struct Moon {
 #[derive(Deserialize)]
 struct Domain {
     cle: String,
+    /// Nom affiché dans la langue de la lecture (Barnum 0.3) ; sinon, la clé fait l'affaire.
+    #[serde(default)]
+    libelle: Option<String>,
     note: u8,
     texte: String,
 }
@@ -80,13 +90,16 @@ pub fn available() -> bool {
 }
 
 /// Lance Barnum et lit sa réponse JSON.
-fn run(command: &[String], who: &Who, date: NaiveDate, variant: Option<&str>) -> Result<Reading> {
+fn run(command: &[String], who: &Who, date: NaiveDate, variant: Option<&str>, english: bool) -> Result<Reading> {
     let (program, base) = command.split_first().context(i18n::t("commande Barnum vide", "empty Barnum command"))?;
     let mut cmd = Command::new(program);
     cmd.args(base);
     // Options d'abord, sous la forme `--option=valeur`, puis `--` : un signe ou une variante
     // venus de l'appli ne peuvent jamais être pris pour une option de Barnum.
     cmd.arg(format!("--date={date}")).arg("--json");
+    if english {
+        cmd.arg("--lang=en");
+    }
     if let Some(variant) = variant {
         cmd.arg(format!("--sel={variant}"));
     }
@@ -128,10 +141,25 @@ fn run(command: &[String], who: &Who, date: NaiveDate, variant: Option<&str>) ->
     if !status.success() {
         // « barnum: error: signe inconnu : … » : on garde le message utile.
         let message = stderr.lines().last().unwrap_or(i18n::t("erreur inconnue", "unknown error"));
+        if english && message.contains("--lang") {
+            return Err(OldBarnum.into());
+        }
         bail!("{}", message.trim_start_matches("barnum: error: "));
     }
     serde_json::from_str(&stdout).context(i18n::t("réponse de Barnum illisible", "Barnum response unreadable"))
 }
+
+/// Barnum antérieur à 0.3 : il ne connaît pas `--lang`.
+#[derive(Debug)]
+struct OldBarnum;
+
+impl std::fmt::Display for OldBarnum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Barnum < 0.3 : pas de --lang")
+    }
+}
+
+impl std::error::Error for OldBarnum {}
 
 pub enum Who {
     Sign(String),
@@ -144,14 +172,19 @@ fn gauge(note: u8) -> String {
     format!("{}{}", "█".repeat(note), "░".repeat(5 - note))
 }
 
-/// Le ticket reste en français dans les deux langues : Barnum n'écrit qu'en français, et un
-/// ticket mi-anglais mi-français se lit mal.
+/// Les libellés suivent la langue de la lecture, pas celle de l'installation : un ticket écrit par
+/// un Barnum qui ne parle que français reste entièrement en français.
 fn render(r: &Reading, sky: bool) -> Doc {
+    let lang = if r.langue.as_deref() == Some("en") { i18n::Lang::En } else { i18n::Lang::Fr };
+    i18n::with_lang(lang, || render_in_language(r, sky))
+}
+
+fn render_in_language(r: &Reading, sky: bool) -> Doc {
     let mut doc = Doc::new();
     doc.header(&format!("Horoscope · {}", r.signe));
     if let Some(moon) = &r.lune {
         doc.text(
-            &format!("Lune : {} en {}", moon.phase, moon.signe),
+            &tr!("Lune : {} en {}", "Moon: {} in {}", moon.phase, moon.signe),
             Style::default().small().center(),
         );
     }
@@ -159,32 +192,33 @@ fn render(r: &Reading, sky: bool) -> Doc {
     doc.text(&r.climat, Style::default());
     for d in &r.domaines {
         doc.feed(1);
-        doc.line(&format!("{:<14}{}", i18n::capitalize(&d.cle), gauge(d.note)), Style::default().bold());
+        let name = d.libelle.as_deref().unwrap_or(&d.cle);
+        doc.line(&format!("{:<14}{}", i18n::capitalize(name), gauge(d.note)), Style::default().bold());
         doc.text(&d.texte, Style::default());
     }
     if !r.conseil.is_empty() {
         doc.feed(1);
-        doc.hanging("Conseil : ", &r.conseil, Style::default().bold());
+        doc.hanging(i18n::t("Conseil : ", "Advice: "), &r.conseil, Style::default().bold());
     }
     let mut extras = Vec::new();
     if !r.couleur.is_empty() {
-        extras.push(format!("couleur {}", r.couleur));
+        extras.push(tr!("couleur {}", "color {}", r.couleur));
     }
     if let Some(n) = r.chiffre {
-        extras.push(format!("chiffre {n}"));
+        extras.push(tr!("chiffre {n}", "number {n}"));
     }
     if !r.humeur.is_empty() {
-        extras.push(format!("humeur {}", r.humeur));
+        extras.push(tr!("humeur {}", "mood {}", r.humeur));
     }
     if !extras.is_empty() {
         doc.text(&i18n::capitalize(&extras.join(" · ")), Style::default().small().center());
     }
     if sky && !r.ciel.is_empty() {
         doc.feed(1);
-        doc.text("Le ciel du jour", Style::default().small().bold().center());
+        doc.text(i18n::t("Le ciel du jour", "Today's sky"), Style::default().small().bold().center());
         for b in &r.ciel {
             // Même largeur pour toutes les lignes : les colonnes restent alignées une fois centrées.
-            let retro = if b.retrograde { "rétrograde" } else { "" };
+            let retro = if b.retrograde { i18n::t("rétrograde", "retrograde") } else { "" };
             let line = format!("{:<9}{:<12}{:>3.0}°  {retro:<10}", b.astre, b.signe, b.degre);
             doc.line(&line, Style::default().small().center());
         }
@@ -193,7 +227,11 @@ fn render(r: &Reading, sky: bool) -> Doc {
 }
 
 pub fn build(who: Who, date: NaiveDate, sky: bool, variant: Option<&str>) -> Result<Doc> {
-    let reading = run(&command(), &who, date, variant)?;
+    let command = command();
+    let reading = match run(&command, &who, date, variant, i18n::en()) {
+        Err(e) if e.is::<OldBarnum>() => run(&command, &who, date, variant, false)?,
+        other => other?,
+    };
     Ok(render(&reading, sky))
 }
 
@@ -239,7 +277,39 @@ mod tests {
     fn missing_program_is_explained() {
         let cmd = vec!["printr-barnum-introuvable".to_owned()];
         let date = NaiveDate::from_ymd_opt(2026, 10, 8).unwrap();
-        let err = run(&cmd, &Who::Sign("lion".into()), date, None).err().unwrap();
+        let err = run(&cmd, &Who::Sign("lion".into()), date, None, false).err().unwrap();
         assert!(err.to_string().contains("Barnum introuvable"));
+    }
+
+    #[test]
+    fn english_reading_gets_english_labels() {
+        let json = SAMPLE
+            .replacen('{', r#"{"langue": "en","#, 1)
+            .replace(r#""cle": "amour","#, r#""cle": "amour", "libelle": "Love","#);
+        let reading: Reading = serde_json::from_str(&json).unwrap();
+        let all = lines(&render(&reading, true)).join("\n");
+        assert!(all.contains("Love          █░░░░"));
+        assert!(all.contains("Color violet · number 20 · mood joueuse"));
+        assert!(all.contains("retrograde"));
+    }
+
+    /// Un Barnum d'avant 0.3 refuse `--lang` : en anglais, le ticket sort quand même, en français.
+    #[test]
+    fn old_barnum_falls_back_to_french() {
+        let dir = std::env::temp_dir().join(format!("printr-barnum-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let script = dir.join("old-barnum.sh");
+        std::fs::write(&script, format!(
+            "#!/bin/sh\nfor a in \"$@\"; do [ \"$a\" = --lang=en ] && {{ echo 'main.py: error: unrecognized arguments: --lang=en' >&2; exit 2; }}; done\ncat <<'JSON'\n{SAMPLE}\nJSON\n"
+        )).unwrap();
+        std::fs::set_permissions(&script, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+        let cmd = vec![script.to_string_lossy().into_owned()];
+        let date = NaiveDate::from_ymd_opt(2026, 10, 8).unwrap();
+        let err = run(&cmd, &Who::Sign("lion".into()), date, None, true).err().unwrap();
+        assert!(err.is::<OldBarnum>());
+        let reading = run(&cmd, &Who::Sign("lion".into()), date, None, false).unwrap();
+        let all = i18n::with_lang(i18n::Lang::En, || lines(&render(&reading, false)).join("\n"));
+        assert!(all.contains("Couleur violet"));
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

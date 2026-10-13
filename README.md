@@ -244,9 +244,10 @@ switches the whole installation to English: the web interface, the command line,
 tickets. Blocks with content (riddles, quotes, word searches, workouts, gift coupons…) have their
 own English list, and Claude writes the horoscope and the word of the day in English.
 
-Three blocks stay in French, for lack of an English source: **arrow words** (CrossWords' dictionary
-and definitions), the **Barnum horoscope** and the **name day**. **Public holidays** are the French
-ones, named in English.
+The offline **Barnum horoscope** is written in English too, with Barnum 0.3 or later (an older
+Barnum prints it in French). Two blocks stay in French, for lack of an English source:
+**arrow words** (CrossWords' dictionary and definitions) and the **name day**. **Public holidays**
+are the French ones, named in English.
 
 ## Web interface
 
