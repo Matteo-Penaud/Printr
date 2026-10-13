@@ -7,6 +7,8 @@ each one is a `vX.Y.Z` tag on GitHub, which the server checks to tell the admin 
 
 ### Added
 - Apache License 2.0 (`LICENSE`), and a NOTICE crediting Printr's author.
+- GitHub releases with prebuilt binaries for Raspberry Pi (64-bit, ARMv7, ARMv6) and x86_64 PCs, each
+  archive ready to install with `sudo bash install.sh`, plus a `SHA256SUMS` file.
 
 ### Fixed
 - English website: the example tickets on the home page and in the guide are now the English ones.

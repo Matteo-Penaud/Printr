@@ -491,6 +491,15 @@ For a network printer, set `PRINTR_TCP=address:9100` in `/etc/printr.env`. On th
 `printr` command also reads this file: a ticket launched by hand uses the same printer and the
 same key as the server.
 
+**Prebuilt binaries**: each [release](https://github.com/XNinety9/Printr/releases) has an archive per
+machine (`aarch64` for a Pi 3, 4, 5 or Zero 2 W in 64-bit, `armv7`, `arm` for a Pi Zero W or Pi 1,
+`x86_64` for a PC), with the installation files and a `SHA256SUMS` file. No Rust needed:
+
+```sh
+tar xzf printr-v1.6.0-aarch64-unknown-linux-gnu.tar.gz
+cd printr-v1.6.0-aarch64-unknown-linux-gnu && sudo bash install.sh
+```
+
 To do everything by hand, build for the target machine with [`cross`](https://github.com/cross-rs/cross)
 (Docker) from another computer, then run the installation on the machine (`--help` lists the
 options):

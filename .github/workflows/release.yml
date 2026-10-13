@@ -9,7 +9,6 @@ name: Release
 on:
   push:
     tags: ["v*.*.*"]
-    branches: [releases-binaires]  # ESSAI : compilation seule, à retirer avant la fusion
   workflow_dispatch:
     inputs:
       tag:
@@ -41,6 +40,16 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
+      # Licence et NOTICE de la branche principale : les versions publiées avant l'ajout de la
+      # licence Apache 2.0 sont distribuées sous la même licence.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: _main
+          sparse-checkout: |
+            LICENSE
+            NOTICE
+          sparse-checkout-cone-mode: false
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -56,7 +65,8 @@ jobs:
           mkdir -p "dist/$name"
           cp "target/${{ matrix.target }}/release/printr" "dist/$name/"
           cp deploy/* "dist/$name/"
-          for f in README.md README.fr.md NOTICE LICENSE CHANGELOG.md; do [ -f "$f" ] && cp "$f" "dist/$name/"; done
+          for f in README.md README.fr.md CHANGELOG.md; do [ -f "$f" ] && cp "$f" "dist/$name/"; done
+          cp _main/LICENSE _main/NOTICE "dist/$name/"
           tar -C dist -czf "dist/$name.tar.gz" "$name"
       - uses: actions/upload-artifact@v7
         with:
