@@ -22,6 +22,7 @@ mod scheduler;
 mod server;
 mod store;
 mod ui;
+mod update;
 
 use doc::{Doc, Style};
 use output::Target;

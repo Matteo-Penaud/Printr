@@ -43,6 +43,8 @@ pub struct App {
     guard: LoginGuard,
     /// Impressions permises par personne et par heure (0 : sans limite).
     max_per_hour: usize,
+    /// Version plus récente publiée sur GitHub, trouvée par la vérification quotidienne.
+    latest: Arc<Mutex<Option<crate::update::Available>>>,
 }
 
 /// Résultat d'une impression, renvoyé à l'interface.
@@ -586,6 +588,7 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                 "printer": app.destination,
                 "claude": claude.as_ref().map(|c| c.model().to_owned()),
                 "version": env!("CARGO_PKG_VERSION"),
+                "update": *app.latest.lock().unwrap_or_else(|e| e.into_inner()),
             }))
         }
         (Method::Post, ["api", "preview"]) => {
@@ -821,7 +824,9 @@ pub fn serve(listen: &str, token: Option<String>, target: Target) -> Result<()> 
         web_dir: std::env::var_os("PRINTR_WEB_DIR").map(PathBuf::from),
         guard: LoginGuard::default(),
         max_per_hour: std::env::var("PRINTR_MAX_TICKETS_PER_HOUR").ok().and_then(|v| v.trim().parse().ok()).unwrap_or(DEFAULT_MAX_PER_HOUR),
+        latest: Arc::new(Mutex::new(None)),
     });
+    crate::update::spawn(Arc::clone(&app.latest));
     let server = Server::http(listen).map_err(|e| anyhow::anyhow!("impossible d'écouter sur {listen} : {e}"))?;
 
     let ctx = Ctx::web(false);

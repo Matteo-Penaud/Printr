@@ -203,6 +203,17 @@ pub fn banner(listen: &str, destination: &str, claude: Option<&str>, cache: Opti
     );
     row("données", data.to_owned());
     row(
+        "versions",
+        if crate::update::enabled() {
+            match crate::update::interval_minutes() {
+                1440 => "vérification quotidienne sur GitHub (rien n'est installé tout seul)".to_owned(),
+                m => format!("vérification toutes les {m} min sur GitHub (rien n'est installé tout seul)"),
+            }
+        } else {
+            format!("{WARN}vérification désactivée{WARN:#} (PRINTR_UPDATE_CHECK)")
+        },
+    );
+    row(
         "comptes",
         if users == 0 {
             format!("{WARN}aucun{WARN:#} : ouvre l'interface pour créer le premier")

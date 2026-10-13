@@ -303,7 +303,9 @@ Le numéro de version (`Cargo.toml`, affiché par `printr --version` et dans l'a
 - **majeure** (**2**.0.0) : un changement qui oblige à modifier ses tickets ou sa configuration.
 
 Chaque version publiée a son étiquette git (`v1.0.0`), créée sur `master` une fois la version
-poussée : `git tag -a v1.1.0 -m "printr 1.1.0" && git push origin v1.1.0`.
+poussée : `git tag -a v1.1.0 -m "printr 1.1.0" && git push origin v1.1.0`. Les installations la
+voient dans la journée (« Mon compte » de l'administrateur) : ne pousse une étiquette que pour
+une version prête à être installée.
 
 ## Proposer une modification
 

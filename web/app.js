@@ -1462,7 +1462,7 @@ function Toasts() {
 }
 
 // Mon compte : la famille (ajouter, retirer), mon mot de passe, la déconnexion.
-function AccountSheet({ me, users, version, reloadUsers, onLogout, onClose }) {
+function AccountSheet({ me, users, version, update, reloadUsers, onLogout, onClose }) {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [mine, setMine] = useState('');
@@ -1487,6 +1487,12 @@ function AccountSheet({ me, users, version, reloadUsers, onLogout, onClose }) {
   return html`<${Sheet} title="Mon compte" onClose=${onClose}>
     <div class="row" style="margin-bottom:6px"><${Avatar} user=${me} size="large" /><div><strong>${me.name}</strong>
       <div class="muted">Connecté sur cet appareil</div></div></div>
+
+    ${me.admin && update && html`<a class="update-card" href=${update.url} target="_blank" rel="noopener">
+      <span class="big-emoji">✨</span>
+      <span class="grow"><strong>Printr ${update.version} est disponible</strong>
+        <span class="muted">Tu as la ${version}. Lis les nouveautés, puis mets à jour depuis ton ordinateur.</span></span>
+      <${Icon} name="send" size=${18} /></a>`}
 
     <div class="section-title">La famille</div>
     <div class="card family">${users.map((u) => html`<div class="family-row" key=${u.id}>
@@ -1525,6 +1531,7 @@ function App() {
   const [me, setMe] = useState(undefined);
   const [users, setUsers] = useState([]);
   const [version, setVersion] = useState(null);
+  const [update, setUpdate] = useState(null); // version plus récente publiée sur GitHub
   const [presets, setPresets] = useState(null);
   const [composer, setComposer] = useState(() => store.get('printr.draft', null) || emptyComposer());
   const [scrolled, setScrolled] = useState(false);
@@ -1542,7 +1549,7 @@ function App() {
     if (!me) return;
     loadPresets();
     loadUsers();
-    api('GET', '/api/status').then((s) => setVersion(s.version)).catch(() => {});
+    api('GET', '/api/status').then((s) => { setVersion(s.version); setUpdate(s.update || null); }).catch(() => {});
   }, [me]);
   useEffect(() => {
     const onScroll = () => setScrolled(scrollY > 4);
@@ -1572,7 +1579,7 @@ function App() {
         onClick=${n.hash === '#/compose' ? (e) => { if (route.hash !== '#/compose') { e.preventDefault(); openComposer(store.get('printr.draft', null) || emptyComposer()); } } : undefined}>
         <${Icon} name=${n.icon} />${n.label}</a>`)}
       <div class="spacer"></div>
-      ${version && html`<div class="version">printr ${version}</div>`}
+      ${version && html`<div class="version">printr ${version}${me.admin && update && html` · <a href=${update.url} target="_blank" rel="noopener">${update.version} disponible</a>`}</div>`}
       <div class="account-row">
         <button type="button" class="navlink account" onClick=${() => setMenu(true)}><${Avatar} user=${me} />
           <span class="grow"><strong>${me.name}</strong><span class="muted">Mon compte</span></span></button>
@@ -1591,7 +1598,7 @@ function App() {
     <nav class="tabbar" aria-label="Navigation">
       ${NAV.map((n) => html`<a class="tab ${n.hash === route.hash ? 'active' : ''}" href=${n.hash}><${Icon} name=${n.icon} />${n.label}</a>`)}
     </nav>
-    ${menu && html`<${AccountSheet} me=${me} users=${users} version=${version} reloadUsers=${loadUsers} onLogout=${logout} onClose=${() => setMenu(false)} />`}
+    ${menu && html`<${AccountSheet} me=${me} users=${users} version=${version} update=${update} reloadUsers=${loadUsers} onLogout=${logout} onClose=${() => setMenu(false)} />`}
     <${Toasts} />
   </div>`;
 }

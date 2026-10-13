@@ -331,6 +331,13 @@ se protège ainsi :
   [`deploy/printr.service`](deploy/printr.service)) ; politique de sécurité du contenu (CSP)
   sur l'interface.
 
+**Mises à jour** : une fois par jour (`PRINTR_UPDATE_INTERVAL` minutes pour changer, 5 au
+minimum), printr regarde sur GitHub si une version plus récente est publiée et le signale à
+l'administrateur (« Mon compte »). Rien n'est téléchargé ni installé
+tout seul : la mise à jour reste un geste humain (`scripts/deploy.sh`), après lecture des
+nouveautés ; un compte GitHub compromis ne peut donc rien exécuter sur les machines.
+`PRINTR_UPDATE_CHECK=off` coupe la vérification.
+
 Côté machine, il reste conseillé de n'accepter que les clés en SSH, et de vérifier que le
 pare-feu IPv6 de la box ne laisse pas entrer les connexions vers le réseau local.
 
