@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Printr — des petits tickets qui font du bien</title>
 <meta name="description" content="Printr transforme une imprimante à tickets Epson TM-T88V en gadget familial : météo, horoscope, sudoku, mots mêlés, énigmes, actualités, petits mots avec photo… composés et planifiés depuis le téléphone.">
-<meta property="og:title" content="Printr — des petits tickets qui font du bien">
-<meta property="og:description" content="Une imprimante à tickets, 40 blocs, une appli web familiale et un planificateur. En Rust, sur un Raspberry Pi.">
+<meta property="og:title" content="Printr — little receipts that make your day">
+<meta property="og:description" content="A thermal receipt printer, 40 blocks, a family web app and a scheduler. In Rust, on a Raspberry Pi.">
 <meta property="og:image" content="https://xninety9.github.io/Printr/preview.png">
 <meta property="og:type" content="website">
 <link rel="icon" href="mark.png" type="image/png">
@@ -403,13 +403,13 @@ scripts/deploy.sh pi@printer.local   <span class="c"># mise à jour / update</sp
 
 <script>
   function save(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
-  // Tickets et captures existent dans les deux langues : tickets/en/, shots/en/.
+  // Tickets et captures existent dans les deux langues : tickets/en/, shots/en/, exemples/en/.
   function localizeImages() {
     var en = document.documentElement.lang === "en";
-    document.querySelectorAll('img[src^="tickets/"], img[src^="shots/"]').forEach(function (img) {
+    document.querySelectorAll('img[src^="tickets/"], img[src^="shots/"], img[src^="exemples/"]').forEach(function (img) {
       var fr = img.getAttribute("data-fr") || img.getAttribute("src");
       img.setAttribute("data-fr", fr);
-      img.setAttribute("src", en ? fr.replace(/^(tickets|shots)\//, "$1/en/") : fr);
+      img.setAttribute("src", en ? fr.replace(/^(tickets|shots|exemples)\//, "$1/en/") : fr);
     });
   }
   localizeImages();
