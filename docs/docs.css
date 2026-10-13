@@ -88,3 +88,41 @@ article.doc p[align="center"] img { border-radius: 10px; box-shadow: 0 10px 30px
   .toc { position: static; max-height: none; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-card); }
   .nav .links { gap: 14px; font-size: .9rem; }
 }
+
+/* ---------- Page des blocs (bilingue, comme la page d'accueil) ---------- */
+
+html[lang="fr"] .bilingual .en, html[lang="en"] .bilingual .fr { display: none !important; }
+.toggle { font: inherit; font-size: .8rem; font-family: var(--mono); background: none; border: 1px solid var(--line);
+          color: var(--fg-dim); border-radius: 8px; padding: 3px 9px; cursor: pointer; }
+.toggle:hover { color: var(--fg); border-color: var(--accent); }
+
+/* Une fiche : le texte à gauche, le ticket à droite ; l'un sous l'autre sur téléphone. */
+.bloc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 28px; align-items: start;
+        padding: 26px 0; border-bottom: 1px solid var(--line); }
+.bloc:last-of-type { border-bottom: 0; }
+.bloc h3 { margin: 0 0 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bloc h3 .emoji { font-size: 1.3em; }
+.bloc p { margin: 0 0 12px; }
+.claude { font-family: var(--mono); font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+          color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 999px; padding: 2px 8px; }
+.bloc details summary { cursor: pointer; color: var(--fg-dim); font-size: .92rem; }
+.bloc details summary:hover { color: var(--fg); }
+.bloc details pre { margin-top: 10px; font-size: .82rem; }
+/* Le ticket, comme sorti de l'imprimante. */
+.bloc-ticket { display: block; background: #fff; padding: 10px 10px 16px; border-radius: 4px;
+               box-shadow: 0 14px 34px -16px rgba(70, 40, 15, .45); transition: transform .2s; }
+.bloc-ticket:hover { transform: translateY(-3px); }
+.bloc-ticket img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+@media (max-width: 700px) {
+  .bloc { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .bloc-ticket { max-width: 320px; margin: 0 auto; }
+}
+
+/* Téléphone : la barre de navigation tient sur une ligne (GitHub reste dans le pied de page). */
+@media (max-width: 520px) {
+  .nav .wrap { gap: 10px; }
+  .nav .links { gap: 12px; font-size: .88rem; }
+  .nav .links a[href^="https://github.com"] { display: none; }
+}
+/* Très étroit : le logo seul mène à l'accueil. */
+@media (max-width: 400px) { .brand-name { display: none; } }

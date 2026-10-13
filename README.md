@@ -165,7 +165,8 @@ Un paramètre inconnu est une erreur, pour repérer les fautes de frappe.
 | `monthly_report` (ou `bilan`) | `month` (`AAAA-MM`, mois en cours par défaut) | Bilan façon ticket de caisse, tiré de l'historique de l'appli |
 
 Chaque bloc a son exemple dans [`docs/exemples/`](docs/exemples/) : le ticket JSON et son rendu,
-régénérés par `docs/exemples/generer.sh` (données fictives).
+régénérés par `docs/exemples/generer.sh` (données fictives). Ils sont tous présentés, en images,
+sur la [page des blocs](https://xninety9.github.io/Printr/blocs.html) du site.
 
 <p align="center">
   <img src="docs/exemples/logimage.png" alt="Logimage" width="200">

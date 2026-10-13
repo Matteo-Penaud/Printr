@@ -14,7 +14,7 @@
   function update() {
     // La section dont le titre est passé en dernier sous la barre de navigation ; la dernière
     // en bas de page, où les sections courtes n'atteignent jamais le haut.
-    const line = document.querySelector(".nav").offsetHeight + 24;
+    const line = document.querySelector(".nav").offsetHeight + 60;
     let current = headings[0];
     for (const h of headings) {
       if (h.getBoundingClientRect().top > line) break;
@@ -44,5 +44,9 @@
     }
   }, { passive: true });
   addEventListener("resize", update);
+  // Arrivée par une ancre (pastille de la page d'accueil, lien partagé) : le navigateur saute
+  // à la section après le premier calcul, parfois sans événement de défilement.
+  addEventListener("load", update);
+  addEventListener("hashchange", () => requestAnimationFrame(update));
   update();
 })();

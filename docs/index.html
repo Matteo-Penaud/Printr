@@ -149,6 +149,9 @@
   .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--bg-card);
           border: 1px solid var(--line); font-size: .92rem; font-weight: 500; }
   .chip.ai { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  /* Pastilles cliquables : chacune mène à la fiche du bloc (blocs.html). */
+  a.chip { color: var(--fg); transition: border-color .15s, transform .15s; }
+  a.chip:hover { text-decoration: none; border-color: var(--accent); transform: translateY(-1px); }
   .note { color: var(--fg-dim); font-size: .92rem; margin-top: 26px; }
 
   /* Appli */
@@ -187,6 +190,7 @@
       <a class="optional" href="#blocks"><span class="fr">Blocs</span><span class="en">Blocks</span></a>
       <a class="optional" href="#app"><span class="fr">Appli</span><span class="en">App</span></a>
       <a class="optional" href="#install"><span class="fr">Installer</span><span class="en">Install</span></a>
+      <a class="optional" href="blocs.html"><span class="fr">Les blocs</span><span class="en">Blocks</span></a>
       <a href="guide.html">Documentation</a>
       <a href="https://github.com/XNinety9/Printr">GitHub</a>
       <button class="toggle" type="button" onclick="toggleLang()" aria-label="Français / English"><span class="fr">EN</span><span class="en">FR</span></button>
@@ -314,30 +318,31 @@
     <h2 class="en">Every block.</h2>
     <div class="groups">
       <div class="group"><h3><span class="fr">Mise en page</span><span class="en">Layout</span></h3><div class="chips">
-        <span class="chip">🔠 <span class="fr">Titre</span><span class="en">Title</span></span><span class="chip">📝 <span class="fr">Texte</span><span class="en">Text</span></span>
-        <span class="chip">📅 Date</span><span class="chip">➖ <span class="fr">Séparateur</span><span class="en">Separator</span></span>
-        <span class="chip">↕️ <span class="fr">Espace</span><span class="en">Spacing</span></span><span class="chip">🖼️ Image</span>
-        <span class="chip">🔳 QR code</span><span class="chip">💖 <span class="fr">Pictogramme</span><span class="en">Pictogram</span></span></div></div>
+        <a class="chip" href="blocs.html#titre">🔠 <span class="fr">Titre</span><span class="en">Title</span></a><a class="chip" href="blocs.html#texte">📝 <span class="fr">Texte</span><span class="en">Text</span></a>
+        <a class="chip" href="blocs.html#date">📅 Date</a><a class="chip" href="blocs.html#separateur">➖ <span class="fr">Séparateur</span><span class="en">Separator</span></a>
+        <a class="chip" href="blocs.html#espace">↕️ <span class="fr">Espace</span><span class="en">Spacing</span></a><a class="chip" href="blocs.html#image">🖼️ Image</a>
+        <a class="chip" href="blocs.html#qr">🔳 QR code</a><a class="chip" href="blocs.html#pictogramme">💖 <span class="fr">Pictogramme</span><span class="en">Pictogram</span></a></div></div>
       <div class="group"><h3><span class="fr">Au quotidien</span><span class="en">Daily</span></h3><div class="chips">
-        <span class="chip">🌤️ <span class="fr">Météo</span><span class="en">Weather</span></span><span class="chip">🌟 Horoscope</span><span class="chip ai">🔮 <span class="fr">Horoscope Claude</span><span class="en">Claude horoscope</span></span>
-        <span class="chip ai">📖 <span class="fr">Mot du jour</span><span class="en">Word of the day</span></span><span class="chip">😇 <span class="fr">Saint du jour</span><span class="en">Saint of the day</span></span>
-        <span class="chip">💬 <span class="fr">Citation</span><span class="en">Quote</span></span><span class="chip">🌙 <span class="fr">Lune</span><span class="en">Moon</span></span>
-        <span class="chip">🌅 <span class="fr">Soleil</span><span class="en">Sun</span></span><span class="chip">🍃 <span class="fr">Qualité de l'air</span><span class="en">Air quality</span></span>
-        <span class="chip">🏖️ <span class="fr">Jours fériés</span><span class="en">Holidays</span></span><span class="chip">⏳ <span class="fr">Compte à rebours</span><span class="en">Countdown</span></span></div></div>
+        <a class="chip" href="blocs.html#meteo">🌤️ <span class="fr">Météo</span><span class="en">Weather</span></a><a class="chip" href="blocs.html#horoscope">🌟 Horoscope</a><a class="chip ai" href="blocs.html#horoscope_claude">🔮 <span class="fr">Horoscope Claude</span><span class="en">Claude horoscope</span></a>
+        <a class="chip ai" href="blocs.html#mot_du_jour">📖 <span class="fr">Mot du jour</span><span class="en">Word of the day</span></a><a class="chip" href="blocs.html#saint">😇 <span class="fr">Saint du jour</span><span class="en">Saint of the day</span></a>
+        <a class="chip" href="blocs.html#citation">💬 <span class="fr">Citation</span><span class="en">Quote</span></a><a class="chip" href="blocs.html#lune">🌙 <span class="fr">Lune</span><span class="en">Moon</span></a>
+        <a class="chip" href="blocs.html#soleil">🌅 <span class="fr">Soleil</span><span class="en">Sun</span></a><a class="chip" href="blocs.html#air">🍃 <span class="fr">Qualité de l'air</span><span class="en">Air quality</span></a>
+        <a class="chip" href="blocs.html#jours_feries">🏖️ <span class="fr">Jours fériés</span><span class="en">Holidays</span></a><a class="chip" href="blocs.html#compte_a_rebours">⏳ <span class="fr">Compte à rebours</span><span class="en">Countdown</span></a></div></div>
       <div class="group"><h3><span class="fr">Jeux &amp; défis</span><span class="en">Games &amp; challenges</span></h3><div class="chips">
-        <span class="chip">🧩 <span class="fr">Énigme</span><span class="en">Riddle</span></span><span class="chip">💪 <span class="fr">Défi sportif</span><span class="en">Workout</span></span>
-        <span class="chip">🔢 Sudoku</span><span class="chip">🌀 <span class="fr">Labyrinthe</span><span class="en">Maze</span></span><span class="chip">🔤 <span class="fr">Mots mêlés</span><span class="en">Word search</span></span><span class="chip">🚂 <span class="fr">Voie ferrée</span><span class="en">Train tracks</span></span><span class="chip ai">✍️ <span class="fr">Mots fléchés</span><span class="en">Arrow words</span></span>
-        <span class="chip">🖍️ <span class="fr">Logimage</span><span class="en">Nonogram</span></span><span class="chip">✏️ <span class="fr">Petit bac</span><span class="en">Scattergories</span></span>
-        <span class="chip">➗ <span class="fr">Calcul mental</span><span class="en">Mental math</span></span><span class="chip">🔀 <span class="fr">Mot mystère</span><span class="en">Anagram</span></span>
-        <span class="chip">🕵️ <span class="fr">Message codé</span><span class="en">Secret message</span></span><span class="chip">🎨 <span class="fr">Coloriage</span><span class="en">Coloring</span></span>
-        <span class="chip">🎟️ <span class="fr">Bon à offrir</span><span class="en">Gift coupon</span></span></div></div>
+        <a class="chip" href="blocs.html#enigme">🧩 <span class="fr">Énigme</span><span class="en">Riddle</span></a><a class="chip" href="blocs.html#defi_sportif">💪 <span class="fr">Défi sportif</span><span class="en">Workout</span></a>
+        <a class="chip" href="blocs.html#sudoku">🔢 Sudoku</a><a class="chip" href="blocs.html#labyrinthe">🌀 <span class="fr">Labyrinthe</span><span class="en">Maze</span></a><a class="chip" href="blocs.html#mots_meles">🔤 <span class="fr">Mots mêlés</span><span class="en">Word search</span></a><a class="chip" href="blocs.html#voie_ferree">🚂 <span class="fr">Voie ferrée</span><span class="en">Train tracks</span></a><a class="chip ai" href="blocs.html#mots_fleches">✍️ <span class="fr">Mots fléchés</span><span class="en">Arrow words</span></a>
+        <a class="chip" href="blocs.html#logimage">🖍️ <span class="fr">Logimage</span><span class="en">Nonogram</span></a><a class="chip" href="blocs.html#petit_bac">✏️ <span class="fr">Petit bac</span><span class="en">Scattergories</span></a>
+        <a class="chip" href="blocs.html#calcul_mental">➗ <span class="fr">Calcul mental</span><span class="en">Mental math</span></a><a class="chip" href="blocs.html#mot_mystere">🔀 <span class="fr">Mot mystère</span><span class="en">Anagram</span></a>
+        <a class="chip" href="blocs.html#message_code">🕵️ <span class="fr">Message codé</span><span class="en">Secret message</span></a><a class="chip" href="blocs.html#coloriage">🎨 <span class="fr">Coloriage</span><span class="en">Coloring</span></a>
+        <a class="chip" href="blocs.html#bon">🎟️ <span class="fr">Bon à offrir</span><span class="en">Gift coupon</span></a></div></div>
       <div class="group"><h3><span class="fr">Infos &amp; organisation</span><span class="en">News &amp; to-dos</span></h3><div class="chips">
-        <span class="chip">📰 <span class="fr">Actualités (RSS)</span><span class="en">News (RSS)</span></span><span class="chip">🏛️ <span class="fr">Éphéméride</span><span class="en">On this day</span></span>
-        <span class="chip">🪙 Crypto</span><span class="chip">✅ <span class="fr">À faire</span><span class="en">To-do</span></span>
-        <span class="chip">🛒 <span class="fr">Liste de courses</span><span class="en">Shopping list</span></span><span class="chip">🗓️ <span class="fr">Agenda</span><span class="en">Calendar</span></span>
-        <span class="chip">🗑️ <span class="fr">Poubelles</span><span class="en">Bin day</span></span><span class="chip">📶 <span class="fr">Wi-Fi invités</span><span class="en">Guest Wi-Fi</span></span>
-        <span class="chip">🧾 <span class="fr">Bilan du mois</span><span class="en">Monthly receipt</span></span></div></div>
+        <a class="chip" href="blocs.html#actualites">📰 <span class="fr">Actualités (RSS)</span><span class="en">News (RSS)</span></a><a class="chip" href="blocs.html#ephemeride">🏛️ <span class="fr">Éphéméride</span><span class="en">On this day</span></a>
+        <a class="chip" href="blocs.html#crypto">🪙 Crypto</a><a class="chip" href="blocs.html#a_faire">✅ <span class="fr">À faire</span><span class="en">To-do</span></a>
+        <a class="chip" href="blocs.html#courses">🛒 <span class="fr">Liste de courses</span><span class="en">Shopping list</span></a><a class="chip" href="blocs.html#agenda">🗓️ <span class="fr">Agenda</span><span class="en">Calendar</span></a>
+        <a class="chip" href="blocs.html#poubelles">🗑️ <span class="fr">Poubelles</span><span class="en">Bin day</span></a><a class="chip" href="blocs.html#wifi">📶 <span class="fr">Wi-Fi invités</span><span class="en">Guest Wi-Fi</span></a>
+        <a class="chip" href="blocs.html#bilan">🧾 <span class="fr">Bilan du mois</span><span class="en">Monthly receipt</span></a></div></div>
     </div>
+    <p class="intro" style="margin-top:22px"><a href="blocs.html"><span class="fr">Chaque bloc en image, avec son exemple →</span><span class="en">Every block as printed, with its example →</span></a></p>
     <p class="note fr">Les blocs entourés d'orange utilisent Claude Haiku : un petit appel payant par jour, mis en cache. Tout le reste est local ou passe par des API gratuites et sans clé (Open-Meteo, Wikipédia, CoinGecko).</p>
     <p class="note en">Orange-outlined blocks use Claude Haiku: one small paid call per day, cached. Everything else is local or uses free, keyless APIs (Open-Meteo, Wikipedia, CoinGecko).</p>
   </div>

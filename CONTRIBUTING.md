@@ -229,8 +229,12 @@ Avec `PRINTR_WEB_DIR=web`, recharge simplement la page pour voir ton bloc dans l
 ### 7. Le documenter
 
 - un exemple dans `docs/exemples/` (`mon_bloc.json`), dont `generer.sh mon_bloc` tire le PNG ;
+- sa fiche dans `docs/exemples/catalogue.json` (groupe, emoji, nom et description en français et
+  en anglais) : `docs/build.py` en tire la page des blocs du site, et refuse de construire si
+  l'exemple ou son PNG manque ;
 - une ligne dans le tableau des blocs du `README.md` (paramètres et valeurs par défaut) ;
-- une puce dans le catalogue de `docs/index.html`, en français et en anglais.
+- une pastille dans le catalogue de `docs/index.html`, en français et en anglais, qui pointe
+  vers sa fiche : `<a class="chip" href="blocs.html#mon_bloc">`.
 
 ### Cas particuliers
 

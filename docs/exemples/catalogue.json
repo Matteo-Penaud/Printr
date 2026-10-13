@@ -1,0 +1,455 @@
+[
+ {
+  "fr": "Mise en page",
+  "en": "Layout",
+  "blocs": [
+   {
+    "id": "titre",
+    "emoji": "🔠",
+    "fr": "Titre",
+    "en": "Title",
+    "description": {
+     "fr": "Un grand titre centré, en gras.",
+     "en": "A big bold centered title."
+    }
+   },
+   {
+    "id": "texte",
+    "emoji": "📝",
+    "fr": "Texte",
+    "en": "Text",
+    "description": {
+     "fr": "Un paragraphe libre : gras, souligné, inversé, petit ou agrandi, aligné où l'on veut.",
+     "en": "Free text: bold, underlined, inverted, small or large, aligned as you like."
+    }
+   },
+   {
+    "id": "date",
+    "emoji": "📅",
+    "fr": "Date",
+    "en": "Date",
+    "description": {
+     "fr": "La date du jour, en toutes lettres.",
+     "en": "Today's date, spelled out."
+    }
+   },
+   {
+    "id": "separateur",
+    "emoji": "➖",
+    "fr": "Séparateur",
+    "en": "Separator",
+    "description": {
+     "fr": "Une ligne de séparation, avec le caractère de son choix.",
+     "en": "A separating line, with the character of your choice."
+    }
+   },
+   {
+    "id": "espace",
+    "emoji": "↕️",
+    "fr": "Espace",
+    "en": "Spacing",
+    "description": {
+     "fr": "De l'air entre deux blocs.",
+     "en": "Some air between two blocks."
+    }
+   },
+   {
+    "id": "image",
+    "emoji": "🖼️",
+    "fr": "Image",
+    "en": "Image",
+    "description": {
+     "fr": "Une photo, cadrée dans l'appli et tramée en noir et blanc.",
+     "en": "A photo, framed in the app and dithered in black and white."
+    }
+   },
+   {
+    "id": "qr",
+    "emoji": "🔳",
+    "fr": "QR code",
+    "en": "QR code",
+    "description": {
+     "fr": "Un lien à scanner, avec sa légende.",
+     "en": "A link to scan, with a caption."
+    }
+   },
+   {
+    "id": "pictogramme",
+    "emoji": "💖",
+    "fr": "Pictogramme",
+    "en": "Pictogram",
+    "description": {
+     "fr": "Cœur, étoile, soleil, fleur ou sourire, dessinés au point près.",
+     "en": "Heart, star, sun, flower or smile, drawn dot by dot."
+    }
+   }
+  ]
+ },
+ {
+  "fr": "Au quotidien",
+  "en": "Daily",
+  "blocs": [
+   {
+    "id": "meteo",
+    "emoji": "🌤️",
+    "fr": "Météo",
+    "en": "Weather",
+    "description": {
+     "fr": "Le temps du jour et des jours suivants (Open-Meteo, sans clé).",
+     "en": "Today's weather and the next days (Open-Meteo, no key)."
+    }
+   },
+   {
+    "id": "horoscope",
+    "emoji": "🌟",
+    "fr": "Horoscope",
+    "en": "Horoscope",
+    "description": {
+     "fr": "Calculé sur le vrai ciel du jour par Barnum, hors ligne et gratuit.",
+     "en": "Computed from the real sky by Barnum, offline and free."
+    }
+   },
+   {
+    "id": "horoscope_claude",
+    "emoji": "🔮",
+    "fr": "Horoscope Claude",
+    "en": "Claude horoscope",
+    "description": {
+     "fr": "Rédigé par Claude, sérieux, farfelu, vachard… ou insultant.",
+     "en": "Written by Claude: serious, whimsical, snarky… or insulting."
+    },
+    "claude": true
+   },
+   {
+    "id": "mot_du_jour",
+    "emoji": "📖",
+    "fr": "Mot du jour",
+    "en": "Word of the day",
+    "description": {
+     "fr": "Un mot rare, sa définition, un exemple et son étymologie.",
+     "en": "A rare word, its definition, an example and its etymology."
+    },
+    "claude": true
+   },
+   {
+    "id": "saint",
+    "emoji": "😇",
+    "fr": "Saint du jour",
+    "en": "Saint of the day",
+    "description": {
+     "fr": "La fête du jour, du calendrier français.",
+     "en": "Today's name day, from the French calendar."
+    }
+   },
+   {
+    "id": "citation",
+    "emoji": "💬",
+    "fr": "Citation",
+    "en": "Quote",
+    "description": {
+     "fr": "Une citation française célèbre, différente chaque jour.",
+     "en": "A famous French quote, a new one every day."
+    }
+   },
+   {
+    "id": "lune",
+    "emoji": "🌙",
+    "fr": "Lune",
+    "en": "Moon",
+    "description": {
+     "fr": "Phase, éclairement et prochaines lunes, calculés sur place.",
+     "en": "Phase, illumination and next moons, computed locally."
+    }
+   },
+   {
+    "id": "soleil",
+    "emoji": "🌅",
+    "fr": "Soleil",
+    "en": "Sun",
+    "description": {
+     "fr": "Lever, coucher et durée du jour.",
+     "en": "Sunrise, sunset and day length."
+    }
+   },
+   {
+    "id": "air",
+    "emoji": "🍃",
+    "fr": "Qualité de l'air",
+    "en": "Air quality",
+    "description": {
+     "fr": "Indice européen, particules et pollens.",
+     "en": "European index, particles and pollen."
+    }
+   },
+   {
+    "id": "jours_feries",
+    "emoji": "🏖️",
+    "fr": "Jours fériés",
+    "en": "Holidays",
+    "description": {
+     "fr": "Les prochains jours fériés, en métropole ou en Alsace-Moselle.",
+     "en": "The next French public holidays."
+    }
+   },
+   {
+    "id": "compte_a_rebours",
+    "emoji": "⏳",
+    "fr": "Compte à rebours",
+    "en": "Countdown",
+    "description": {
+     "fr": "« J-12 avant les vacances ».",
+     "en": "“12 days to go before the holidays”."
+    }
+   }
+  ]
+ },
+ {
+  "fr": "Jeux & défis",
+  "en": "Games & challenges",
+  "blocs": [
+   {
+    "id": "enigme",
+    "emoji": "🧩",
+    "fr": "Énigme",
+    "en": "Riddle",
+    "description": {
+     "fr": "125 énigmes, la réponse imprimée à l'envers.",
+     "en": "125 riddles, the answer printed upside down."
+    }
+   },
+   {
+    "id": "defi_sportif",
+    "emoji": "💪",
+    "fr": "Défi sportif",
+    "en": "Workout",
+    "description": {
+     "fr": "Un défi du jour sans équipement, sur trois niveaux.",
+     "en": "A daily no-equipment challenge, three levels."
+    }
+   },
+   {
+    "id": "sudoku",
+    "emoji": "🔢",
+    "fr": "Sudoku",
+    "en": "Sudoku",
+    "description": {
+     "fr": "Une grille à remplir au stylo ; la solution par son numéro.",
+     "en": "A grid to fill in with a pen; the solution by its number."
+    }
+   },
+   {
+    "id": "labyrinthe",
+    "emoji": "🌀",
+    "fr": "Labyrinthe",
+    "en": "Maze",
+    "description": {
+     "fr": "Entrée en haut, sortie en bas.",
+     "en": "Enter at the top, exit at the bottom."
+    }
+   },
+   {
+    "id": "mots_meles",
+    "emoji": "🔤",
+    "fr": "Mots mêlés",
+    "en": "Word search",
+    "description": {
+     "fr": "Des mots cachés par thème, ou les siens.",
+     "en": "Hidden words by theme, or your own."
+    }
+   },
+   {
+    "id": "voie_ferree",
+    "emoji": "🚂",
+    "fr": "Voie ferrée",
+    "en": "Train tracks",
+    "description": {
+     "fr": "Relier A à B par une seule voie, d'après les nombres des bords.",
+     "en": "Link A to B with a single track, from the numbers on the edges."
+    }
+   },
+   {
+    "id": "mots_fleches",
+    "emoji": "✍️",
+    "fr": "Mots fléchés",
+    "en": "Arrow words",
+    "description": {
+     "fr": "Une grille générée par CrossWords, définitions par Claude.",
+     "en": "A grid generated by CrossWords, clues written by Claude."
+    },
+    "claude": true
+   },
+   {
+    "id": "logimage",
+    "emoji": "🖍️",
+    "fr": "Logimage",
+    "en": "Nonogram",
+    "description": {
+     "fr": "Noircir des cases pour révéler un dessin.",
+     "en": "Fill in cells to reveal a picture."
+    }
+   },
+   {
+    "id": "petit_bac",
+    "emoji": "✏️",
+    "fr": "Petit bac",
+    "en": "Scattergories",
+    "description": {
+     "fr": "Une lettre, des catégories, une feuille par joueur.",
+     "en": "A letter, categories, one sheet per player."
+    }
+   },
+   {
+    "id": "calcul_mental",
+    "emoji": "➗",
+    "fr": "Calcul mental",
+    "en": "Mental math",
+    "description": {
+     "fr": "Une fiche d'opérations, résultats à l'envers.",
+     "en": "A sheet of sums, answers upside down."
+    }
+   },
+   {
+    "id": "mot_mystere",
+    "emoji": "🔀",
+    "fr": "Mot mystère",
+    "en": "Anagram",
+    "description": {
+     "fr": "Des lettres mélangées à remettre dans l'ordre.",
+     "en": "Scrambled letters to put back in order."
+    }
+   },
+   {
+    "id": "message_code",
+    "emoji": "🕵️",
+    "fr": "Message codé",
+    "en": "Secret message",
+    "description": {
+     "fr": "César, morse ou nombres, avec la grille pour déchiffrer.",
+     "en": "Caesar, Morse or numbers, with the key to decode."
+    }
+   },
+   {
+    "id": "coloriage",
+    "emoji": "🎨",
+    "fr": "Coloriage",
+    "en": "Coloring",
+    "description": {
+     "fr": "Un mandala à colorier, toujours différent.",
+     "en": "A mandala to color, always different."
+    }
+   }
+  ]
+ },
+ {
+  "fr": "Petites attentions",
+  "en": "Little treats",
+  "blocs": [
+   {
+    "id": "bon",
+    "emoji": "🎟️",
+    "fr": "Bon à offrir",
+    "en": "Gift coupon",
+    "description": {
+     "fr": "« Bon pour un petit-déjeuner au lit », à découper.",
+     "en": "“Good for one breakfast in bed”, to cut out."
+    }
+   }
+  ]
+ },
+ {
+  "fr": "Infos & organisation",
+  "en": "News & to-dos",
+  "blocs": [
+   {
+    "id": "actualites",
+    "emoji": "📰",
+    "fr": "Actualités (RSS)",
+    "en": "News (RSS)",
+    "description": {
+     "fr": "Une revue de presse depuis ses flux, sans IA, avec QR codes.",
+     "en": "A news digest from your feeds, no AI, with QR codes."
+    }
+   },
+   {
+    "id": "ephemeride",
+    "emoji": "🏛️",
+    "fr": "Éphéméride",
+    "en": "On this day",
+    "description": {
+     "fr": "C'est arrivé un jour comme aujourd'hui (Wikipédia).",
+     "en": "It happened on a day like today (Wikipedia)."
+    }
+   },
+   {
+    "id": "crypto",
+    "emoji": "🪙",
+    "fr": "Crypto",
+    "en": "Crypto",
+    "description": {
+     "fr": "Cours et variation sur 24 h (CoinGecko).",
+     "en": "Price and 24-hour change (CoinGecko)."
+    }
+   },
+   {
+    "id": "a_faire",
+    "emoji": "✅",
+    "fr": "À faire",
+    "en": "To-do",
+    "description": {
+     "fr": "Une liste à cocher au stylo.",
+     "en": "A checklist to tick with a pen."
+    }
+   },
+   {
+    "id": "courses",
+    "emoji": "🛒",
+    "fr": "Liste de courses",
+    "en": "Shopping list",
+    "description": {
+     "fr": "La liste partagée de la famille, qui se vide une fois imprimée.",
+     "en": "The family's shared list, cleared once printed."
+    }
+   },
+   {
+    "id": "agenda",
+    "emoji": "🗓️",
+    "fr": "Agenda",
+    "en": "Calendar",
+    "description": {
+     "fr": "Les rendez-vous du jour, depuis un calendrier en ligne.",
+     "en": "Today's events, from an online calendar."
+    }
+   },
+   {
+    "id": "poubelles",
+    "emoji": "🗑️",
+    "fr": "Poubelles",
+    "en": "Bin day",
+    "description": {
+     "fr": "« Ce soir, on sort le bac jaune ».",
+     "en": "“Tonight, the recycling bin goes out”."
+    }
+   },
+   {
+    "id": "wifi",
+    "emoji": "📶",
+    "fr": "Wi-Fi invités",
+    "en": "Guest Wi-Fi",
+    "description": {
+     "fr": "Un QR code pour se connecter au réseau.",
+     "en": "A QR code to join the network."
+    }
+   },
+   {
+    "id": "bilan",
+    "emoji": "🧾",
+    "fr": "Bilan du mois",
+    "en": "Monthly receipt",
+    "description": {
+     "fr": "Qui a imprimé quoi, façon ticket de caisse.",
+     "en": "Who printed what, as a till receipt."
+    }
+   }
+  ]
+ }
+]
