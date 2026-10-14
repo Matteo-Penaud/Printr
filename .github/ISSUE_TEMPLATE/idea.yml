@@ -1,0 +1,27 @@
+name: Idea or new block
+description: A new block, a block option or an app feature (vous pouvez écrire en français)
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of idea?
+      options:
+        - New block
+        - Option for an existing block
+        - App feature
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: What should it print or do, and for whom? An example of the ticket you imagine is welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Data source
+      description: For a new block, where would the content come from (a free API, a local list…)?

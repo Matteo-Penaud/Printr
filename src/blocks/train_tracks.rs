@@ -15,6 +15,7 @@ const UP: u8 = 1;
 const RIGHT: u8 = 2;
 const DOWN: u8 = 4;
 const LEFT: u8 = 8;
+#[rustfmt::skip]
 const DIRS: [u8; 4] = [UP, RIGHT, DOWN, LEFT];
 
 fn opposite(d: u8) -> u8 {
@@ -333,14 +334,7 @@ fn render(p: &Puzzle, solution: bool) -> image::GrayImage {
     let t = (cell / 7).max(4);
     let ay = oy + p.entry as i64 * cell + cell / 2;
     draw::fill_rect(&mut img, ox - stub, ay - t / 2, stub, t);
-    draw::letter(
-        &mut img,
-        b'A',
-        ox - cell + 2,
-        ay - draw::DIGIT_H * letter_scale / 2,
-        letter_scale,
-        draw::BLACK,
-    );
+    draw::letter(&mut img, b'A', ox - cell + 2, ay - draw::DIGIT_H * letter_scale / 2, letter_scale, draw::BLACK);
     let bx = ox + p.exit as i64 * cell + cell / 2;
     draw::fill_rect(&mut img, bx - t / 2, oy + size, t, stub);
     draw::letter(

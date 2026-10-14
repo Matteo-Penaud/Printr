@@ -94,7 +94,12 @@ impl PublicOnly {
 }
 
 impl Resolver for PublicOnly {
-    fn resolve(&self, uri: &Uri, config: &ureq::config::Config, timeout: NextTimeout) -> Result<ResolvedSocketAddrs, ureq::Error> {
+    fn resolve(
+        &self,
+        uri: &Uri,
+        config: &ureq::config::Config,
+        timeout: NextTimeout,
+    ) -> Result<ResolvedSocketAddrs, ureq::Error> {
         let all = DefaultResolver::default().resolve(uri, config, timeout)?;
         let mut allowed = self.empty();
         allowed.truncate(0);
@@ -105,7 +110,10 @@ impl Resolver for PublicOnly {
             let host = uri.host().unwrap_or("?");
             return Err(ureq::Error::Io(std::io::Error::new(
                 std::io::ErrorKind::PermissionDenied,
-                tr!("{host} : adresse du réseau local, refusée depuis l'appli", "{host}: local network address, refused by the app"),
+                tr!(
+                    "{host} : adresse du réseau local, refusée depuis l'appli",
+                    "{host}: local network address, refused by the app"
+                ),
             )));
         }
         Ok(allowed)
@@ -123,8 +131,19 @@ mod tests {
     #[test]
     fn private_and_reserved_addresses_are_refused() {
         for s in [
-            "127.0.0.1", "10.1.2.3", "172.16.0.1", "192.168.1.200", "169.254.169.254", "0.0.0.0", "100.64.0.1",
-            "::1", "fe80::1", "fd00::1", "::ffff:192.168.1.1", "64:ff9b::c0a8:0101", "2001:db8::1",
+            "127.0.0.1",
+            "10.1.2.3",
+            "172.16.0.1",
+            "192.168.1.200",
+            "169.254.169.254",
+            "0.0.0.0",
+            "100.64.0.1",
+            "::1",
+            "fe80::1",
+            "fd00::1",
+            "::ffff:192.168.1.1",
+            "64:ff9b::c0a8:0101",
+            "2001:db8::1",
         ] {
             assert!(!is_public(ip(s)), "{s} devrait être refusée");
         }

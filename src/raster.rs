@@ -30,11 +30,8 @@ pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
 /// réduction à la largeur imprimable, centrage, puis noir et blanc
 /// (tramage Floyd–Steinberg, ou simple seuil si `dither` est faux).
 pub fn prepare(img: &DynamicImage, dither: bool) -> GrayImage {
-    let img = if img.width() > PRINT_WIDTH {
-        img.resize(PRINT_WIDTH, u32::MAX, FilterType::Lanczos3)
-    } else {
-        img.clone()
-    };
+    let img =
+        if img.width() > PRINT_WIDTH { img.resize(PRINT_WIDTH, u32::MAX, FilterType::Lanczos3) } else { img.clone() };
 
     // Compose sur fond blanc pleine largeur, image centrée.
     let rgba = img.to_rgba8();

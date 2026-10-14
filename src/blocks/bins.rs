@@ -117,7 +117,8 @@ pub fn build(collections: &[Collection], when: When, always: bool, today: NaiveD
             doc.text(nothing, Style::default().small().center());
             // Le prochain ramassage, dans les quatre semaines.
             let next = (1..=28).map(|k| day + Duration::days(k)).find_map(|d| {
-                let names: Vec<&str> = collections.iter().filter(|c| c.collects_on(d)).map(|c| c.name.as_str()).collect();
+                let names: Vec<&str> =
+                    collections.iter().filter(|c| c.collects_on(d)).map(|c| c.name.as_str()).collect();
                 (!names.is_empty()).then(|| (d, names.join(", ")))
             });
             if let Some((date, names)) = next {
@@ -158,7 +159,8 @@ mod tests {
     #[test]
     fn every_other_week() {
         // Jeudi 1er octobre 2026 : bac jaune ; puis un jeudi sur deux.
-        let jaune: Collection = serde_json::from_str(r#"{"name":"bac jaune","days":["jeudi"],"every":2,"from":"2026-10-01"}"#).unwrap();
+        let jaune: Collection =
+            serde_json::from_str(r#"{"name":"bac jaune","days":["jeudi"],"every":2,"from":"2026-10-01"}"#).unwrap();
         assert!(jaune.collects_on(date(1)));
         assert!(!jaune.collects_on(date(8)));
         assert!(jaune.collects_on(date(15)));

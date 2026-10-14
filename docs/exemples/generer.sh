@@ -77,7 +77,12 @@ until nc -z 127.0.0.1 $PORT 2>/dev/null; do sleep 0.3; done
 mkdir -p emulator/receipts "$OUT"
 
 names=("$@")
-[ ${#names[@]} -eq 0 ] && names=($(ls docs/exemples/*.json | xargs -n1 basename | grep -v '^catalogue.json$' | sed 's/\.json$//'))
+if [ ${#names[@]} -eq 0 ]; then
+  for f in docs/exemples/*.json; do
+    name=$(basename "$f" .json)
+    [ "$name" = catalogue ] || names+=("$name")
+  done
+fi
 for name in "${names[@]}"; do
   before=$(find emulator/receipts -name '*.png' | wc -l)
   source="docs/exemples/$name.json"

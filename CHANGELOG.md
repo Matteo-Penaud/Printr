@@ -9,8 +9,15 @@ Pierre-Simon Fournier, Johannes Gutenberg…
 
 ## [Unreleased]
 
+### Security
+- rustls updated to 0.23.46, fixing four TLS client advisories (RUSTSEC-2026-0346 to 0349) affecting
+  Printr's HTTPS requests (weather, news, Claude API, update check).
+
 ### Added
 - Apache License 2.0 (`LICENSE`), and a NOTICE crediting Printr's author.
+- Continuous integration on every pull request: formatting, clippy, tests, web app syntax, shellcheck,
+  dependency audit (cargo-deny) and workflow audit (zizmor); Dependabot for weekly dependency updates;
+  issue and pull request templates.
 - GitHub releases with prebuilt binaries for Raspberry Pi (64-bit, ARMv7, ARMv6) and x86_64 PCs, each
   archive ready to install with `sudo bash install.sh`, plus a `SHA256SUMS` file.
 

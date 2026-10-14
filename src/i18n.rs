@@ -85,12 +85,16 @@ macro_rules! tr {
     };
 }
 
+#[rustfmt::skip]
 const DAYS: [&str; 7] = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+#[rustfmt::skip]
 const MONTHS: [&str; 12] = [
     "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
     "novembre", "décembre",
 ];
+#[rustfmt::skip]
 const DAYS_EN: [&str; 7] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+#[rustfmt::skip]
 const MONTHS_EN: [&str; 12] = [
     "January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
     "November", "December",

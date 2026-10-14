@@ -4,6 +4,7 @@
 //! `Ò` absent) et envoie les caractères inconnus en UTF-8 brut : on encode donc nous-mêmes.
 
 /// Caractères 0x80..=0xFF de la page CP858.
+#[rustfmt::skip]
 const HIGH: [char; 128] = [
     'Ç', 'ü', 'é', 'â', 'ä', 'à', 'å', 'ç', 'ê', 'ë', 'è', 'ï', 'î', 'ì', 'Ä', 'Å', //
     'É', 'æ', 'Æ', 'ô', 'ö', 'ò', 'û', 'ù', 'ÿ', 'Ö', 'Ü', 'ø', '£', 'Ø', '×', 'ƒ', //

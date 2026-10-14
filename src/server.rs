@@ -11,10 +11,10 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::Utc;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tiny_http::{Header, Method, Request, Response, Server};
 
 use crate::blocks::{Block, Ctx, Silent, Ticket};
@@ -68,7 +68,14 @@ impl App {
             return None;
         }
         let wait = (recent[0].at + chrono::Duration::hours(1) - Utc::now()).num_minutes().max(1);
-        Some(Reply::error(429, tr!("{} impressions dans l'heure, c'est le maximum : réessaie dans {wait} min", "limit is {} prints per hour: try again in {wait} min", self.max_per_hour)))
+        Some(Reply::error(
+            429,
+            tr!(
+                "{} impressions dans l'heure, c'est le maximum : réessaie dans {wait} min",
+                "limit is {} prints per hour: try again in {wait} min",
+                self.max_per_hour
+            ),
+        ))
     }
 
     /// Verrouille les données, après les avoir relues si le fichier a changé sur le disque
@@ -198,13 +205,21 @@ const MAX_BLOCKS: usize = 60;
 
 fn check_ticket(ticket: Ticket) -> Result<Ticket, Reply> {
     if ticket.blocks.len() > MAX_BLOCKS {
-        return Err(Reply::error(400, tr!("ticket trop long ({} blocs, {MAX_BLOCKS} au plus)", "ticket too long ({} blocks, {MAX_BLOCKS} max)", ticket.blocks.len())));
+        return Err(Reply::error(
+            400,
+            tr!(
+                "ticket trop long ({} blocs, {MAX_BLOCKS} au plus)",
+                "ticket too long ({} blocks, {MAX_BLOCKS} max)",
+                ticket.blocks.len()
+            ),
+        ));
     }
     Ok(ticket)
 }
 
 fn parse_ticket(value: &Value) -> Result<Ticket, Reply> {
-    let ticket = serde_json::from_value(value.clone()).map_err(|e| Reply::error(400, tr!("ticket invalide : {e}", "invalid ticket: {e}")))?;
+    let ticket = serde_json::from_value(value.clone())
+        .map_err(|e| Reply::error(400, tr!("ticket invalide : {e}", "invalid ticket: {e}")))?;
     check_ticket(ticket)
 }
 
@@ -229,10 +244,10 @@ impl Caller {
 
 fn caller(app: &App, request: &Request) -> Option<Caller> {
     let bearer = header(request, "Authorization").and_then(|h| h.strip_prefix("Bearer "));
-    if let (Some(token), Some(bearer)) = (&app.token, bearer) {
-        if same_secret(bearer.trim(), token) {
-            return Some(Caller::Script);
-        }
+    if let (Some(token), Some(bearer)) = (&app.token, bearer)
+        && same_secret(bearer.trim(), token)
+    {
+        return Some(Caller::Script);
     }
     let session = cookie(request, COOKIE)?;
     let store = app.lock_store();
@@ -283,8 +298,10 @@ fn localize(name: &str, bytes: Vec<u8>) -> Vec<u8> {
     let mut text = String::from_utf8_lossy(&bytes).into_owned();
     for (fr, en) in [
         (r#"<html lang="fr">"#, r#"<html lang="en">"#),
-        ("Composer, imprimer et planifier des tickets sur l'imprimante de la maison.",
-         "Compose, print and schedule tickets on the household receipt printer."),
+        (
+            "Composer, imprimer et planifier des tickets sur l'imprimante de la maison.",
+            "Compose, print and schedule tickets on the household receipt printer.",
+        ),
         ("Printr a besoin de JavaScript.", "Printr needs JavaScript."),
         (r#""lang": "fr""#, r#""lang": "en""#),
     ] {
@@ -477,7 +494,11 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             let ip = client.unwrap_or(std::net::IpAddr::from([0, 0, 0, 0]));
             if let Err(wait) = app.guard.check(ip) {
                 let minutes = wait.as_secs().div_ceil(60).max(1);
-                return Reply::error(429, tr!("trop d'essais : réessaie dans {minutes} min", "too many attempts: try again in {minutes} min")).note(tr!("connexion bloquée pour {ip}", "login blocked for {ip}"));
+                return Reply::error(
+                    429,
+                    tr!("trop d'essais : réessaie dans {minutes} min", "too many attempts: try again in {minutes} min"),
+                )
+                .note(tr!("connexion bloquée pour {ip}", "login blocked for {ip}"));
             }
             // Argon2 est lent : la vérification se fait sans bloquer les données des autres.
             let hash = app.lock_store().password_hash(&login.user_id);
@@ -501,12 +522,21 @@ fn handle(app: &App, request: &mut Request) -> Reply {
         (Method::Post, ["api", "setup"]) => {
             // Depuis Internet, personne ne doit pouvoir s'approprier une installation vide.
             if client.is_some_and(crate::net::is_public) {
-                return Reply::error(403, t("le premier compte se crée depuis le réseau de la maison", "the first account must be created from the home network"));
+                return Reply::error(
+                    403,
+                    t(
+                        "le premier compte se crée depuis le réseau de la maison",
+                        "the first account must be created from the home network",
+                    ),
+                );
             }
             let input: NewUser = try_reply!(json_body(request));
             let mut store = app.lock_store();
             if !store.users().is_empty() {
-                return Reply::error(403, t("des comptes existent déjà : connecte-toi", "accounts already exist: log in"));
+                return Reply::error(
+                    403,
+                    t("des comptes existent déjà : connecte-toi", "accounts already exist: log in"),
+                );
             }
             let id = match store.add_user(&input.name, &input.password) {
                 Ok(id) => id,
@@ -559,7 +589,11 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             };
             let user = store.user(&id).map(|u| user_json(&store, u));
             match store.save() {
-                Ok(()) => Reply::ok(json!({ "ok": true, "user": user })).note(tr!("compte créé par {by} : {}", "account created by {by}: {}", input.name.trim())),
+                Ok(()) => Reply::ok(json!({ "ok": true, "user": user })).note(tr!(
+                    "compte créé par {by} : {}",
+                    "account created by {by}: {}",
+                    input.name.trim()
+                )),
                 Err(e) => Reply::error(500, format!("{e:#}")),
             }
         }
@@ -568,21 +602,32 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                 return Reply::error(403, t("réservé aux membres de la famille", "reserved for family members"));
             }
             if user_id.as_deref() == Some(*id) {
-                return Reply::error(400, t("tu ne peux pas supprimer ton propre compte", "you cannot delete your own account"));
+                return Reply::error(
+                    400,
+                    t("tu ne peux pas supprimer ton propre compte", "you cannot delete your own account"),
+                );
             }
             let mut store = app.lock_store();
             if !user_id.as_deref().is_some_and(|me| store.is_admin(me)) {
-                return Reply::error(403, t("seul l'administrateur peut supprimer un compte", "only the administrator can delete an account"));
+                return Reply::error(
+                    403,
+                    t("seul l'administrateur peut supprimer un compte", "only the administrator can delete an account"),
+                );
             }
-            let Some(name) = store.user(id).map(|u| u.name.clone()) else { return Reply::error(404, t("compte inconnu", "unknown account")) };
+            let Some(name) = store.user(id).map(|u| u.name.clone()) else {
+                return Reply::error(404, t("compte inconnu", "unknown account"));
+            };
             store.remove_user_id(id);
             match store.save() {
-                Ok(()) => Reply::ok(json!({ "ok": true })).note(tr!("compte {name} supprimé par {by}", "account {name} deleted by {by}")),
+                Ok(()) => Reply::ok(json!({ "ok": true }))
+                    .note(tr!("compte {name} supprimé par {by}", "account {name} deleted by {by}")),
                 Err(e) => Reply::error(500, format!("{e:#}")),
             }
         }
         (Method::Put, ["api", "me", "password"]) => {
-            let Caller::User(me) = &caller else { return Reply::error(403, t("réservé aux membres de la famille", "reserved for family members")) };
+            let Caller::User(me) = &caller else {
+                return Reply::error(403, t("réservé aux membres de la famille", "reserved for family members"));
+            };
             let input: NewPassword = try_reply!(json_body(request));
             let mut store = app.lock_store();
             if let Err(e) = store.set_password(&me.name, &input.password) {
@@ -591,7 +636,9 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             // `set_password` ferme toutes les sessions : on en rouvre une pour cet appareil.
             let token = store.open_session(&me.id);
             match store.save() {
-                Ok(()) => Reply::ok(json!({ "ok": true })).header("Set-Cookie", session_cookie(&token, https)).note(tr!("mot de passe changé : {by}", "password changed: {by}")),
+                Ok(()) => Reply::ok(json!({ "ok": true }))
+                    .header("Set-Cookie", session_cookie(&token, https))
+                    .note(tr!("mot de passe changé : {by}", "password changed: {by}")),
                 Err(e) => Reply::error(500, format!("{e:#}")),
             }
         }
@@ -617,10 +664,12 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             let (doc, reports) = ticket.build(&Ctx::web(false).for_preview(), &mut Silent);
             let mut out = doc.to_json();
             out["cut"] = json!(ticket.cut);
-            out["reports"] = json!(reports
-                .iter()
-                .map(|r| json!({ "label": r.label, "error": r.error, "ms": r.elapsed.as_millis() as u64 }))
-                .collect::<Vec<_>>());
+            out["reports"] = json!(
+                reports
+                    .iter()
+                    .map(|r| json!({ "label": r.label, "error": r.error, "ms": r.elapsed.as_millis() as u64 }))
+                    .collect::<Vec<_>>()
+            );
             Reply::ok(out).note(tr!("aperçu · {} blocs", "preview · {} blocks", reports.len()))
         }
         (Method::Post, ["api", "print"]) => {
@@ -635,7 +684,9 @@ fn handle(app: &App, request: &mut Request) -> Reply {
         (Method::Post, ["api", "images"]) => {
             let body = try_reply!(read_body(request, MAX_IMAGE));
             match save_upload(&body) {
-                Ok(id) => Reply::ok(json!({ "id": id })).note(tr!("photo de {} Ko", "photo of {} KB", body.len() / 1024)),
+                Ok(id) => {
+                    Reply::ok(json!({ "id": id })).note(tr!("photo de {} Ko", "photo of {} KB", body.len() / 1024))
+                }
                 Err(e) => e.into(),
             }
         }
@@ -644,8 +695,10 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                 return Reply::error(404, t("photo inconnue", "unknown photo"));
             }
             match store::uploads_dir().map(|d| d.join(format!("{id}.png"))).and_then(|p| std::fs::read(p).ok()) {
-                Some(body) => Reply { status: 200, content_type: "image/png", body, headers: Vec::new(), note: String::new() }
-                    .header("Cache-Control", "private, max-age=31536000, immutable".to_owned()),
+                Some(body) => {
+                    Reply { status: 200, content_type: "image/png", body, headers: Vec::new(), note: String::new() }
+                        .header("Cache-Control", "private, max-age=31536000, immutable".to_owned())
+                }
                 None => Reply::error(404, t("photo inconnue", "unknown photo")),
             }
         }
@@ -661,7 +714,9 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             Reply::ok(json!(visible))
         }
         (Method::Post, ["api", "presets"]) => {
-            let Some(owner) = user_id else { return Reply::error(403, t("réservé aux utilisateurs", "reserved for users")) };
+            let Some(owner) = user_id else {
+                return Reply::error(403, t("réservé aux utilisateurs", "reserved for users"));
+            };
             let input: PresetInput = try_reply!(json_body(request));
             try_reply!(parse_ticket(&input.ticket));
             if input.name.trim().is_empty() {
@@ -698,7 +753,10 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                 return Reply::error(404, t("preset inconnu", "unknown preset"));
             };
             if Some(&store.data.presets[index].owner) != user_id.as_ref() {
-                return Reply::error(403, t("seul son auteur peut modifier ce preset", "only its author can edit this preset"));
+                return Reply::error(
+                    403,
+                    t("seul son auteur peut modifier ce preset", "only its author can edit this preset"),
+                );
             }
             let note;
             let out = match input {
@@ -734,7 +792,12 @@ fn handle(app: &App, request: &mut Request) -> Reply {
         (Method::Post, ["api", "presets", id, "print"]) => {
             let preset = {
                 let store = app.lock_store();
-                store.data.presets.iter().find(|p| p.id == *id && (p.shared || Some(&p.owner) == user_id.as_ref())).cloned()
+                store
+                    .data
+                    .presets
+                    .iter()
+                    .find(|p| p.id == *id && (p.shared || Some(&p.owner) == user_id.as_ref()))
+                    .cloned()
             };
             let Some(preset) = preset else { return Reply::error(404, t("preset inconnu", "unknown preset")) };
             let ticket = try_reply!(parse_ticket(&preset.ticket));
@@ -756,7 +819,12 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             let mut store = app.lock_store();
             for text in &items {
                 let text: String = text.chars().take(80).collect();
-                store.data.shopping.push(store::ShoppingItem { id: store::new_id(6), text, by: by.clone(), added: Utc::now() });
+                store.data.shopping.push(store::ShoppingItem {
+                    id: store::new_id(6),
+                    text,
+                    by: by.clone(),
+                    added: Utc::now(),
+                });
             }
             match store.save() {
                 Ok(()) => Reply::ok(shopping_json(&store)).note(tr!("courses : {}", "shopping: {}", items.join(", "))),
@@ -804,9 +872,19 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             if preview {
                 let (doc, _) = ticket.build(&Ctx::web(false).for_preview(), &mut Silent);
                 let body = doc.preview(ticket.cut).into_bytes();
-                return Reply { status: 200, content_type: "text/plain; charset=utf-8", body, headers: Vec::new(), note: t("aperçu", "preview").into() };
+                return Reply {
+                    status: 200,
+                    content_type: "text/plain; charset=utf-8",
+                    body,
+                    headers: Vec::new(),
+                    note: t("aperçu", "preview").into(),
+                };
             }
-            let label = if segments == ["todo"] { t("Liste à faire", "To-do list") } else { t("Ticket (script)", "Script ticket") };
+            let label = if segments == ["todo"] {
+                t("Liste à faire", "To-do list")
+            } else {
+                t("Ticket (script)", "Script ticket")
+            };
             if let Some(refused) = app.quota_exceeded(&by) {
                 return refused;
             }
@@ -824,7 +902,8 @@ fn printed_reply(printed: Printed, label: &str) -> Reply {
             } else {
                 tr!(" · {} bloc(s) en échec", " · {} block(s) failed", printed.errors.len())
             };
-            Reply::ok(json!({ "ok": true, "errors": printed.errors })).note(tr!("« {label} » imprimé{failed}", "\"{label}\" printed{failed}"))
+            Reply::ok(json!({ "ok": true, "errors": printed.errors }))
+                .note(tr!("« {label} » imprimé{failed}", "\"{label}\" printed{failed}"))
         }
         Some(failure) => Reply::error(503, failure),
     }
@@ -843,11 +922,16 @@ pub fn serve(listen: &str, token: Option<String>, target: Target) -> Result<()> 
         token,
         web_dir: std::env::var_os("PRINTR_WEB_DIR").map(PathBuf::from),
         guard: LoginGuard::default(),
-        max_per_hour: std::env::var("PRINTR_MAX_TICKETS_PER_HOUR").ok().and_then(|v| v.trim().parse().ok()).unwrap_or(DEFAULT_MAX_PER_HOUR),
+        max_per_hour: std::env::var("PRINTR_MAX_TICKETS_PER_HOUR")
+            .ok()
+            .and_then(|v| v.trim().parse().ok())
+            .unwrap_or(DEFAULT_MAX_PER_HOUR),
         latest: Arc::new(Mutex::new(None)),
     });
     crate::update::spawn(Arc::clone(&app.latest));
-    let server = Server::http(listen).map_err(|e| anyhow::anyhow!("{}", tr!("impossible d'écouter sur {listen} : {e}", "cannot listen on {listen}: {e}")))?;
+    let server = Server::http(listen).map_err(|e| {
+        anyhow::anyhow!("{}", tr!("impossible d'écouter sur {listen} : {e}", "cannot listen on {listen}: {e}"))
+    })?;
 
     let ctx = Ctx::web(false);
     let cache = ctx.cache.as_ref().map(|c| c.dir().display().to_string());

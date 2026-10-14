@@ -30,9 +30,9 @@ mod sudoku;
 mod sun;
 mod train_tracks;
 mod weather;
+mod wifi;
 mod word;
 mod word_search;
-mod wifi;
 mod workout;
 
 use std::panic::AssertUnwindSafe;
@@ -497,7 +497,13 @@ pub fn ai_placeholder(title: &str, what: &str) -> Doc {
     let mut doc = Doc::new();
     doc.header(title);
     doc.feed(1);
-    doc.text(&tr!("{what} sera rédigé par Claude au moment de l'impression.", "{what} will be written by Claude when printing."), Style::default().center());
+    doc.text(
+        &tr!(
+            "{what} sera rédigé par Claude au moment de l'impression.",
+            "{what} will be written by Claude when printing."
+        ),
+        Style::default().center(),
+    );
     doc
 }
 
@@ -598,9 +604,9 @@ impl Block {
             Block::Barnum { sign, birth_date, .. } => {
                 birth_date.map(|d| tr!("né le {d}", "born {d}")).or_else(|| sign.clone())
             }
-            Block::Image { path, url, upload, .. } => path.as_ref().or(url.as_ref()).or(upload.as_ref()).map(|p| {
-                p.rsplit('/').next().unwrap_or(p).to_owned()
-            }),
+            Block::Image { path, url, upload, .. } => {
+                path.as_ref().or(url.as_ref()).or(upload.as_ref()).map(|p| p.rsplit('/').next().unwrap_or(p).to_owned())
+            }
             _ => None,
         };
         match detail {
@@ -616,7 +622,14 @@ impl Block {
                 doc.text(text, Style::default().bold().center().size(*size));
             }
             Block::Text { text, bold, underline, reverse, small, size, align } => {
-                let style = Style { bold: *bold, underline: *underline, reverse: *reverse, small: *small, align: *align, ..Style::default() };
+                let style = Style {
+                    bold: *bold,
+                    underline: *underline,
+                    reverse: *reverse,
+                    small: *small,
+                    align: *align,
+                    ..Style::default()
+                };
                 doc.text(text, style.size(*size));
             }
             Block::Glitch { seed } => doc = glitch::build(*seed),
@@ -632,8 +645,12 @@ impl Block {
             Block::Image { path, url, upload, dither } => {
                 let img = match (path, url, upload) {
                     (None, None, Some(id)) => {
-                        anyhow::ensure!(id.chars().all(|c| c.is_ascii_hexdigit()), i18n::t("photo invalide", "invalid photo"));
-                        let dir = crate::store::uploads_dir().context(i18n::t("répertoire de données introuvable", "data directory not found"))?;
+                        anyhow::ensure!(
+                            id.chars().all(|c| c.is_ascii_hexdigit()),
+                            i18n::t("photo invalide", "invalid photo")
+                        );
+                        let dir = crate::store::uploads_dir()
+                            .context(i18n::t("répertoire de données introuvable", "data directory not found"))?;
                         raster::load(&dir.join(format!("{id}.png")), *dither)?
                     }
                     (Some(path), None, None) => {
@@ -652,7 +669,10 @@ impl Block {
                             .read_to_vec()?;
                         raster::prepare(&raster::decode(&bytes)?, *dither)
                     }
-                    _ => anyhow::bail!(i18n::t("indiquer `path`, `url` ou `upload` (un seul)", "give `path`, `url` or `upload` (only one)")),
+                    _ => anyhow::bail!(i18n::t(
+                        "indiquer `path`, `url` ou `upload` (un seul)",
+                        "give `path`, `url` or `upload` (only one)"
+                    )),
                 };
                 doc.image(img);
             }
@@ -707,7 +727,9 @@ impl Block {
                 let who = match (birth_date, sign) {
                     (Some(birth), _) => barnum::Who::Birth(*birth),
                     (None, Some(sign)) => barnum::Who::Sign(sign.clone()),
-                    (None, None) => anyhow::bail!(i18n::t("indiquer `sign` ou `birth_date`", "give `sign` or `birth_date`")),
+                    (None, None) => {
+                        anyhow::bail!(i18n::t("indiquer `sign` ou `birth_date`", "give `sign` or `birth_date`"))
+                    }
                 };
                 doc = barnum::build(who, ctx.today, *sky, variant.as_deref())?;
             }
@@ -788,7 +810,8 @@ impl Ticket {
                             Ok(doc) => (doc, None),
                             Err(error) => {
                                 let mut doc = Doc::new();
-                                let message = tr!("({} indisponible : {error})", "({} unavailable: {error})", block.name());
+                                let message =
+                                    tr!("({} indisponible : {error})", "({} unavailable: {error})", block.name());
                                 doc.text(&message, Style::default().small().center());
                                 (doc, Some(error))
                             }
@@ -887,7 +910,15 @@ mod tests {
             r#"{"blocks": [{"type": "text", "text": "avant"}, {"type": "image", "path": "/nope.png"}, {"type": "text", "text": "après"}]}"#,
         )
         .unwrap();
-        let ctx = Ctx { today: NaiveDate::from_ymd_opt(2026, 10, 7).unwrap(), http: ureq::agent(), claude: None, cache: None, refresh: false, preview: false, local: true };
+        let ctx = Ctx {
+            today: NaiveDate::from_ymd_opt(2026, 10, 7).unwrap(),
+            http: ureq::agent(),
+            claude: None,
+            cache: None,
+            refresh: false,
+            preview: false,
+            local: true,
+        };
         let (doc, reports) = t.build(&ctx, &mut Silent);
         let preview = doc.preview(true);
         assert_eq!(reports.iter().filter(|r| r.error.is_some()).count(), 1);
@@ -926,19 +957,14 @@ mod tests {
 
         assert_eq!(completed.0.len(), 3);
         assert_eq!(
-            reports
-                .iter()
-                .map(|report| report.label.as_str())
-                .collect::<Vec<_>>(),
+            reports.iter().map(|report| report.label.as_str()).collect::<Vec<_>>(),
             ["titre · premier", "image · nope.png", "titre · dernier"]
         );
         let titles: Vec<_> = doc
             .ops
             .iter()
             .filter_map(|op| match op {
-                crate::doc::Op::Line { text, .. } if text == "premier" || text == "dernier" => {
-                    Some(text.as_str())
-                }
+                crate::doc::Op::Line { text, .. } if text == "premier" || text == "dernier" => Some(text.as_str()),
                 _ => None,
             })
             .collect();

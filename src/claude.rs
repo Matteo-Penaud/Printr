@@ -2,9 +2,9 @@
 
 use std::time::Duration;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::de::DeserializeOwned;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::i18n::t;
 
@@ -46,11 +46,8 @@ impl Claude {
             },
             "messages": [{ "role": "user", "content": prompt }],
         });
-        let mut request = self
-            .agent
-            .post(API_URL)
-            .header("x-api-key", &self.api_key)
-            .header("anthropic-version", "2023-06-01");
+        let mut request =
+            self.agent.post(API_URL).header("x-api-key", &self.api_key).header("anthropic-version", "2023-06-01");
         // Relance automatique sur un autre modèle si le modèle principal refuse la requête.
         if supports_default_fallbacks(&self.model) {
             body["fallbacks"] = json!("default");
@@ -59,7 +56,10 @@ impl Claude {
 
         let mut response = request.send_json(&body).context(t("API Claude injoignable", "Claude API unreachable"))?;
         let status = response.status();
-        let reply: Value = response.body_mut().read_json().context(t("réponse de l'API Claude illisible", "Claude API response unreadable"))?;
+        let reply: Value = response
+            .body_mut()
+            .read_json()
+            .context(t("réponse de l'API Claude illisible", "Claude API response unreadable"))?;
         if std::env::var_os("PRINTR_DEBUG").is_some() {
             eprintln!("[claude] {reply}");
         }
@@ -80,7 +80,8 @@ impl Claude {
             .filter(|block| block["type"] == "text")
             .filter_map(|block| block["text"].as_str())
             .collect();
-        serde_json::from_str(&text).with_context(|| tr!("JSON inattendu de Claude : {text}", "unexpected JSON from Claude: {text}"))
+        serde_json::from_str(&text)
+            .with_context(|| tr!("JSON inattendu de Claude : {text}", "unexpected JSON from Claude: {text}"))
     }
 }
 

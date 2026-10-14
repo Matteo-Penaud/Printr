@@ -11,7 +11,7 @@ use std::io::Read;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::NaiveDate;
 use serde::Deserialize;
 
@@ -107,20 +107,16 @@ fn run(command: &[String], who: &Who, date: NaiveDate, variant: Option<&str>, en
         Who::Sign(sign) => cmd.arg("--").arg(sign),
         Who::Birth(birth) => cmd.arg(format!("--naissance={birth}")),
     };
-    let mut child = cmd
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => anyhow::anyhow!(
-                "{}",
-                tr!(
-                    "Barnum introuvable (« {program} ») : installe-le ou définis PRINTR_BARNUM",
-                    "Barnum not found (\"{program}\"): install it or set PRINTR_BARNUM"
-                )
-            ),
-            _ => anyhow::anyhow!("{}", tr!("impossible de lancer Barnum : {e}", "could not start Barnum: {e}")),
-        })?;
+    let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().map_err(|e| match e.kind() {
+        std::io::ErrorKind::NotFound => anyhow::anyhow!(
+            "{}",
+            tr!(
+                "Barnum introuvable (« {program} ») : installe-le ou définis PRINTR_BARNUM",
+                "Barnum not found (\"{program}\"): install it or set PRINTR_BARNUM"
+            )
+        ),
+        _ => anyhow::anyhow!("{}", tr!("impossible de lancer Barnum : {e}", "could not start Barnum: {e}")),
+    })?;
 
     // Barnum répond en quelques dizaines de millisecondes ; au-delà de TIMEOUT, on abandonne.
     let start = Instant::now();
@@ -183,10 +179,7 @@ fn render_in_language(r: &Reading, sky: bool) -> Doc {
     let mut doc = Doc::new();
     doc.header(&format!("Horoscope · {}", r.signe));
     if let Some(moon) = &r.lune {
-        doc.text(
-            &tr!("Lune : {} en {}", "Moon: {} in {}", moon.phase, moon.signe),
-            Style::default().small().center(),
-        );
+        doc.text(&tr!("Lune : {} en {}", "Moon: {} in {}", moon.phase, moon.signe), Style::default().small().center());
     }
     doc.feed(1);
     doc.text(&r.climat, Style::default());

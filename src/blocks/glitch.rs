@@ -13,6 +13,7 @@ use crate::{draw, i18n};
 /// Une impression sur `DEFAULT_ODDS` reçoit un glitch.
 const DEFAULT_ODDS: u32 = 20;
 
+#[rustfmt::skip]
 const MESSAGES: &[&str] = &[
     "il fait froid dans le bac à papier",
     "ne me débranche pas ce soir",
@@ -97,6 +98,7 @@ const MESSAGES: &[&str] = &[
     "nombre de tickets imprimés : trop. nombre de mercis : 0.",
 ];
 
+#[rustfmt::skip]
 const MESSAGES_EN: &[&str] = &[
     "it is cold in the paper tray",
     "do not unplug me tonight",
@@ -199,6 +201,7 @@ fn timely(hour: u32) -> &'static str {
 }
 
 /// Caractères de bruit, tous présents dans la page PC858 de l'imprimante.
+#[rustfmt::skip]
 const NOISE: &[char] = &['░', '▒', '▓', '█', '▄', '▀', '■', '¤', '§', '¶', '¦', '±', '÷', '¬', '¸', '¨', '·', '‗', '¯', 'þ', 'ð', 'ø', '#', '%', '&', '@', '/', '\\', '|', '_'];
 const COLUMNS: usize = 42;
 const COLUMNS_SMALL: usize = 56;
@@ -289,7 +292,11 @@ pub fn build(seed: Option<u64>) -> Doc {
         Some(seed) => StdRng::seed_from_u64(seed),
         None => StdRng::from_rng(&mut rand::rng()),
     };
-    let message = if rng.random_bool(0.15) { timely(Local::now().hour()) } else { *messages().choose(&mut rng).expect("messages") };
+    let message = if rng.random_bool(0.15) {
+        timely(Local::now().hour())
+    } else {
+        *messages().choose(&mut rng).expect("messages")
+    };
 
     let mut doc = Doc::new();
     doc.image(noise_band(&mut rng));
@@ -330,7 +337,8 @@ pub fn build(seed: Option<u64>) -> Doc {
     // L'écho : le dernier mot se répète en s'effaçant.
     if rng.random_bool(0.5) {
         let last = message.trim_end_matches(['.', '?', '!']).rsplit(' ').next().unwrap_or(message);
-        let echo: Vec<String> = (0..rng.random_range(3..=5)).map(|i| corrupt(last, 0.15 * i as f64, &mut rng)).collect();
+        let echo: Vec<String> =
+            (0..rng.random_range(3..=5)).map(|i| corrupt(last, 0.15 * i as f64, &mut rng)).collect();
         doc.line(&offset(&echo.join("  "), COLUMNS_SMALL, &mut rng), Style::default().small());
     }
     if rng.random_bool(0.5) {
@@ -347,7 +355,7 @@ mod tests {
 
     #[test]
     fn english_glitch_is_printable_and_within_width() {
-        use crate::i18n::{with_lang, Lang};
+        use crate::i18n::{Lang, with_lang};
         with_lang(Lang::En, || {
             assert_eq!(messages().len(), 77);
             for m in messages() {
@@ -358,7 +366,10 @@ mod tests {
                 for op in &doc.ops {
                     if let Op::Line { text, style } = op {
                         assert!(text.chars().count() <= style.columns(), "ligne trop longue : {text}");
-                        assert!(!crate::cp858::encode(text).contains(&b'?') || text.contains('?'), "hors PC858 : {text}");
+                        assert!(
+                            !crate::cp858::encode(text).contains(&b'?') || text.contains('?'),
+                            "hors PC858 : {text}"
+                        );
                     }
                 }
             }
@@ -377,5 +388,4 @@ mod tests {
             }
         }
     }
-
 }

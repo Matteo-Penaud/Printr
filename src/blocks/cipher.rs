@@ -33,6 +33,7 @@ impl Cipher {
 }
 
 /// Messages en anglais, en lettres simples (sans apostrophe : elle serait remplacée par un espace).
+#[rustfmt::skip]
 const MESSAGES_EN: &[&str] = &[
     "The treasure is hidden under the couch",
     "Tonight we are having pizza",
@@ -55,6 +56,7 @@ fn messages() -> &'static [&'static str] {
     if en() { MESSAGES_EN } else { MESSAGES }
 }
 
+#[rustfmt::skip]
 const MESSAGES: &[&str] = &[
     "Le trésor est caché sous le canapé",
     "Ce soir, c'est pizza",
@@ -72,6 +74,7 @@ const MESSAGES: &[&str] = &[
     "Demain, on va au parc",
 ];
 
+#[rustfmt::skip]
 const MORSE: [&str; 26] = [
     ".-", "-...", "-.-.", "-..", ".", "..-.", "--.", "....", "..", ".---", "-.-", ".-..", "--", "-.", "---", ".--.",
     "--.-", ".-.", "...", "-", "..-", "...-", ".--", "-..-", "-.--", "--..",
@@ -102,10 +105,9 @@ fn encode(text: &str, cipher: Cipher, shift: u8) -> String {
             .map(|w| letters(w).map(|i| (b'A' + ((i + shift as usize) % 26) as u8) as char).collect::<String>())
             .collect::<Vec<_>>()
             .join(" "),
-        Cipher::Morse => words
-            .map(|w| letters(w).map(|i| MORSE[i]).collect::<Vec<_>>().join(" "))
-            .collect::<Vec<_>>()
-            .join(" / "),
+        Cipher::Morse => {
+            words.map(|w| letters(w).map(|i| MORSE[i]).collect::<Vec<_>>().join(" ")).collect::<Vec<_>>().join(" / ")
+        }
         Cipher::Nombres => words
             .map(|w| letters(w).map(|i| (i + 1).to_string()).collect::<Vec<_>>().join("-"))
             .collect::<Vec<_>>()
@@ -120,8 +122,16 @@ fn key(cipher: Cipher, shift: u8) -> Vec<String> {
         Cipher::Cesar => {
             let shifted: String = alphabet.iter().map(|&c| (b'A' + (c as u8 - b'A' + shift) % 26) as char).collect();
             vec![
-                tr!("Chaque lettre a avancé de {shift} : A est devenu {}.", "Each letter moved forward by {shift}: A became {}.", &shifted[..1]),
-                t("En haut la lettre codée, en dessous la vraie lettre :", "Top: the coded letter. Bottom: the real one:").to_owned(),
+                tr!(
+                    "Chaque lettre a avancé de {shift} : A est devenu {}.",
+                    "Each letter moved forward by {shift}: A became {}.",
+                    &shifted[..1]
+                ),
+                t(
+                    "En haut la lettre codée, en dessous la vraie lettre :",
+                    "Top: the coded letter. Bottom: the real one:",
+                )
+                .to_owned(),
                 String::new(),
                 shifted.chars().map(String::from).collect::<Vec<_>>().join(" "),
                 alphabet.iter().map(char::to_string).collect::<Vec<_>>().join(" "),
@@ -129,14 +139,20 @@ fn key(cipher: Cipher, shift: u8) -> Vec<String> {
         }
         Cipher::Morse => {
             let cells: Vec<String> = alphabet.iter().zip(MORSE).map(|(c, m)| format!("{c} {m:<6}")).collect();
-            let hint = t("Un espace entre les lettres, « / » entre les mots.", "One space between letters, \"/\" between words.");
+            let hint = t(
+                "Un espace entre les lettres, « / » entre les mots.",
+                "One space between letters, \"/\" between words.",
+            );
             let mut lines = vec![hint.to_owned(), String::new()];
             lines.extend(cells.chunks(6).map(|row| row.join(" ").trim_end().to_owned()));
             lines
         }
         Cipher::Nombres => {
             let cells: Vec<String> = alphabet.iter().enumerate().map(|(i, c)| format!("{c}={:<2}", i + 1)).collect();
-            let hint = t("Chaque nombre est le rang d'une lettre dans l'alphabet.", "Each number is a letter's place in the alphabet.");
+            let hint = t(
+                "Chaque nombre est le rang d'une lettre dans l'alphabet.",
+                "Each number is a letter's place in the alphabet.",
+            );
             let mut lines = vec![hint.to_owned(), String::new()];
             lines.extend(cells.chunks(9).map(|row| row.join(" ").trim_end().to_owned()));
             lines
@@ -149,7 +165,8 @@ pub fn build(message: Option<&str>, cipher: Cipher, shift: Option<u8>, answer: b
         Some(seed) => StdRng::seed_from_u64(seed),
         None => StdRng::from_rng(&mut rand::rng()),
     };
-    let plain = message.filter(|m| !m.trim().is_empty()).unwrap_or_else(|| messages().choose(&mut rng).expect("messages"));
+    let plain =
+        message.filter(|m| !m.trim().is_empty()).unwrap_or_else(|| messages().choose(&mut rng).expect("messages"));
     let shift = shift.map(|s| s % 26).filter(|&s| s != 0).unwrap_or_else(|| rng.random_range(1..26));
     let coded = encode(&normalize(plain), cipher, shift);
 
@@ -185,7 +202,7 @@ mod tests {
 
     #[test]
     fn english_messages_are_plain_letters() {
-        use crate::i18n::{with_lang, Lang};
+        use crate::i18n::{Lang, with_lang};
         with_lang(Lang::En, || {
             assert!(!messages().is_empty());
             assert_eq!(messages().len(), 14);

@@ -15,6 +15,7 @@ if [ -n "$(listener_pid)" ]; then
 fi
 
 (cd emulator && exec uvx emupos run >/dev/null 2>&1) &
+# shellcheck disable=SC2154  # pid est affecté dans le trap lui-même
 trap 'pid=$(listener_pid); [ -n "$pid" ] && kill "$pid"' EXIT
 
 for _ in $(seq 60); do

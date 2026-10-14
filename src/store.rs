@@ -12,7 +12,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use chrono::{DateTime, Duration, Local, Utc};
 use rand::RngExt;
@@ -25,6 +25,7 @@ const HISTORY_MAX: usize = 300;
 /// Durée de validité d'une session.
 const SESSION_DAYS: i64 = 180;
 /// Couleurs attribuées aux utilisateurs, dans l'ordre de création.
+#[rustfmt::skip]
 const COLORS: &[&str] = &["#e4572e", "#2e86ab", "#7a9e3f", "#a259c4", "#f2a541", "#3fa7a0"];
 
 /// Données du service installé sur le Pi.
@@ -145,7 +146,10 @@ pub struct Data {
 
 /// Lit les données sur le disque, sans rien créer : pour les blocs (liste de courses, bilan).
 pub fn read_data() -> Result<Data> {
-    let dir = data_dir().context(t("répertoire de données introuvable (définir PRINTR_DATA_DIR)", "data directory not found (set PRINTR_DATA_DIR)"))?;
+    let dir = data_dir().context(t(
+        "répertoire de données introuvable (définir PRINTR_DATA_DIR)",
+        "data directory not found (set PRINTR_DATA_DIR)",
+    ))?;
     Ok(Store::open_at(&dir.join("printr.json"))?.data)
 }
 
@@ -170,10 +174,14 @@ fn share_with_group(path: &Path, mode: u32) {
 
 impl Store {
     pub fn open() -> Result<Self> {
-        let dir = data_dir().context(t("répertoire de données introuvable (définir PRINTR_DATA_DIR)", "data directory not found (set PRINTR_DATA_DIR)"))?;
+        let dir = data_dir().context(t(
+            "répertoire de données introuvable (définir PRINTR_DATA_DIR)",
+            "data directory not found (set PRINTR_DATA_DIR)",
+        ))?;
         let images = dir.join("images");
         if !images.is_dir() {
-            fs::create_dir_all(&images).with_context(|| tr!("impossible de créer {}", "cannot create {}", images.display()))?;
+            fs::create_dir_all(&images)
+                .with_context(|| tr!("impossible de créer {}", "cannot create {}", images.display()))?;
             #[cfg(unix)]
             share_with_group(&images, 0o2770);
         }
@@ -182,7 +190,9 @@ impl Store {
 
     pub fn open_at(path: &Path) -> Result<Self> {
         let data = match fs::read_to_string(path) {
-            Ok(text) => serde_json::from_str(&text).with_context(|| tr!("{} illisible", "{} is unreadable", path.display()))?,
+            Ok(text) => {
+                serde_json::from_str(&text).with_context(|| tr!("{} illisible", "{} is unreadable", path.display()))?
+            }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Data::default(),
             Err(e) => return Err(e).with_context(|| tr!("impossible de lire {}", "cannot read {}", path.display())),
         };
@@ -263,7 +273,10 @@ impl Store {
     }
 
     pub fn remove_user(&mut self, name: &str) -> Result<()> {
-        let id = self.find_by_name(name).map(|u| u.id.clone()).with_context(|| tr!("utilisateur inconnu : {name}", "unknown user: {name}"))?;
+        let id = self
+            .find_by_name(name)
+            .map(|u| u.id.clone())
+            .with_context(|| tr!("utilisateur inconnu : {name}", "unknown user: {name}"))?;
         self.remove_user_id(&id);
         Ok(())
     }
@@ -324,7 +337,13 @@ pub fn verify_password(hash: &str, password: &str) -> bool {
 
 fn hash(password: &str) -> Result<String> {
     if password.chars().count() < MIN_PASSWORD {
-        bail!("{}", tr!("mot de passe trop court ({MIN_PASSWORD} caractères minimum)", "password too short (at least {MIN_PASSWORD} characters)"));
+        bail!(
+            "{}",
+            tr!(
+                "mot de passe trop court ({MIN_PASSWORD} caractères minimum)",
+                "password too short (at least {MIN_PASSWORD} characters)"
+            )
+        );
     }
     Argon2::default()
         .hash_password(password.as_bytes())

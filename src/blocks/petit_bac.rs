@@ -9,6 +9,7 @@ use crate::doc::{Align, Doc, Style};
 use crate::i18n::{self, t};
 
 /// Catégories en anglais, pour le jeu des catégories.
+#[rustfmt::skip]
 const CATEGORIES_EN: &[&str] = &[
     "First name",
     "Animal",
@@ -37,11 +38,13 @@ const CATEGORIES_EN: &[&str] = &[
 ];
 
 /// Lettres en anglais : sans Q, U, V, X, Y, Z, qui bloquent toute la partie.
+#[rustfmt::skip]
 const LETTERS_EN: &[char] = &[
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'W',
 ];
 
 /// Catégories tirées au hasard quand le ticket n'en précise pas.
+#[rustfmt::skip]
 const CATEGORIES: &[&str] = &[
     "Prénom",
     "Animal",
@@ -70,6 +73,7 @@ const CATEGORIES: &[&str] = &[
 ];
 
 /// Lettres tirées par défaut : on écarte celles qui bloquent toute la partie.
+#[rustfmt::skip]
 const LETTERS: &[char] = &[
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'V',
 ];
@@ -148,7 +152,7 @@ mod tests {
 
     #[test]
     fn english_sheets_use_safe_letters() {
-        use crate::i18n::{with_lang, Lang};
+        use crate::i18n::{Lang, with_lang};
         with_lang(Lang::En, || {
             for seed in 0..50 {
                 let doc = build(None, &[], 6, 2, Some(seed));

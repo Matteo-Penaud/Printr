@@ -304,15 +304,22 @@ Le numéro de version (`Cargo.toml`, affiché par `printr --version` et dans l'a
   marchent toujours ;
 - **majeure** (**2**.0.0) : un changement qui oblige à modifier ses tickets ou sa configuration.
 
+Chaque version mineure porte le nom d'un pionnier de l'imprimerie, par ordre alphabétique (voir le
+[CHANGELOG](CHANGELOG.md)) : change `CODENAME` dans `src/main.rs` et le titre du CHANGELOG ensemble
+(un test vérifie qu'ils concordent).
+
 Chaque version publiée a son étiquette git (`v1.0.0`), créée sur `master` une fois la version
-poussée : `git tag -a v1.1.0 -m "printr 1.1.0" && git push origin v1.1.0`. Les installations la
+poussée : `git tag -a v1.1.0 -m "printr 1.1.0" && git push origin v1.1.0`. Le workflow Release
+compile alors les binaires et publie la release GitHub, avec la section du CHANGELOG comme notes. Les installations la
 voient dans la journée (« Mon compte » de l'administrateur) : ne pousse une étiquette que pour
 une version prête à être installée.
 
 ## Proposer une modification
 
 1. Crée une branche à partir de `master`.
-2. Vérifie que `cargo test` passe et que `cargo build` ne produit aucun warning.
+2. Vérifie que `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` et `cargo test`
+   passent. La CI les lance sur chaque pull request, avec `cargo deny check` (failles connues,
+   licences), `shellcheck` sur les scripts et `zizmor` sur les workflows.
 3. Si tu touches au rendu, joins une capture de l'aperçu ou de l'émulateur à ta demande de
    fusion.
 4. Ouvre une pull request en décrivant le pourquoi autant que le comment.

@@ -94,12 +94,23 @@ pub fn spawn(latest: Arc<Mutex<Option<Available>>>) {
                 Ok(found) => {
                     let mut slot = latest.lock().unwrap_or_else(|e| e.into_inner());
                     if let Some(new) = found.as_ref().filter(|n| slot.as_ref() != Some(*n)) {
-                        eprintln!("{}", tr!("nouvelle version disponible : printr {} ({})", "new version available: printr {} ({})", new.version, new.url));
+                        eprintln!(
+                            "{}",
+                            tr!(
+                                "nouvelle version disponible : printr {} ({})",
+                                "new version available: printr {} ({})",
+                                new.version,
+                                new.url
+                            )
+                        );
                     }
                     *slot = found;
                 }
                 // Hors ligne, GitHub en panne : on réessaiera à la prochaine échéance.
-                Err(e) => eprintln!("{}", tr!("vérification des mises à jour impossible : {e:#}", "cannot check for updates: {e:#}")),
+                Err(e) => eprintln!(
+                    "{}",
+                    tr!("vérification des mises à jour impossible : {e:#}", "cannot check for updates: {e:#}")
+                ),
             }
             std::thread::sleep(interval);
         }

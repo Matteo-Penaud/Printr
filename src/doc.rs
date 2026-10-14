@@ -208,10 +208,9 @@ impl Doc {
                     raster::print_gray(printer, img)?;
                 }
                 Op::Qr { data, size } => {
-                    printer.justify(JustifyMode::CENTER)?.qrcode_option(
-                        data,
-                        QRCodeOption::new(QRCodeModel::Model2, *size, QRCodeCorrectionLevel::M),
-                    )?;
+                    printer
+                        .justify(JustifyMode::CENTER)?
+                        .qrcode_option(data, QRCodeOption::new(QRCodeModel::Model2, *size, QRCodeCorrectionLevel::M))?;
                     current = None;
                 }
                 Op::Feed(n) => {
@@ -273,11 +272,7 @@ impl Doc {
         }
         if cut {
             let side = (PAPER - 1) / 2;
-            out.push_str(&format!(
-                "{frame}╰{} ✂ {}╯{frame:#}\n",
-                "╌".repeat(side),
-                "╌".repeat(PAPER - 1 - side)
-            ));
+            out.push_str(&format!("{frame}╰{} ✂ {}╯{frame:#}\n", "╌".repeat(side), "╌".repeat(PAPER - 1 - side)));
         } else {
             out.push_str(&format!("{frame}╰{}╯{frame:#}\n", "─".repeat(PAPER + 2)));
         }
@@ -388,11 +383,8 @@ const TEXT_WIDTH: u32 = COLUMNS_A as u32 * 12;
 
 /// `GS L` + `GS W` : zone d'impression centrée de `TEXT_WIDTH` points, ou toute la largeur.
 fn set_print_area<D: Driver>(printer: &mut Printer<D>, text: bool) -> Result<()> {
-    let (left, width) = if text {
-        ((raster::PRINT_WIDTH - TEXT_WIDTH) / 2, TEXT_WIDTH)
-    } else {
-        (0, raster::PRINT_WIDTH)
-    };
+    let (left, width) =
+        if text { ((raster::PRINT_WIDTH - TEXT_WIDTH) / 2, TEXT_WIDTH) } else { (0, raster::PRINT_WIDTH) };
     let [l0, l1, ..] = left.to_le_bytes();
     let [w0, w1, ..] = width.to_le_bytes();
     printer.custom(&[0x1d, b'L', l0, l1, 0x1d, b'W', w0, w1])?;

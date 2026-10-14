@@ -15,9 +15,11 @@ const GRACE: Duration = Duration::minutes(15);
 const TICK: StdDuration = StdDuration::from_secs(20);
 
 pub fn spawn(app: Arc<App>) {
-    std::thread::spawn(move || loop {
-        run_due(&app);
-        std::thread::sleep(TICK);
+    std::thread::spawn(move || {
+        loop {
+            run_due(&app);
+            std::thread::sleep(TICK);
+        }
     });
 }
 
@@ -36,10 +38,10 @@ fn run_due(app: &App) {
                 }
             }
         }
-        if !due.is_empty() {
-            if let Err(e) = store.save() {
-                eprintln!("{}", tr!("planification non enregistrée : {e:#}", "schedule not saved: {e:#}"));
-            }
+        if !due.is_empty()
+            && let Err(e) = store.save()
+        {
+            eprintln!("{}", tr!("planification non enregistrée : {e:#}", "schedule not saved: {e:#}"));
         }
         due
     };
@@ -50,10 +52,16 @@ fn run_due(app: &App) {
                 let printed = app.print(&ticket, "planification", &name);
                 match printed.failure {
                     None => eprintln!("{}", tr!("planification « {name} » imprimée", "schedule \"{name}\" printed")),
-                    Some(e) => eprintln!("{}", tr!("planification « {name} » en échec : {e}", "schedule \"{name}\" failed: {e}")),
+                    Some(e) => eprintln!(
+                        "{}",
+                        tr!("planification « {name} » en échec : {e}", "schedule \"{name}\" failed: {e}")
+                    ),
                 }
             }
-            Err(e) => eprintln!("{}", tr!("planification « {name} » : ticket invalide ({e})", "schedule \"{name}\": invalid ticket ({e})")),
+            Err(e) => eprintln!(
+                "{}",
+                tr!("planification « {name} » : ticket invalide ({e})", "schedule \"{name}\": invalid ticket ({e})")
+            ),
         }
     }
 }

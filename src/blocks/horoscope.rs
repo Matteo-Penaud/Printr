@@ -1,6 +1,6 @@
 //! Horoscope du jour, généré par Claude, sérieux ou farfelu.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::NaiveDate;
 use rand::seq::IndexedRandom;
 use serde::{Deserialize, Serialize};
@@ -39,6 +39,7 @@ impl Tone {
 }
 
 /// Nom et période en anglais, dans l'ordre de `SIGNS`.
+#[rustfmt::skip]
 const SIGNS_EN: [(&str, &str); 12] = [
     ("Aries", "Mar 21 - Apr 19"),
     ("Taurus", "Apr 20 - May 20"),
@@ -55,6 +56,7 @@ const SIGNS_EN: [(&str, &str); 12] = [
 ];
 
 /// (nom affiché, période, alias acceptés sans accents)
+#[rustfmt::skip]
 const SIGNS: [(&str, &str, &[&str]); 12] = [
     ("Bélier", "21/03 - 19/04", &["belier", "aries"]),
     ("Taureau", "20/04 - 20/05", &["taureau", "taurus"]),
@@ -97,17 +99,20 @@ fn find_sign(sign: &str) -> Result<(&'static str, &'static str)> {
 const PROMPT_VERSION: u32 = 4;
 
 /// Thèmes tirés au hasard pour que deux horoscopes ne se ressemblent pas.
+#[rustfmt::skip]
 const SERIOUS_THEMES: &[&str] = &[
     "la communication", "l'organisation", "la créativité", "les finances", "la famille",
     "le repos", "les amitiés", "les projets à long terme", "la confiance en soi", "les imprévus",
     "la patience", "les nouvelles rencontres", "le rangement", "l'apprentissage",
 ];
+#[rustfmt::skip]
 const ABSURD_THEMES: &[&str] = &[
     "la cuisine", "les transports en commun", "les nuages", "l'espace", "le jardinage",
     "la musique classique", "le Moyen Âge", "les objets de la salle de bain", "la mer", "les supermarchés",
     "les pirates", "les animaux de la forêt", "la météo", "les sports d'hiver", "le cirque",
     "les fromages", "les dinosaures", "la plomberie", "les jeux de société", "la haute couture",
 ];
+#[rustfmt::skip]
 const INSULTING_THEMES: &[&str] = &[
     "les retards", "la procrastination", "le canapé", "les courses oubliées", "la vaisselle qui s'empile",
     "les plantes qui meurent", "le sport commencé lundi", "les excuses bidon", "les réseaux sociaux",
@@ -115,17 +120,20 @@ const INSULTING_THEMES: &[&str] = &[
     "les clés perdues", "les séries regardées jusqu'à 3 h", "les messages laissés sans réponse",
     "les bonnes résolutions", "le réveil qui sonne cinq fois", "le bricolage", "les régimes",
 ];
+#[rustfmt::skip]
 const SERIOUS_THEMES_EN: &[&str] = &[
     "communication", "getting organized", "creativity", "money", "family", "rest", "friendship",
     "long-term plans", "self-confidence", "the unexpected", "patience", "meeting new people",
     "tidying up", "learning something new",
 ];
+#[rustfmt::skip]
 const ABSURD_THEMES_EN: &[&str] = &[
     "cooking", "public transport", "clouds", "outer space", "gardening", "classical music",
     "the Middle Ages", "bathroom objects", "the sea", "supermarkets", "pirates", "woodland animals",
     "the weather", "winter sports", "the circus", "cheese", "dinosaurs", "plumbing", "board games",
     "haute couture",
 ];
+#[rustfmt::skip]
 const INSULTING_THEMES_EN: &[&str] = &[
     "being late", "procrastination", "the couch", "forgotten groceries", "the pile of dirty dishes",
     "dying houseplants", "the workout started on Monday", "lame excuses", "social media",
@@ -165,7 +173,8 @@ pub fn build(ctx: &Ctx, sign: &str, tone: Tone) -> Result<Doc> {
             return Ok(super::ai_placeholder(&format!("Horoscope · {name}"), i18n::t("L'horoscope", "The horoscope")));
         }
         None => {
-            let claude = ctx.claude.as_ref().context(i18n::t("ANTHROPIC_API_KEY manquante", "ANTHROPIC_API_KEY is missing"))?;
+            let claude =
+                ctx.claude.as_ref().context(i18n::t("ANTHROPIC_API_KEY manquante", "ANTHROPIC_API_KEY is missing"))?;
             // Une réponse incomplète est rare : on retente une fois avant d'abandonner.
             let h = match generate(claude, date, name, tone)? {
                 h if h.is_complete() => h,
@@ -219,7 +228,7 @@ fn generate(claude: &Claude, date: NaiveDate, name: &str, tone: Tone) -> Result<
         Tone::Absurd => {
             "Ton : complètement farfelu et absurde : prédictions improbables et drôles (animaux, \
              objets du quotidien, situations surréalistes), toujours bienveillant, jamais inquiétant."
-        },
+        }
         Tone::Insulting => {
             "Ton : ouvertement insultant, un « roast » sans aucune pitié. Insulte copieusement le \
              lecteur, avec des insultes françaises bien senties et variées (abruti, tocard, boulet, \
@@ -269,9 +278,7 @@ fn generate_en(claude: &Claude, date: NaiveDate, name: &str, tone: Tone) -> Resu
     };
     let theme = themes.choose(&mut rand::rng()).copied().unwrap_or("everyday life");
     let tone_instruction = match tone {
-        Tone::Serious => {
-            "Tone: serious and believable, like a magazine horoscope, with concrete, nuanced advice."
-        }
+        Tone::Serious => "Tone: serious and believable, like a magazine horoscope, with concrete, nuanced advice.",
         Tone::Absurd => {
             "Tone: completely absurd and whimsical: unlikely, funny predictions (animals, everyday \
              objects, surreal situations), always kind, never worrying."

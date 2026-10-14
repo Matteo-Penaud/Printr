@@ -33,24 +33,27 @@ impl Target {
     pub fn send(&self, doc: &Doc, cut: bool) -> Result<()> {
         match self {
             Target::Tcp(addr) => {
-                let (host, port) = addr.rsplit_once(':').context(t("--tcp attend hôte:port", "--tcp expects host:port"))?;
+                let (host, port) =
+                    addr.rsplit_once(':').context(t("--tcp attend hôte:port", "--tcp expects host:port"))?;
                 let port = port.parse().context(t("port TCP invalide", "invalid TCP port"))?;
                 let driver = NetworkDriver::open(host, port, None)
                     .with_context(|| tr!("impossible de se connecter à {addr}", "cannot connect to {addr}"))?;
                 send(driver, doc, cut)
             }
             Target::Dump(path) => {
-                let driver = FileDriver::open_with_options(
-                    path,
-                    OpenOptions::new().create(true).write(true).truncate(true),
-                )
-                .with_context(|| tr!("impossible de créer {}", "cannot create {}", path.display()))?;
+                let driver =
+                    FileDriver::open_with_options(path, OpenOptions::new().create(true).write(true).truncate(true))
+                        .with_context(|| tr!("impossible de créer {}", "cannot create {}", path.display()))?;
                 send(driver, doc, cut)
             }
             Target::Device(path) => {
-                let driver = FileDriver::open_with_options(path, OpenOptions::new().write(true))
-                    .with_context(|| {
-                        tr!("impossible d'ouvrir {} (imprimante branchée ? droits udev ?)", "cannot open {} (printer plugged in? udev permissions?)", path.display())
+                let driver =
+                    FileDriver::open_with_options(path, OpenOptions::new().write(true)).with_context(|| {
+                        tr!(
+                            "impossible d'ouvrir {} (imprimante branchée ? droits udev ?)",
+                            "cannot open {} (printer plugged in? udev permissions?)",
+                            path.display()
+                        )
                     })?;
                 send(driver, doc, cut)
             }

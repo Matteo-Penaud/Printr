@@ -1,0 +1,4 @@
+# Lignes de 120 caractères au plus : le style du projet, plus large que les 100 par défaut.
+# Les tables de données (listes de mots, énigmes, saints…) sont marquées #[rustfmt::skip].
+max_width = 120
+use_small_heuristics = "Max"

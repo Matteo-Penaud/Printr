@@ -296,15 +296,22 @@ The version number (`Cargo.toml`, shown by `printr --version` and in the app) fo
 - **minor** (1.**1**.0): one more block, option or screen; existing tickets keep working;
 - **major** (**2**.0.0): a change that requires editing your tickets or your configuration.
 
+Each minor version is named after a pioneer of printing, in alphabetical order (see the
+[CHANGELOG](CHANGELOG.md)): update `CODENAME` in `src/main.rs` and the CHANGELOG heading together (a
+test checks they match).
+
 Every published version has its git tag (`v1.0.0`), created on `master` once the version has been
-pushed: `git tag -a v1.1.0 -m "printr 1.1.0" && git push origin v1.1.0`. Installations see it
+pushed: `git tag -a v1.1.0 -m "printr 1.1.0" && git push origin v1.1.0`. The Release workflow then
+builds the binaries and publishes the GitHub release, with the CHANGELOG section as notes. Installations see it
 within the day ("My account" of the administrator): only push a tag for a version that is ready
 to be installed.
 
 ## Proposing a change
 
 1. Create a branch from `master`.
-2. Check that `cargo test` passes and that `cargo build` produces no warnings.
+2. Check that `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test`
+   pass. The CI runs them on every pull request, along with `cargo deny check` (known
+   vulnerabilities, licenses), `shellcheck` on the scripts and `zizmor` on the workflows.
 3. If you touch the rendering, attach a screenshot of the preview or of the emulator output to
    your pull request.
 4. Open a pull request describing the why as much as the how.

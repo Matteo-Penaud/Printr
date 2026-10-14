@@ -1,10 +1,10 @@
 //! Défi sportif du jour, sans équipement, sur trois niveaux. Local et hors ligne.
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use chrono::NaiveDate;
+use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
-use rand::SeedableRng;
 use serde::Deserialize;
 
 use crate::doc::{Align, Doc, Style};
@@ -38,10 +38,9 @@ impl Level {
         match self {
             Level::Easy => t("Tout le monde peut le faire.", "Anyone can do this."),
             Level::Medium => t("Là, on commence à causer.", "Now we're talking."),
-            Level::Hard => t(
-                "Ça rigole plus : réservé aux vrais déglingos.",
-                "No more laughing: reserved for the total maniacs.",
-            ),
+            Level::Hard => {
+                t("Ça rigole plus : réservé aux vrais déglingos.", "No more laughing: reserved for the total maniacs.")
+            }
         }
     }
 
@@ -55,6 +54,7 @@ impl Level {
     }
 }
 
+#[rustfmt::skip]
 const EASY_EN: &[&str] = &[
     "Take the stairs all day: no elevator or escalator allowed.",
     "3 sets of 10 calf raises, holding on to a wall.",
@@ -83,6 +83,7 @@ const EASY_EN: &[&str] = &[
     "10 minutes of walking outside, with no phone in your hand.",
 ];
 
+#[rustfmt::skip]
 const MEDIUM_EN: &[&str] = &[
     "50 push-ups over the day, in as many sets as you need (on your knees if needed).",
     "100 squats over the day.",
@@ -111,6 +112,7 @@ const MEDIUM_EN: &[&str] = &[
     "1 minute 30 of plank in one go.",
 ];
 
+#[rustfmt::skip]
 const HARD_EN: &[&str] = &[
     "100 push-ups over the day.",
     "100 burpees over the day.",
@@ -139,6 +141,7 @@ const HARD_EN: &[&str] = &[
     "A push-up pyramid: 1, 2, 3... up to 10, then back down to 1.",
 ];
 
+#[rustfmt::skip]
 const EASY: &[&str] = &[
     "Prends les escaliers toute la journée : interdiction d'utiliser l'ascenseur ou l'escalator.",
     "3 séries de 10 montées sur la pointe des pieds, en te tenant à un mur.",
@@ -167,6 +170,7 @@ const EASY: &[&str] = &[
     "10 minutes de marche dehors, sans téléphone à la main.",
 ];
 
+#[rustfmt::skip]
 const MEDIUM: &[&str] = &[
     "50 pompes dans la journée, en autant de séries qu'il le faut (sur les genoux si besoin).",
     "100 squats dans la journée.",
@@ -195,6 +199,7 @@ const MEDIUM: &[&str] = &[
     "1 minute 30 de planche d'une traite.",
 ];
 
+#[rustfmt::skip]
 const HARD: &[&str] = &[
     "100 pompes dans la journée.",
     "100 burpees dans la journée.",
@@ -237,11 +242,7 @@ pub fn build(today: NaiveDate, level: Level, number: Option<usize>) -> Result<Do
     let index = match number {
         Some(n) if (1..=list.len()).contains(&n) => n - 1,
         Some(n) => {
-            let msg = tr!(
-                "défi n° {n} inconnu (1 à {})",
-                "challenge No. {n} not found (1 to {})",
-                list.len()
-            );
+            let msg = tr!("défi n° {n} inconnu (1 à {})", "challenge No. {n} not found (1 to {})", list.len());
             bail!("{}", msg)
         }
         None => of_day(today, level),
@@ -271,7 +272,8 @@ mod tests {
         let start = NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
         for level in [Level::Easy, Level::Medium, Level::Hard] {
             let n = level.challenges().len();
-            let mut seen: Vec<usize> = (0..n as i64).map(|d| of_day(start + chrono::Duration::days(d), level)).collect();
+            let mut seen: Vec<usize> =
+                (0..n as i64).map(|d| of_day(start + chrono::Duration::days(d), level)).collect();
             seen.sort();
             seen.dedup();
             assert_eq!(seen.len(), n);
@@ -280,13 +282,14 @@ mod tests {
 
     #[test]
     fn english_challenges_cycle_without_repeat() {
-        use crate::i18n::{with_lang, Lang};
+        use crate::i18n::{Lang, with_lang};
         with_lang(Lang::En, || {
             let start = NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
             for level in [Level::Easy, Level::Medium, Level::Hard] {
                 let n = level.challenges().len();
                 assert_eq!(n, 25);
-                let mut seen: Vec<usize> = (0..n as i64).map(|d| of_day(start + chrono::Duration::days(d), level)).collect();
+                let mut seen: Vec<usize> =
+                    (0..n as i64).map(|d| of_day(start + chrono::Duration::days(d), level)).collect();
                 seen.sort();
                 seen.dedup();
                 assert_eq!(seen.len(), n);

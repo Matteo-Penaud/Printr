@@ -1,6 +1,6 @@
 //! Météo via Open-Meteo (gratuit, sans clé) : géocodage puis prévisions.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::NaiveDate;
 use serde::Deserialize;
 
@@ -80,10 +80,10 @@ fn describe(code: u8) -> &'static str {
 
 /// « Lyon », ou des coordonnées « 45.76,4.83 ».
 pub fn locate(agent: &ureq::Agent, location: &str) -> Result<Place> {
-    if let Some((lat, lon)) = location.split_once(',') {
-        if let (Ok(latitude), Ok(longitude)) = (lat.trim().parse(), lon.trim().parse()) {
-            return Ok(Place { name: location.to_owned(), latitude, longitude });
-        }
+    if let Some((lat, lon)) = location.split_once(',')
+        && let (Ok(latitude), Ok(longitude)) = (lat.trim().parse(), lon.trim().parse())
+    {
+        return Ok(Place { name: location.to_owned(), latitude, longitude });
     }
     let geo: GeoResults = agent
         .get("https://geocoding-api.open-meteo.com/v1/search")
@@ -131,12 +131,7 @@ pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
     doc.header(&tr!("Météo · {}", "Weather · {}", place.name));
     doc.text(describe(c.weather_code), Style::default().bold().center());
     doc.text(
-        &tr!(
-            "{:.0}°C (ressenti {:.0}°C)",
-            "{:.0}°C (feels {:.0}°C)",
-            c.temperature_2m,
-            c.apparent_temperature
-        ),
+        &tr!("{:.0}°C (ressenti {:.0}°C)", "{:.0}°C (feels {:.0}°C)", c.temperature_2m, c.apparent_temperature),
         Style::default().size(2).center(),
     );
     doc.feed(1);
@@ -151,11 +146,11 @@ pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
         Style::default().center(),
     );
     let uv = d.uv_index_max[0].map_or("-".to_owned(), |u| format!("{u:.0}"));
-    doc.text(&tr!("Vent {:.0} km/h · UV {uv}", "Wind {:.0} km/h · UV {uv}", c.wind_speed_10m), Style::default().center());
     doc.text(
-        &tr!("Soleil {} - {}", "Sun {} - {}", hour(&d.sunrise[0]), hour(&d.sunset[0])),
+        &tr!("Vent {:.0} km/h · UV {uv}", "Wind {:.0} km/h · UV {uv}", c.wind_speed_10m),
         Style::default().center(),
     );
+    doc.text(&tr!("Soleil {} - {}", "Sun {} - {}", hour(&d.sunrise[0]), hour(&d.sunset[0])), Style::default().center());
 
     if d.time.len() > 1 {
         doc.feed(1);
