@@ -152,13 +152,13 @@ impl Grille {
 // ---- Dictionnaire et définitions de CrossWords ----
 
 /// Langue des grilles : celle de l'installation.
-fn language() -> Language {
+pub(super) fn language() -> Language {
     if crate::i18n::en() { Language::En } else { Language::Fr }
 }
 
 /// Dictionnaire par seuil de fréquence, chargé une fois (la liste est téléchargée par curl au
 /// tout premier usage, dans le cache de CrossWords).
-fn dictionary(lang: Language, min_score: u32) -> Result<Arc<Dictionary>> {
+pub(super) fn dictionary(lang: Language, min_score: u32) -> Result<Arc<Dictionary>> {
     /// Dictionnaires chargés, par langue et seuil.
     type Dicts = HashMap<(&'static str, u32), Arc<Dictionary>>;
     static DICTS: OnceLock<Mutex<Dicts>> = OnceLock::new();
@@ -186,7 +186,7 @@ fn definitions_path(lang: Language) -> Option<PathBuf> {
 }
 
 /// Toutes les définitions connues (tous niveaux) : le cache de CrossWords.
-fn known_definitions(lang: Language) -> Definitions {
+pub(super) fn known_definitions(lang: Language) -> Definitions {
     definitions_path(lang)
         .and_then(|p| File::open(p).ok())
         .and_then(|f| Definitions::from_reader(BufReader::new(f)).ok())
@@ -194,7 +194,7 @@ fn known_definitions(lang: Language) -> Definitions {
 }
 
 /// Ajoute des définitions rédigées au cache de CrossWords, au même format que sa commande.
-fn remember(lang: Language, defs: &[(String, String)], level: u8, model: &str) -> Result<()> {
+pub(super) fn remember(lang: Language, defs: &[(String, String)], level: u8, model: &str) -> Result<()> {
     let Some(path) = definitions_path(lang) else { return Ok(()) };
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;

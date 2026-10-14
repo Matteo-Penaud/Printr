@@ -9,6 +9,7 @@ mod bins;
 mod cipher;
 mod coloring;
 mod coupon;
+mod crossword;
 mod crypto;
 mod glitch;
 mod holidays;
@@ -416,6 +417,19 @@ pub enum Block {
         #[serde(default)]
         solution: bool,
     },
+    /// Mots croisés (CrossWords), définitions rédigées par Claude à l'impression.
+    #[serde(alias = "mots_croises", alias = "croises")]
+    Crossword {
+        #[serde(default)]
+        size: crossword::Size,
+        /// 1 (facile) à 4 (très difficile).
+        #[serde(default = "two")]
+        level: u8,
+        #[serde(default)]
+        seed: Option<u64>,
+        #[serde(default)]
+        solution: bool,
+    },
     /// Mandala à colorier.
     #[serde(alias = "coloriage")]
     Coloring {
@@ -540,6 +554,7 @@ impl Block {
             Block::MonthlyReport { .. } => i18n::t("bilan du mois", "monthly report"),
             Block::Coloring { .. } => i18n::t("coloriage", "coloring page"),
             Block::ArrowWord { .. } => i18n::t("mots fléchés", "arrow words"),
+            Block::Crossword { .. } => i18n::t("mots croisés", "crossword"),
             Block::Title { .. } => i18n::t("titre", "title"),
             Block::Text { .. } => i18n::t("texte", "text"),
             Block::Glitch { .. } => "glitch",
@@ -609,6 +624,13 @@ impl Block {
             Block::MonthlyReport { month, .. } => month.clone(),
             Block::Nonogram { number, .. } => number.map(|n| tr!("n° {n}", "No. {n}")),
             Block::ArrowWord { size, level, solution, .. } => Some(format!(
+                "{}, {} {}{}",
+                arrow_word::level_label(*level),
+                i18n::t("grille", "grid"),
+                size.label(),
+                if *solution { ", solution" } else { "" }
+            )),
+            Block::Crossword { size, level, solution, .. } => Some(format!(
                 "{}, {} {}{}",
                 arrow_word::level_label(*level),
                 i18n::t("grille", "grid"),
@@ -786,6 +808,10 @@ impl Block {
             Block::ArrowWord { size, level, seed, solution } => {
                 let options = arrow_word::Options { size: *size, level: *level, seed: *seed, solution: *solution };
                 doc = arrow_word::build(ctx, &options)?;
+            }
+            Block::Crossword { size, level, seed, solution } => {
+                let options = crossword::Options { size: *size, level: *level, seed: *seed, solution: *solution };
+                doc = crossword::build(ctx, &options)?;
             }
             Block::News { title, feeds, count, qr, themes, exclude, max_age_hours } => {
                 let options = news::Options {

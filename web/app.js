@@ -385,6 +385,22 @@ const BLOCKS = [
     },
   },
   {
+    type: 'crossword', label: T('Mots croisés', 'Crossword'), emoji: '🔤', group: G.fun, desc: T('Une grille de mots croisés, définitions par Claude', 'A crossword grid, clues written by Claude'), ai: true,
+    defaults: { level: 2, size: 'moyen' },
+    fields: [
+      { key: 'level', label: T('Niveau', 'Level'), kind: 'segmented', options: [[1, T('Facile', 'Easy')], [2, T('Moyen', 'Medium')], [3, T('Difficile', 'Hard')], [4, 'Expert']],
+        help: T('Niveaux 3 et 4 : définitions plus fines, rédigées par un modèle plus cher (une dizaine de centimes par grille neuve).', 'Levels 3 and 4: finer clues, written by a more expensive model (around 10 cents per new grid).') },
+      { key: 'size', label: T('Taille', 'Size'), kind: 'segmented', options: [['petit', T('Petite (7 × 7)', 'Small (7 × 7)')], ['moyen', T('Moyenne (9 × 9)', 'Medium (9 × 9)')], ['grand', T('Grande (11 × 11)', 'Large (11 × 11)')]] },
+      { key: 'seed', label: T('Numéro de grille', 'Grid number'), kind: 'number', optional: true, help: T('Laisse vide pour une nouvelle grille.', 'Leave empty for a new grid.') },
+      { key: 'solution', label: T('Imprimer la solution de cette grille', "Print this grid's solution"), kind: 'toggle', help: T('Même numéro, même taille et même niveau.', 'Same number, same size and same level.') },
+    ],
+    summary: (b) => {
+      const lv = ({ 1: T('Facile', 'Easy'), 2: T('Moyen', 'Medium'), 3: T('Difficile', 'Hard'), 4: 'Expert' })[b.level] || '';
+      const sz = ({ petit: T('petite', 'small'), moyen: T('moyenne', 'medium'), grand: T('grande', 'large') })[b.size] || '';
+      return T(`${lv} · ${sz} grille`, `${lv} · ${sz} grid`);
+    },
+  },
+  {
     type: 'nonogram', label: T('Logimage', 'Nonogram'), emoji: '🖍️', group: G.fun, desc: T('Noircir des cases pour révéler un dessin', 'Shade squares to reveal a picture'),
     defaults: {},
     fields: [
@@ -1175,7 +1191,7 @@ const EXAMPLE = {
   picto: 'pictogramme', weather: 'meteo', barnum: 'horoscope', horoscope: 'horoscope_claude', word_of_the_day: 'mot_du_jour',
   saint: 'saint', quote: 'citation', moon: 'lune', sun: 'soleil', air_quality: 'air', holidays: 'jours_feries',
   countdown: 'compte_a_rebours', riddle: 'enigme', workout: 'defi_sportif', sudoku: 'sudoku', maze: 'labyrinthe',
-  word_search: 'mots_meles', train_tracks: 'voie_ferree', arrow_word: 'mots_fleches', nonogram: 'logimage',
+  word_search: 'mots_meles', train_tracks: 'voie_ferree', arrow_word: 'mots_fleches', crossword: 'mots_croises', nonogram: 'logimage',
   petit_bac: 'petit_bac', mental_math: 'calcul_mental', anagram: 'mot_mystere', cipher: 'message_code',
   coloring: 'coloriage', coupon: 'bon', news: 'actualites', on_this_day: 'ephemeride', crypto: 'crypto', todo: 'a_faire',
   shopping: 'courses', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
@@ -1194,7 +1210,8 @@ const KEYWORDS = {
   countdown: 'compte rebours countdown jours days vacances', riddle: 'enigme riddle devinette charade logique',
   workout: 'sport defi workout exercice exercise', sudoku: 'sudoku grille chiffres numbers puzzle', maze: 'labyrinthe maze',
   word_search: 'mots meles word search grille puzzle', train_tracks: 'voie ferree train tracks rails puzzle',
-  arrow_word: 'mots fleches arrow words crossword grille', nonogram: 'logimage nonogram picross pixel',
+  arrow_word: 'mots fleches arrow words grille',
+  crossword: 'mots croises crossword grille grid definitions clues', nonogram: 'logimage nonogram picross pixel',
   petit_bac: 'petit bac categories jeu game', mental_math: 'calcul mental math maths additions multiplications tables enfants kids',
   anagram: 'mot mystere anagramme anagram lettres letters', cipher: 'message code secret cesar caesar morse',
   coloring: 'coloriage coloring mandala dessin', coupon: 'bon cadeau coupon gift offrir',
