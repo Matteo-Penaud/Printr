@@ -9,11 +9,14 @@ Pierre-Simon Fournier, Johannes Gutenberg…
 
 ## [Unreleased]
 
+## [1.6.1] “Gutenberg” - 2026-10-14
+
 ### Security
 - rustls updated to 0.23.46, fixing four TLS client advisories (RUSTSEC-2026-0346 to 0349) affecting
   Printr's HTTPS requests (weather, news, Claude API, update check).
 
 ### Added
+- Version codenames, shown by `printr --version` and in release titles.
 - Apache License 2.0 (`LICENSE`), and a NOTICE crediting Printr's author.
 - Continuous integration on every pull request: formatting, clippy, tests, web app syntax, shellcheck,
   dependency audit (cargo-deny) and workflow audit (zizmor); Dependabot for weekly dependency updates;
@@ -109,7 +112,8 @@ First release.
 - One-command installation on a Raspberry Pi, no sudo needed afterwards.
 - Windows development with a dev container and a printing relay.
 
-[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/XNinety9/Printr/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/XNinety9/Printr/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/XNinety9/Printr/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/XNinety9/Printr/compare/v1.3.0...v1.4.0
