@@ -1169,20 +1169,109 @@ function Home({ me, presets, reload, openComposer }) {
 // Écran : composer
 // ============================================================================
 
+// Ticket d'exemple de chaque bloc (celui du site, intégré au binaire) : vignettes du catalogue.
+const EXAMPLE = {
+  title: 'titre', text: 'texte', date: 'date', separator: 'separateur', feed: 'espace', image: 'image', qr: 'qr',
+  picto: 'pictogramme', weather: 'meteo', barnum: 'horoscope', horoscope: 'horoscope_claude', word_of_the_day: 'mot_du_jour',
+  saint: 'saint', quote: 'citation', moon: 'lune', sun: 'soleil', air_quality: 'air', holidays: 'jours_feries',
+  countdown: 'compte_a_rebours', riddle: 'enigme', workout: 'defi_sportif', sudoku: 'sudoku', maze: 'labyrinthe',
+  word_search: 'mots_meles', train_tracks: 'voie_ferree', arrow_word: 'mots_fleches', nonogram: 'logimage',
+  petit_bac: 'petit_bac', mental_math: 'calcul_mental', anagram: 'mot_mystere', cipher: 'message_code',
+  coloring: 'coloriage', coupon: 'bon', news: 'actualites', on_this_day: 'ephemeride', crypto: 'crypto', todo: 'a_faire',
+  shopping: 'courses', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
+};
+const exampleUrl = (type) => EXAMPLE[type] && `/exemples/${EN ? 'en/' : ''}${EXAMPLE[type]}.png`;
+
+// Mots-clés de recherche, dans les deux langues, en plus du nom et de la description.
+const KEYWORDS = {
+  title: 'titre title gros big', text: 'texte text paragraphe paragraph message', date: 'date jour day calendrier',
+  separator: 'separateur separator ligne line trait', feed: 'espace space blanc vide blank', image: 'image photo picture',
+  qr: 'qr code lien link url', picto: 'pictogramme pictogram coeur heart etoile star dessin drawing',
+  weather: 'meteo weather pluie rain temps soleil sun temperature', barnum: 'horoscope astrologie astrology signe sign zodiaque ciel sky',
+  horoscope: 'horoscope astrologie astrology signe sign zodiaque claude ia ai', word_of_the_day: 'mot word definition vocabulaire vocabulary claude',
+  saint: 'saint fete name day prenom', quote: 'citation quote phrase', moon: 'lune moon phase', sun: 'soleil sun lever coucher sunrise sunset',
+  air_quality: 'air pollution pollen qualite quality', holidays: 'feries holidays conge vacances',
+  countdown: 'compte rebours countdown jours days vacances', riddle: 'enigme riddle devinette charade logique',
+  workout: 'sport defi workout exercice exercise', sudoku: 'sudoku grille chiffres numbers puzzle', maze: 'labyrinthe maze',
+  word_search: 'mots meles word search grille puzzle', train_tracks: 'voie ferree train tracks rails puzzle',
+  arrow_word: 'mots fleches arrow words crossword grille', nonogram: 'logimage nonogram picross pixel',
+  petit_bac: 'petit bac categories jeu game', mental_math: 'calcul mental math maths additions multiplications tables enfants kids',
+  anagram: 'mot mystere anagramme anagram lettres letters', cipher: 'message code secret cesar caesar morse',
+  coloring: 'coloriage coloring mandala dessin', coupon: 'bon cadeau coupon gift offrir',
+  news: 'actualites news rss presse journal', on_this_day: 'ephemeride histoire history wikipedia', crypto: 'crypto bitcoin ethereum',
+  todo: 'faire todo liste list taches tasks', shopping: 'courses shopping liste list', agenda: 'agenda calendar calendrier evenements ics',
+  bins: 'poubelles bins trash dechets recyclage', wifi: 'wifi invites guests reseau network', monthly_report: 'bilan mois monthly report statistiques stats',
+};
+
+// Sans accents ni majuscules : « meteo » trouve « Météo ».
+const fold = (text) => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+const FAVORITES = 'printr.favorites';
+const RECENT = 'printr.recent';
+
+// Exemple d'un bloc, en grand, avant de l'ajouter.
+function ExampleSheet({ block, onPick, onClose }) {
+  return html`<${Sheet} title=${`${block.emoji} ${block.label}`} onClose=${onClose} footer=${html`
+    <button class="btn primary grow" onClick=${() => onPick(block.type)}><${Icon} name="plus" /> ${T('Ajouter ce bloc', 'Add this block')}</button>`}>
+    <p class="muted" style="margin:0 0 12px">${block.desc}</p>
+    <div class="example-ticket"><img src=${exampleUrl(block.type)} alt=${block.label} /></div>
+  </${Sheet}>`;
+}
+
+function CatalogItem({ block, favorite, onPick, onFavorite, onExample }) {
+  const url = exampleUrl(block.type);
+  return html`<div class="cat-item">
+    <button type="button" class="cat-main" onClick=${() => onPick(block.type)}>
+      ${url && html`<span class="cat-thumb"><img src=${url} alt="" loading="lazy" /></span>`}
+      <span class="emoji">${block.emoji}</span>
+      <strong>${block.label}${block.ai && html` <span class="badge">Claude</span>`}</strong><span>${block.desc}</span>
+    </button>
+    <div class="cat-tools ${url ? 'below-thumb' : ''}">
+      ${url && html`<button type="button" class="iconbtn" aria-label=${T(`Voir un exemple : ${block.label}`, `See an example: ${block.label}`)}
+        title=${T('Voir un exemple', 'See an example')} onClick=${() => onExample(block)}><${Icon} name="eye" size=${18} /></button>`}
+      <button type="button" class="iconbtn star ${favorite ? 'on' : ''}" aria-pressed=${favorite}
+        aria-label=${favorite ? T(`Retirer ${block.label} des favoris`, `Remove ${block.label} from favorites`) : T(`Ajouter ${block.label} aux favoris`, `Add ${block.label} to favorites`)}
+        title=${favorite ? T('Retirer des favoris', 'Remove from favorites') : T('Ajouter aux favoris', 'Add to favorites')}
+        onClick=${() => onFavorite(block.type)}>${favorite ? '★' : '☆'}</button>
+    </div>
+  </div>`;
+}
+
 function Catalog({ onPick, onClose }) {
   const [query, setQuery] = useState('');
-  const q = query.trim().toLowerCase();
-  const matches = BLOCKS.filter((b) => !q || `${b.label} ${b.desc}`.toLowerCase().includes(q));
+  const [favorites, setFavorites] = useState(() => store.get(FAVORITES, []));
+  const [example, setExample] = useState(null);
+  const recent = useMemo(() => store.get(RECENT, []), []);
+  const q = fold(query.trim());
+  const matches = BLOCKS.filter((b) => !q || q.split(/\s+/).every((word) =>
+    fold(`${b.label} ${b.desc} ${b.type} ${KEYWORDS[b.type] || ''}`).includes(word)));
   const groups = [...new Set(matches.map((b) => b.group))];
+
+  // Le bloc ajouté passe en tête des récents (sur cet appareil).
+  const pick = (type) => {
+    store.set(RECENT, [type, ...recent.filter((t) => t !== type)].slice(0, 8));
+    onPick(type);
+  };
+  const toggleFavorite = (type) => {
+    const next = favorites.includes(type) ? favorites.filter((t) => t !== type) : [...favorites, type];
+    setFavorites(next);
+    store.set(FAVORITES, next);
+  };
+  const item = (b) => html`<${CatalogItem} key=${b.type} block=${b} favorite=${favorites.includes(b.type)}
+    onPick=${pick} onFavorite=${toggleFavorite} onExample=${setExample} />`;
+  const section = (title, blocks) => blocks.length > 0 && html`<div class="catalog-group"><h4>${title}</h4><div class="catalog">${blocks.map(item)}</div></div>`;
+  const known = (types) => types.map((t) => BLOCK[t]).filter(Boolean);
+  const favoriteBlocks = known(favorites);
+  const recentBlocks = known(recent).filter((b) => !favorites.includes(b.type)).slice(0, 4);
+
   return html`<${Sheet} title=${T('Ajouter un bloc', 'Add a block')} onClose=${onClose} wide>
     <div class="catalog-search"><input class="input" placeholder=${T('Rechercher : météo, photo, sudoku…', 'Search: weather, photo, sudoku…')} value=${query}
       onInput=${(e) => setQuery(e.target.value)} autofocus /></div>
-    ${groups.map((g) => html`<div class="catalog-group" key=${g}><h4>${g}</h4><div class="catalog">
-      ${matches.filter((b) => b.group === g).map((b) => html`<button type="button" key=${b.type} onClick=${() => onPick(b.type)}>
-        <span class="row" style="width:100%"><span class="emoji">${b.emoji}</span><span class="grow"></span>${b.ai && html`<span class="badge">Claude</span>`}</span>
-        <strong>${b.label}</strong><span>${b.desc}</span></button>`)}
-    </div></div>`)}
+    ${!q && section(T('Mes favoris', 'My favorites'), favoriteBlocks)}
+    ${!q && section(T('Récemment ajoutés', 'Recently added'), recentBlocks)}
+    ${groups.map((g) => html`<div key=${g}>${section(g, matches.filter((b) => b.group === g))}</div>`)}
     ${matches.length === 0 && html`<p class="muted" style="text-align:center;padding:24px">${T('Aucun bloc ne correspond.', 'No block matches.')}</p>`}
+    ${example && html`<${ExampleSheet} block=${example} onPick=${(t) => { setExample(null); pick(t); }} onClose=${() => setExample(null)} />`}
   </${Sheet}>`;
 }
 

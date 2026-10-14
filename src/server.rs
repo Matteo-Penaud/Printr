@@ -259,7 +259,27 @@ fn caller(app: &App, request: &Request) -> Option<Caller> {
 
 // ---- Fichiers de l'interface ----
 
+mod examples {
+    include!(concat!(env!("OUT_DIR"), "/examples.rs"));
+}
+
+/// Ticket d'exemple d'un bloc, pour les vignettes du catalogue : `/exemples/meteo.png`, ou
+/// `/exemples/en/meteo.png` (en anglais, avec repli sur le français).
+fn example(path: &str) -> Option<Vec<u8>> {
+    let rest = path.strip_prefix("/exemples/")?;
+    let (list, file) = match rest.strip_prefix("en/") {
+        Some(file) => (examples::EXAMPLES_EN, file),
+        None => (examples::EXAMPLES, rest),
+    };
+    let id = file.strip_suffix(".png")?;
+    let find = |list: &[(&str, &[u8])]| list.iter().find(|(name, _)| *name == id).map(|(_, bytes)| bytes.to_vec());
+    find(list).or_else(|| find(examples::EXAMPLES))
+}
+
 fn asset(app: &App, path: &str) -> Option<(Vec<u8>, &'static str)> {
+    if let Some(png) = example(path) {
+        return Some((png, "image/png"));
+    }
     let (name, content_type) = match path {
         "/" | "/index.html" => ("index.html", "text/html; charset=utf-8"),
         "/app.js" => ("app.js", "text/javascript; charset=utf-8"),
