@@ -292,8 +292,17 @@ pub enum Block {
     /// Fiche de calcul mental, résultats à l'envers.
     #[serde(alias = "calcul_mental")]
     MentalMath {
+        /// Niveau : `beginner` (débutant), `easy`, `medium`, `hard`.
         #[serde(default)]
-        difficulty: sudoku::Difficulty,
+        difficulty: mental_math::Level,
+        /// Opérations à proposer (`addition`, `subtraction`, `multiplication`, `division`, ou
+        /// `+ - × ÷`) ; toutes par défaut.
+        #[serde(default)]
+        operations: Vec<mental_math::Operation>,
+        /// Tables à réviser pour les multiplications et divisions (de 1 à 12) ; celles du niveau
+        /// par défaut.
+        #[serde(default)]
+        tables: Vec<u8>,
         #[serde(default = "ten")]
         count: u8,
         #[serde(default)]
@@ -581,7 +590,18 @@ impl Block {
                 };
                 Some(format!("{subject}{}{}", difficulty.label(), if *solution { ", solution" } else { "" }))
             }
-            Block::MentalMath { difficulty, .. } => Some(difficulty.label().to_owned()),
+            Block::MentalMath { difficulty, operations, tables, .. } => {
+                let mut detail = difficulty.label().to_owned();
+                if !operations.is_empty() {
+                    let ops: Vec<&str> = operations.iter().map(|o| o.symbol()).collect();
+                    detail = format!("{detail}, {}", ops.join(" "));
+                }
+                if !tables.is_empty() {
+                    let list: Vec<String> = tables.iter().map(u8::to_string).collect();
+                    detail = format!("{detail}, {} {}", i18n::t("tables de", "tables of"), list.join(", "));
+                }
+                Some(detail)
+            }
             Block::Cipher { cipher, .. } => Some(cipher.label().to_owned()),
             Block::Coupon { text, .. } => text.clone(),
             Block::Wifi { ssid, .. } => Some(ssid.clone()),
@@ -736,7 +756,10 @@ impl Block {
             Block::PetitBac { letter, categories, count, players, seed } => {
                 doc = petit_bac::build(*letter, categories, *count, *players, *seed);
             }
-            Block::MentalMath { difficulty, count, seed } => doc = mental_math::build(*difficulty, *count, *seed),
+            Block::MentalMath { difficulty, operations, tables, count, seed } => {
+                let choice = mental_math::Choice { operations: operations.clone(), tables: tables.clone() };
+                doc = mental_math::build(*difficulty, &choice, *count, *seed)
+            }
             Block::Anagram { theme, count, seed } => doc = anagram::build(*theme, *count, *seed),
             Block::Nonogram { number, solution } => doc = nonogram::build(*number, *solution)?,
             Block::Cipher { message, cipher: kind, shift, answer, seed } => {

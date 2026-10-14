@@ -154,6 +154,11 @@ const SIGNS = [
   ['sagittaire', T('Sagittaire ♐', 'Sagittarius ♐')], ['capricorne', T('Capricorne ♑', 'Capricorn ♑')], ['verseau', T('Verseau ♒', 'Aquarius ♒')], ['poissons', T('Poissons ♓', 'Pisces ♓')],
 ];
 const TONES = [['serieux', T('Sérieux', 'Serious')], ['farfelu', T('Farfelu', 'Silly')], ['vachard', T('Vachard', 'Snarky')], ['insultant', T('Insultant', 'Insulting')]];
+// Calcul mental : un niveau de plus, pour le début de l'élémentaire (issue n° 4).
+const MATH_LEVELS = [['debutant', T('Débutant', 'Beginner')], ['facile', T('Facile', 'Easy')], ['moyen', T('Moyen', 'Medium')], ['difficile', T('Difficile', 'Hard')]];
+const MATH_OPERATIONS = [['addition', '+', T('Additions', 'Additions')], ['subtraction', '−', T('Soustractions', 'Subtractions')],
+  ['multiplication', '×', T('Multiplications', 'Multiplications')], ['division', '÷', T('Divisions', 'Divisions')]];
+const MATH_TABLES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => [n, String(n), T(`Table de ${n}`, `${n} times table`)]);
 const LEVELS = [['facile', T('Facile', 'Easy')], ['moyen', T('Moyen', 'Medium')], ['difficile', T('Difficile', 'Hard')]];
 const WORD_THEMES = [
   ['', T('Au hasard', 'Random')], ['animaux', T('Animaux', 'Animals')], ['fruits_legumes', T('Fruits et légumes', 'Fruit and vegetables')],
@@ -403,12 +408,20 @@ const BLOCKS = [
   },
   {
     type: 'mental_math', label: T('Calcul mental', 'Mental math'), emoji: '➗', group: G.fun, desc: T('Une fiche d’opérations, résultats à l’envers', 'A sheet of sums, answers upside down'),
-    defaults: { difficulty: 'facile', count: 10 },
+    defaults: { difficulty: 'facile', count: 10, operations: [], tables: [] },
     fields: [
-      { key: 'difficulty', label: T('Niveau', 'Level'), kind: 'segmented', options: LEVELS },
-      { key: 'count', label: T('Opérations', 'Operations'), kind: 'number', min: 4, max: 30 },
+      { key: 'difficulty', label: T('Niveau', 'Level'), kind: 'segmented', options: MATH_LEVELS },
+      { key: 'operations', label: T('Opérations', 'Operations'), kind: 'multi', options: MATH_OPERATIONS,
+        help: T('Rien de coché : toutes celles du niveau.', 'Nothing checked: all of them for the level.') },
+      { key: 'tables', label: T('Tables à réviser', 'Times tables to practice'), kind: 'multi', options: MATH_TABLES,
+        when: (b) => !b.operations?.length || b.operations.some((o) => o === 'multiplication' || o === 'division'),
+        help: T('Pour les multiplications et les divisions. Rien de coché : celles du niveau.', 'For multiplications and divisions. Nothing checked: those of the level.') },
+      { key: 'count', label: T('Nombre d’opérations', 'Number of operations'), kind: 'number', min: 4, max: 30 },
     ],
-    summary: (b) => T(`${label(LEVELS, b.difficulty)} · ${b.count} opérations`, `${label(LEVELS, b.difficulty)} · ${b.count} operations`),
+    summary: (b) => {
+      const ops = b.operations?.length ? ` · ${b.operations.map((o) => label(MATH_OPERATIONS, o)).join(' ')}` : '';
+      return T(`${label(MATH_LEVELS, b.difficulty)}${ops} · ${b.count} opérations`, `${label(MATH_LEVELS, b.difficulty)}${ops} · ${b.count} operations`);
+    },
   },
   {
     type: 'anagram', label: T('Mot mystère', 'Mystery word'), emoji: '🔀', group: G.fun, desc: T('Des lettres mélangées à remettre dans l’ordre', 'Scrambled letters to put back in order'),
@@ -629,6 +642,16 @@ function Segmented({ options, value, onChange }) {
   return html`<div class="segmented" role="radiogroup">
     ${options.map(([v, text]) => html`<button type="button" role="radio" aria-checked=${v === value}
       class=${v === value ? 'on' : ''} onClick=${() => onChange(v)}>${text}</button>`)}
+  </div>`;
+}
+
+// Choix multiple en pastilles : la valeur est la liste des options cochées (vide : aucune).
+function Multi({ options, value, onChange }) {
+  const on = new Set(value || []);
+  const toggle = (v) => onChange(options.map(([o]) => o).filter((o) => (o === v ? !on.has(o) : on.has(o))));
+  return html`<div class="multi">
+    ${options.map(([v, text, aria]) => html`<button type="button" aria-pressed=${on.has(v)} aria-label=${aria || text}
+      class=${on.has(v) ? 'on' : ''} onClick=${() => toggle(v)}>${text}</button>`)}
   </div>`;
 }
 
@@ -863,6 +886,8 @@ function FieldInput({ field, value, onChange }) {
       </select>`;
     case 'segmented':
       return html`<${Segmented} options=${field.options} value=${value} onChange=${onChange} />`;
+    case 'multi':
+      return html`<${Multi} options=${field.options} value=${value} onChange=${onChange} />`;
     case 'icons':
       return html`<div class="pictos">${field.options.map(([v, emoji]) => html`<button type="button" class=${v === value ? 'on' : ''}
         aria-label=${v} onClick=${() => onChange(v)}>${emoji}</button>`)}</div>`;
@@ -889,7 +914,9 @@ function BlockFields({ data, onChange }) {
     return html`<p class="muted first" style="margin-bottom:0">${T(`Rien à régler : ${hint}.`, `Nothing to set up: ${hint}.`)}</p>`;
   }
   const set = (key) => (v) => onChange({ ...data, [key]: v });
-  return html`<div class="first">${def.fields.map((f) => f.kind === 'toggle'
+  // `when` : champ affiché seulement s'il a un sens pour les réglages en cours.
+  const fields = def.fields.filter((f) => !f.when || f.when(data));
+  return html`<div class="first">${fields.map((f) => f.kind === 'toggle'
     ? html`<${Switch} key=${f.key} label=${f.label} help=${f.help} checked=${data[f.key]} onChange=${set(f.key)} />`
     : html`<${Field} key=${f.key} label=${f.label} help=${f.help}><${FieldInput} field=${f} value=${data[f.key]} onChange=${set(f.key)} /></${Field}>`)}
   </div>`;

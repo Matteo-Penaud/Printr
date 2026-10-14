@@ -263,6 +263,15 @@ select.input { appearance: none; padding-right: 38px;
 }
 .segmented button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
 
+/* Choix multiple en pastilles (opérations du calcul mental, tables…). */
+.multi { display: flex; flex-wrap: wrap; gap: 6px; }
+.multi button {
+  min-width: 44px; min-height: 40px; padding: 0 12px; border: 1.5px solid var(--line-strong); border-radius: 12px;
+  background: var(--surface); color: var(--ink-2); font-weight: 800; font-size: 16px; cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.multi button.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
 .listedit .item { display: flex; gap: 6px; margin-bottom: 6px; }
 .listedit .item .input { min-height: 40px; padding: 8px 12px; }
 
