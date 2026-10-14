@@ -1,0 +1,6 @@
+# Commits de pur formatage, ignorés par git blame :
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub les ignore tout seul.)
+
+# Formatage du code avec rustfmt
+f145b8d19fab9e42f7aad6369286070a0cdae127
