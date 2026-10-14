@@ -1640,8 +1640,21 @@ function Shopping({ users }) {
 // Écran : historique
 // ============================================================================
 
-function History({ users }) {
+// Ticket de l'historique tel qu'il est sorti (gardé 30 jours), pour l'administrateur.
+function HistoryPreview({ entry, onClose }) {
+  const [preview, setPreview] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => { api('GET', `/api/history/${entry.preview}/preview`).then(setPreview).catch((e) => setError(e.message)); }, [entry.preview]);
+  const when = new Date(entry.at).toLocaleString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  return html`<${Sheet} title=${entry.label} onClose=${onClose}>
+    <p class="muted" style="margin:0 0 12px">${capitalize(when)} · ${entry.by === 'planification' ? T('impression planifiée', 'scheduled print') : T(`par ${entry.by}`, `by ${entry.by}`)}</p>
+    ${error ? html`<p class="muted">${error}</p>` : html`<${Paper} preview=${preview} loading=${!preview} />`}
+  </${Sheet}>`;
+}
+
+function History({ users, me }) {
   const [entries, setEntries] = useState(null);
+  const [shown, setShown] = useState(null);
   useEffect(() => { api('GET', '/api/history').then(setEntries).catch((e) => { toast(e.message, 'error'); setEntries([]); }); }, []);
   const byName = Object.fromEntries((users || []).map((u) => [u.name, u]));
   const dayLabel = (d) => {
@@ -1670,8 +1683,12 @@ function History({ users }) {
         <span class="chip ${e.ok ? (e.errors?.length ? 'warn' : 'ok') : 'danger'}">${e.ok
           ? (e.errors?.length ? T('Partiel', 'Partial') : T('Imprimé', 'Printed'))
           : T('Échec', 'Failed')}</span>
+        ${me?.admin && e.preview && html`<button class="iconbtn" aria-label=${T('Voir le ticket', 'See the ticket')} title=${T('Voir le ticket', 'See the ticket')}
+          onClick=${() => setShown(e)}><${Icon} name="eye" /></button>`}
       </div>`)}
     </div></div>`)}
+    <p class="muted history-note">${T("L'administrateur peut revoir les tickets imprimés pendant 30 jours.", 'The administrator can look back at printed tickets for 30 days.')}</p>
+    ${shown && html`<${HistoryPreview} entry=${shown} onClose=${() => setShown(null)} />`}
   </div>`;
 }
 
@@ -1805,7 +1822,7 @@ function App() {
   let page;
   if (route.hash === '#/compose') page = html`<${Composer} initial=${composer} onSaved=${loadPresets} />`;
   else if (route.hash === '#/message') page = html`<${Message} me=${me} onSaved=${loadPresets} />`;
-  else if (route.hash === '#/history') page = html`<${History} users=${users} />`;
+  else if (route.hash === '#/history') page = html`<${History} users=${users} me=${me} />`;
   else if (route.hash === '#/courses') page = html`<${Shopping} users=${users} />`;
   else page = html`<${Home} me=${me} presets=${presets} reload=${loadPresets} openComposer=${openComposer} />`;
 

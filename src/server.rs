@@ -98,8 +98,11 @@ impl App {
             let printer = self.printer.lock().unwrap_or_else(|e| e.into_inner());
             printer.send(&doc, ticket.cut).err().map(|e| format!("{e:#}"))
         };
+        // Le ticket tel qu'imprimé (ou tel qu'il aurait dû l'être), pour l'aperçu de l'admin.
+        let preview = crate::store::save_preview(&doc.to_json());
         let mut store = self.lock_store();
         store.record(HistoryEntry {
+            preview,
             at: Utc::now(),
             by: by.to_owned(),
             label: label.to_owned(),
@@ -847,6 +850,19 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             match store.save() {
                 Ok(()) => Reply::ok(shopping_json(&store)).note(note),
                 Err(e) => Reply::error(500, format!("{e:#}")),
+            }
+        }
+        // Aperçu d'un ticket de l'historique : l'administrateur seulement (pas le jeton des scripts).
+        (Method::Get, ["api", "history", id, "preview"]) => {
+            if !user_id.as_deref().is_some_and(|me| app.lock_store().is_admin(me)) {
+                return Reply::error(403, t("réservé à l'administrateur", "reserved for the administrator"));
+            }
+            match crate::store::load_preview(id) {
+                Some(preview) => Reply::ok(preview),
+                None => Reply::error(
+                    404,
+                    t("aperçu indisponible (plus de 30 jours ?)", "preview unavailable (older than 30 days?)"),
+                ),
             }
         }
         (Method::Get, ["api", "history"]) => {

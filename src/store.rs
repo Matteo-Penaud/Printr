@@ -45,6 +45,50 @@ pub fn uploads_dir() -> Option<PathBuf> {
     data_dir().map(|d| d.join("images"))
 }
 
+/// Tickets imprimés gardés pour l'aperçu de l'historique (réservé à l'administrateur).
+fn previews_dir() -> Option<PathBuf> {
+    data_dir().map(|d| d.join("previews"))
+}
+
+/// Durée de conservation des aperçus : un petit mot avec photo pèse une centaine de Ko.
+const PREVIEW_DAYS: u64 = 30;
+
+/// Garde le ticket tel qu'imprimé (au format de l'aperçu de l'appli) et renvoie son identifiant.
+/// Les aperçus de plus de `PREVIEW_DAYS` jours sont supprimés au passage.
+pub fn save_preview(preview: &serde_json::Value) -> Option<String> {
+    let dir = previews_dir()?;
+    fs::create_dir_all(&dir).ok()?;
+    prune_previews(&dir);
+    let id = new_id(12);
+    fs::write(dir.join(format!("{id}.json")), serde_json::to_vec(preview).ok()?).ok()?;
+    Some(id)
+}
+
+/// L'aperçu `id`, s'il existe encore.
+pub fn load_preview(id: &str) -> Option<serde_json::Value> {
+    if id.is_empty() || !id.chars().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+    let bytes = fs::read(previews_dir()?.join(format!("{id}.json"))).ok()?;
+    serde_json::from_slice(&bytes).ok()
+}
+
+fn prune_previews(dir: &Path) {
+    let limit = std::time::Duration::from_secs(PREVIEW_DAYS * 24 * 3600);
+    let Ok(entries) = fs::read_dir(dir) else { return };
+    for entry in entries.flatten() {
+        let old = entry
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.elapsed().ok())
+            .is_some_and(|age| age > limit);
+        if old {
+            let _ = fs::remove_file(entry.path());
+        }
+    }
+}
+
 /// Identifiant aléatoire (hexadécimal).
 pub fn new_id(bytes: usize) -> String {
     let mut rng = rand::rng();
@@ -105,6 +149,9 @@ pub struct Preset {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct HistoryEntry {
+    /// Identifiant de l'aperçu gardé (voir `save_preview`), pour l'administrateur.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preview: Option<String>,
     pub at: DateTime<Utc>,
     /// Nom de l'utilisateur, ou « planification ».
     pub by: String,

@@ -9,6 +9,13 @@ Pierre-Simon Fournier, Johannes Gutenberg…
 
 ## [Unreleased]
 
+### Added
+- Mental math ([#4](https://github.com/XNinety9/Printr/issues/4)): a **beginner** level (sums up to 10,
+  subtractions without negative results), a choice of **operations** (+ − × ÷) and of **times tables** to
+  practice. Without options, sheets are exactly the same as before.
+- History: the administrator can **see each printed ticket** as it came out, for 30 days. Other accounts and
+  the scripts token cannot.
+
 ## [1.6.1] “Gutenberg” - 2026-10-14
 
 ### Security

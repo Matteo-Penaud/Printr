@@ -683,3 +683,6 @@ select.input { appearance: none; padding-right: 38px;
 .update-card .muted { font-size: 13px; }
 .update-card svg { color: var(--accent); flex-shrink: 0; }
 .version a { color: var(--accent); font-weight: 700; text-decoration: none; }
+
+/* Historique : rappel discret que l'administrateur peut revoir les tickets. */
+.history-note { margin: 18px 4px 0; font-size: 12.5px; text-align: center; }

@@ -211,6 +211,7 @@ mod tests {
     fn entry(by: &str, day: u32, hour: u32, blocks: &[&str], paper: Option<u32>) -> HistoryEntry {
         let at = Local.with_ymd_and_hms(2026, 10, day, hour, 0, 0).unwrap().with_timezone(&chrono::Utc);
         HistoryEntry {
+            preview: None,
             at,
             by: by.into(),
             label: "Ticket".into(),
