@@ -11,7 +11,9 @@ fn main() {
         let dir = root.join(dir);
         println!("cargo:rerun-if-changed={}", dir.display());
         let mut files: Vec<_> = std::fs::read_dir(&dir)
-            .map(|entries| entries.flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|e| e == "png")).collect())
+            .map(|entries| {
+                entries.flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|e| e == "png")).collect()
+            })
             .unwrap_or_default();
         files.sort();
         writeln!(out, "pub static {name}: &[(&str, &[u8])] = &[").unwrap();
