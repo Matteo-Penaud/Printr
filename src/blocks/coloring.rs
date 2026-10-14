@@ -78,7 +78,10 @@ fn design(rng: &mut StdRng) -> (usize, Vec<Layer>) {
                 if rng.random_bool(0.6) {
                     // Pétale intérieur, comme une nervure.
                     let inset = band * 0.25;
-                    layers.push(Layer { motif: Motif::Petal { r0: r + inset, r1: r + band - inset, w: w * 0.45 }, shifted });
+                    layers.push(Layer {
+                        motif: Motif::Petal { r0: r + inset, r1: r + band - inset, w: w * 0.45 },
+                        shifted,
+                    });
                 }
             }
             1 => {

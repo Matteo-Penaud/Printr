@@ -28,6 +28,7 @@ pub fn fill_rect_with(img: &mut GrayImage, x: i64, y: i64, w: i64, h: i64, ink: 
 }
 
 /// Chiffres 1 à 9 en 5×7.
+#[rustfmt::skip]
 const DIGITS: [[&str; 7]; 9] = [
     ["..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."],
     [".###.", "#...#", "....#", "...#.", "..#..", ".#...", "#####"],
@@ -41,6 +42,7 @@ const DIGITS: [[&str; 7]; 9] = [
 ];
 
 /// Le zéro, à part : les grilles de sudoku n'en ont pas besoin.
+#[rustfmt::skip]
 const ZERO: [&str; 7] = [".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."];
 
 pub const DIGIT_W: i64 = 5;
@@ -92,6 +94,7 @@ fn glyph(img: &mut GrayImage, rows: &[&str; 7], x: i64, y: i64, scale: i64, ink:
 }
 
 /// Lettres A à Z en 5×7, même dessin que les chiffres.
+#[rustfmt::skip]
 const LETTERS: [[&str; 7]; 26] = [
     [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
     ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."],
@@ -138,11 +141,8 @@ pub fn letter(img: &mut GrayImage, c: u8, x: i64, y: i64, scale: i64, ink: Luma<
 pub fn qr_row(data: &[&str]) -> anyhow::Result<GrayImage> {
     anyhow::ensure!((1..=2).contains(&data.len()), "une rangée contient un ou deux QR codes");
     let qr_error = |e| anyhow::anyhow!("QR code impossible : {e}");
-    let codes = data
-        .iter()
-        .map(|d| qrcode::QrCode::new(d.as_bytes()))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(qr_error)?;
+    let codes =
+        data.iter().map(|d| qrcode::QrCode::new(d.as_bytes())).collect::<Result<Vec<_>, _>>().map_err(qr_error)?;
     // Même version (donc même taille) pour tous les codes de la rangée.
     let version = codes.iter().map(|c| c.version()).max_by_key(|v| v.width()).expect("au moins un code");
     let codes = data
@@ -180,7 +180,8 @@ mod tests {
 
     #[test]
     fn qr_row_fits_paper_width() {
-        let img = qr_row(&["https://example.com/a", "https://example.com/un/lien/bien/plus/long?avec=parametres"]).unwrap();
+        let img =
+            qr_row(&["https://example.com/a", "https://example.com/un/lien/bien/plus/long?avec=parametres"]).unwrap();
         assert_eq!(img.width(), PRINT_WIDTH);
         assert!(img.height() <= 240);
         assert!(qr_row(&[]).is_err());

@@ -26,9 +26,9 @@ mod store;
 mod ui;
 mod update;
 
+use crate::i18n::t;
 use doc::{Doc, Style};
 use output::Target;
-use crate::i18n::t;
 
 const STYLES: Styles = Styles::styled()
     .header(AnsiColor::Yellow.on_default().bold())
@@ -105,8 +105,14 @@ enum Command {
     /// Lance l'interface web et l'API (avec le planificateur)
     Serve {
         /// Adresse d'écoute (défaut 0.0.0.0:8080, ou $PRINTR_LISTEN)
-        #[arg(long, value_name = "ADRESSE", default_value = "0.0.0.0:8080", env = "PRINTR_LISTEN",
-              hide_default_value = true, hide_env = true)]
+        #[arg(
+            long,
+            value_name = "ADRESSE",
+            default_value = "0.0.0.0:8080",
+            env = "PRINTR_LISTEN",
+            hide_default_value = true,
+            hide_env = true
+        )]
         listen: String,
         /// Jeton pour les scripts : « Authorization: Bearer <jeton> » (ou $PRINTR_TOKEN)
         #[arg(long, value_name = "JETON", env = "PRINTR_TOKEN", hide_env = true)]
@@ -207,7 +213,10 @@ fn user_command(action: &UserAction) -> Result<()> {
 /// Analyse la ligne de commande, avec une aide en français.
 fn parse_cli() -> Cli {
     let heading = STYLES.get_usage();
-    let template = format!("{{about-with-newline}}\n{heading}{}{heading:#} {{usage}}\n\n{{all-args}}", t("Utilisation :", "Usage:"));
+    let template = format!(
+        "{{about-with-newline}}\n{heading}{}{heading:#} {{usage}}\n\n{{all-args}}",
+        t("Utilisation :", "Usage:")
+    );
     // Titres de sections à la française : « Options : », « Arguments : ».
     let headings = |cmd: clap::Command| {
         cmd.help_template(template.clone()).mut_args(|arg| {
@@ -253,7 +262,9 @@ fn in_english(command: clap::Command) -> clap::Command {
         Some(match id {
             "device" => ("Printer device (default /dev/usb/lp0, or $PRINTR_DEVICE)", Some("PATH")),
             "dump" => ("Writes the ESC/POS bytes to this file instead of the printer", Some("FILE")),
-            "tcp" => ("Sends over TCP (network printer or emulator), e.g. 127.0.0.1:9100, or $PRINTR_TCP", Some("HOST:PORT")),
+            "tcp" => {
+                ("Sends over TCP (network printer or emulator), e.g. 127.0.0.1:9100, or $PRINTR_TCP", Some("HOST:PORT"))
+            }
             "preview" => ("Shows a preview in the terminal instead of printing", None),
             "refresh" => ("Regenerates the news, sun times, horoscope and word of the day", None),
             "quiet" => ("Only shows errors", None),
@@ -363,7 +374,11 @@ fn run(cli: Cli) -> Result<()> {
     let (doc, cut) = match &cli.command {
         Command::Serve { listen, token } => {
             if let Some(token) = token {
-                anyhow::ensure!(token.len() >= 16, "{}", t("le jeton doit faire au moins 16 caractères", "the token must be at least 16 characters"));
+                anyhow::ensure!(
+                    token.len() >= 16,
+                    "{}",
+                    t("le jeton doit faire au moins 16 caractères", "the token must be at least 16 characters")
+                );
             }
             return server::serve(listen, token.clone(), target);
         }
@@ -374,7 +389,8 @@ fn run(cli: Cli) -> Result<()> {
                     .with_context(|| tr!("impossible de lire {}", "cannot read {}", path.display()))?,
                 _ => read_stdin()?,
             };
-            let ticket: blocks::Ticket = serde_json::from_str(&json).context(t("ticket JSON invalide", "invalid ticket JSON"))?;
+            let ticket: blocks::Ticket =
+                serde_json::from_str(&json).context(t("ticket JSON invalide", "invalid ticket JSON"))?;
             let mut progress: Box<dyn blocks::Progress> =
                 if cli.quiet { Box::new(blocks::Silent) } else { Box::new(ui::Console::new()) };
             let (doc, ticket_reports) = ticket.build(&blocks::Ctx::new(cli.refresh), progress.as_mut());

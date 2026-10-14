@@ -2,9 +2,9 @@
 
 use anyhow::{Context, Result};
 use chrono::{Datelike, NaiveDate};
+use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
-use rand::SeedableRng;
 use serde::Deserialize;
 
 use crate::doc::{Doc, Style};

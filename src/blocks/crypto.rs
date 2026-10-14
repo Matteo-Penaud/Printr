@@ -2,13 +2,19 @@
 
 use std::collections::HashMap;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 use crate::doc::{Doc, Style};
 
 /// « 74673.5 » -> « 74 673,50 » ; en anglais : « 74,673.50 ».
 fn format_price(price: f64) -> String {
-    let decimals = if price >= 1000.0 { 0 } else if price >= 1.0 { 2 } else { 4 };
+    let decimals = if price >= 1000.0 {
+        0
+    } else if price >= 1.0 {
+        2
+    } else {
+        4
+    };
     let s = format!("{price:.decimals$}");
     let (int, frac) = s.split_once('.').unwrap_or((&s, ""));
     let (group_sep, dec_sep) = if crate::i18n::en() { (',', '.') } else { (' ', ',') };

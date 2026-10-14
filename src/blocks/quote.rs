@@ -5,6 +5,7 @@ use chrono::{Datelike, NaiveDate};
 
 use crate::doc::{Align, Doc, Style};
 
+#[rustfmt::skip]
 const QUOTES: &[(&str, &str)] = &[
     ("Le cœur a ses raisons que la raison ne connaît point.", "Blaise Pascal"),
     ("L'homme n'est qu'un roseau, le plus faible de la nature ; mais c'est un roseau pensant.", "Blaise Pascal"),
@@ -47,6 +48,7 @@ const QUOTES: &[(&str, &str)] = &[
 ];
 
 /// Citations en anglais, d'attribution sûre (un clin d'œil aux bidouilleurs à la fin).
+#[rustfmt::skip]
 const QUOTES_EN: &[(&str, &str)] = &[
     ("To be, or not to be: that is the question.", "William Shakespeare"),
     ("All the world's a stage, and all the men and women merely players.", "William Shakespeare"),

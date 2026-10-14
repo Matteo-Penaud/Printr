@@ -12,6 +12,7 @@ use crate::doc::{Doc, Style};
 use crate::{draw, i18n};
 
 /// Idées de bons, quand le ticket n'en précise pas.
+#[rustfmt::skip]
 const IDEAS: &[&str] = &[
     "un petit-déjeuner au lit",
     "une vaisselle faite sans râler",
@@ -30,6 +31,7 @@ const IDEAS: &[&str] = &[
 ];
 
 /// Mêmes idées, en anglais.
+#[rustfmt::skip]
 const IDEAS_EN: &[&str] = &[
     "breakfast in bed",
     "one dishwashing session without complaining",
@@ -164,9 +166,15 @@ mod tests {
 
     #[test]
     fn english_coupons_fit() {
-        use crate::i18n::{with_lang, Lang};
+        use crate::i18n::{Lang, with_lang};
         let today = NaiveDate::from_ymd_opt(2026, 10, 8).unwrap();
-        let coupon = Coupon { text: None, from: Some("Alex"), to: Some("Camille"), valid_until: NaiveDate::from_ymd_opt(2026, 10, 31), count: 3 };
+        let coupon = Coupon {
+            text: None,
+            from: Some("Alex"),
+            to: Some("Camille"),
+            valid_until: NaiveDate::from_ymd_opt(2026, 10, 31),
+            count: 3,
+        };
         with_lang(Lang::En, || {
             let doc = build(&coupon, today);
             let lines: Vec<&str> = doc

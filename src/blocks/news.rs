@@ -2,7 +2,7 @@
 //! selon les thèmes demandés, leur place dans le flux, leur fraîcheur et leurs recoupements
 //! entre flux, puis dédoublonnés.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::{DateTime, Duration, Utc};
 
 use super::Ctx;
@@ -14,9 +14,11 @@ use crate::i18n::t;
 const SUMMARY_MAX: usize = 260;
 
 /// Rubriques et formats écartés : directs, vidéos, podcasts, tribunes.
+#[rustfmt::skip]
 const NOISE_PREFIXES: &[&str] = &[
     "en direct", "direct", "video", "podcast", "replay", "tribune", "entretien", "live ", "watch ", "opinion ", "op ed ",
 ];
+#[rustfmt::skip]
 const NOISE_PATHS: &[&str] = &[
     "/live/", "/direct/", "/video/", "/videos/", "/podcast", "/replay", "/idees/", "/opinion", "/tribune", "/watch/",
     "/op-ed",
@@ -85,7 +87,9 @@ fn is_noise(article: &Article, exclude: &[String]) -> bool {
     NOISE_PREFIXES.iter().any(|p| title.starts_with(p))
         || NOISE_PATHS.iter().any(|p| link.contains(p))
         || exclude.iter().any(|e| {
-            mentions(&article.title, e) || mentions(&article.summary, e) || article.categories.iter().any(|c| mentions(c, e))
+            mentions(&article.title, e)
+                || mentions(&article.summary, e)
+                || article.categories.iter().any(|c| mentions(c, e))
         })
 }
 
@@ -105,7 +109,8 @@ fn score(article: &Article, all: &[Article], themes: &[String], now: DateTime<Ut
         }
     }
     // Recoupements : même sujet traité par d'autres flux.
-    let mut feeds: Vec<usize> = all.iter().filter(|o| o.feed != article.feed && same_story(article, o)).map(|o| o.feed).collect();
+    let mut feeds: Vec<usize> =
+        all.iter().filter(|o| o.feed != article.feed && same_story(article, o)).map(|o| o.feed).collect();
     feeds.dedup();
     score += 2.0 * feeds.len() as f64;
     // Fraîcheur.
@@ -200,7 +205,8 @@ fn fetch(agent: &ureq::Agent, url: &str, index: usize) -> Result<Vec<Article>> {
         .call()
         .with_context(|| tr!("flux injoignable : {url}", "feed unreachable: {url}"))?;
     let bytes = response.body_mut().with_config().limit(10 * 1024 * 1024).read_to_vec()?;
-    let feed = feed_rs::parser::parse(bytes.as_slice()).with_context(|| tr!("flux illisible : {url}", "unreadable feed: {url}"))?;
+    let feed = feed_rs::parser::parse(bytes.as_slice())
+        .with_context(|| tr!("flux illisible : {url}", "unreadable feed: {url}"))?;
     let source = host(feed.links.first().map_or(url, |l| l.href.as_str()));
     let feed_len = feed.entries.len();
     Ok(feed
@@ -208,11 +214,8 @@ fn fetch(agent: &ureq::Agent, url: &str, index: usize) -> Result<Vec<Article>> {
         .into_iter()
         .enumerate()
         .map(|(position, entry)| {
-            let summary = entry
-                .summary
-                .map(|t| t.content)
-                .or_else(|| entry.content.and_then(|c| c.body))
-                .unwrap_or_default();
+            let summary =
+                entry.summary.map(|t| t.content).or_else(|| entry.content.and_then(|c| c.body)).unwrap_or_default();
             Article {
                 title: strip_html(&entry.title.map(|t| t.content).unwrap_or_default()),
                 summary: shorten(&strip_html(&summary)),
@@ -236,7 +239,10 @@ pub fn build(ctx: &Ctx, title: &str, feeds: &[String], options: &Options) -> Res
     let results: Vec<Result<Vec<Article>>> = std::thread::scope(|s| {
         let handles: Vec<_> =
             feeds.iter().enumerate().map(|(i, url)| s.spawn(move || fetch(&ctx.http, url, i))).collect();
-        handles.into_iter().map(|h| h.join().unwrap_or_else(|_| bail!("{}", t("erreur interne", "internal error")))).collect()
+        handles
+            .into_iter()
+            .map(|h| h.join().unwrap_or_else(|_| bail!("{}", t("erreur interne", "internal error"))))
+            .collect()
     });
     let mut articles = Vec::new();
     let mut errors = Vec::new();
@@ -365,7 +371,7 @@ mod tests {
 
     #[test]
     fn english_noise_is_filtered() {
-        use crate::i18n::{with_lang, Lang};
+        use crate::i18n::{Lang, with_lang};
         with_lang(Lang::En, || {
             let articles = vec![
                 article("Live: the prime minister addresses the nation", "https://a.fr/politics/x", 0, 0),

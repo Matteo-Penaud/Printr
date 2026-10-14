@@ -1,11 +1,11 @@
 //! Énigme du jour : devinettes, charades, logique et calcul, en local et hors ligne.
 //! Chaque jour tire une énigme différente ; toute la liste passe avant la première répétition.
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use chrono::NaiveDate;
+use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
-use rand::SeedableRng;
 use serde::Deserialize;
 
 use crate::doc::{Align, Doc, Style};
@@ -51,6 +51,7 @@ pub enum Answer {
 use Kind::*;
 
 /// (famille, énigme, réponse)
+#[rustfmt::skip]
 const RIDDLES: &[(Kind, &str, &str)] = &[
     // Devinettes
     (Devinette, "Plus on m'enlève, plus je grandis. Qui suis-je ?", "Un trou."),
@@ -185,6 +186,7 @@ const RIDDLES: &[(Kind, &str, &str)] = &[
 
 /// Les énigmes en anglais : les jeux de mots ne se traduisent pas, la liste est écrite à part.
 /// Les charades anglaises assemblent des mots composés (car + pet = carpet).
+#[rustfmt::skip]
 const RIDDLES_EN: &[(Kind, &str, &str)] = &[
     (Devinette, "What has keys but can't open locks?", "A piano."),
     (Devinette, "What gets wetter the more it dries?", "A towel."),
@@ -259,8 +261,7 @@ fn riddles() -> &'static [(Kind, &'static str, &'static str)] {
 
 /// Ordre de passage des énigmes : mélange fixe, pour éviter les répétitions.
 fn order(kind: Option<Kind>) -> Vec<usize> {
-    let mut indices: Vec<usize> =
-        (0..riddles().len()).filter(|&i| kind.is_none_or(|k| riddles()[i].0 == k)).collect();
+    let mut indices: Vec<usize> = (0..riddles().len()).filter(|&i| kind.is_none_or(|k| riddles()[i].0 == k)).collect();
     indices.shuffle(&mut StdRng::seed_from_u64(2026));
     indices
 }
@@ -275,7 +276,9 @@ fn of_day(date: NaiveDate, kind: Option<Kind>) -> usize {
 pub fn build(today: NaiveDate, kind: Option<Kind>, number: Option<usize>, answer: Answer) -> Result<Doc> {
     let index = match number {
         Some(n) if (1..=riddles().len()).contains(&n) => n - 1,
-        Some(n) => bail!("{}", tr!("énigme n° {n} inconnue (1 à {})", "riddle No. {n} unknown (1 to {})", riddles().len())),
+        Some(n) => {
+            bail!("{}", tr!("énigme n° {n} inconnue (1 à {})", "riddle No. {n} unknown (1 to {})", riddles().len()))
+        }
         None => of_day(today, kind),
     };
     let (riddle_kind, question, solution) = riddles()[index];
@@ -313,9 +316,8 @@ mod tests {
     #[test]
     fn every_riddle_comes_before_any_repeat() {
         let start = NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
-        let mut seen: Vec<usize> = (0..riddles().len() as i64)
-            .map(|d| of_day(start + chrono::Duration::days(d), None))
-            .collect();
+        let mut seen: Vec<usize> =
+            (0..riddles().len() as i64).map(|d| of_day(start + chrono::Duration::days(d), None)).collect();
         seen.sort();
         seen.dedup();
         assert_eq!(seen.len(), riddles().len());
@@ -352,7 +354,11 @@ mod tests {
                 assert_eq!(riddles()[of_day(NaiveDate::from_ymd_opt(2026, 10, 7).unwrap(), Some(kind))].0, kind);
             }
             let doc = build(NaiveDate::from_ymd_opt(2026, 10, 7).unwrap(), None, Some(1), Answer::Below).unwrap();
-            assert!(doc.ops.iter().any(|op| matches!(op, crate::doc::Op::Line { text, .. } if text.contains("What has keys"))));
+            assert!(
+                doc.ops
+                    .iter()
+                    .any(|op| matches!(op, crate::doc::Op::Line { text, .. } if text.contains("What has keys")))
+            );
         });
     }
 }

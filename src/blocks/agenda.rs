@@ -205,7 +205,8 @@ fn fetch(ctx: &Ctx, source: &str) -> Result<String> {
         None => source.to_owned(),
     };
     if url.starts_with("http://") || url.starts_with("https://") {
-        let mut response = ctx.http.get(&url).call().context(i18n::t("calendrier injoignable", "calendar unreachable"))?;
+        let mut response =
+            ctx.http.get(&url).call().context(i18n::t("calendrier injoignable", "calendar unreachable"))?;
         Ok(response.body_mut().with_config().limit(10 * 1024 * 1024).read_to_string()?)
     } else {
         ctx.check_local_file(&url)?;

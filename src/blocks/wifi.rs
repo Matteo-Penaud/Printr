@@ -45,7 +45,13 @@ fn payload(ssid: &str, password: Option<&str>, security: Security, hidden: bool)
     out
 }
 
-pub fn build(ssid: &str, password: Option<&str>, security: Security, hidden: bool, show_password: bool) -> anyhow::Result<Doc> {
+pub fn build(
+    ssid: &str,
+    password: Option<&str>,
+    security: Security,
+    hidden: bool,
+    show_password: bool,
+) -> anyhow::Result<Doc> {
     anyhow::ensure!(
         !ssid.trim().is_empty(),
         "{}",

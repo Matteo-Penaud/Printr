@@ -30,11 +30,7 @@ pub fn duration(d: Duration) -> String {
 /// Longueur de papier lisible : « 12 cm », « 1,2 m ».
 fn paper_length(dots: u32) -> String {
     let cm = dots as f64 / 180.0 * 2.54;
-    if cm < 100.0 {
-        format!("{cm:.0} cm")
-    } else {
-        decimal(format!("{:.1} m", cm / 100.0))
-    }
+    if cm < 100.0 { format!("{cm:.0} cm") } else { decimal(format!("{:.1} m", cm / 100.0)) }
 }
 
 /// Virgule décimale en français, point en anglais.
@@ -60,6 +56,7 @@ fn report_line(r: &Report, width: usize) -> String {
     }
 }
 
+#[rustfmt::skip]
 const SPINNER: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
 /// Affichage de la construction en console : chaque bloc s'affiche dès qu'il est prêt et,
@@ -117,7 +114,13 @@ impl Console {
             return self.clear_status();
         }
         let spinner = SPINNER[self.frame % SPINNER.len()];
-        let text = tr!("en cours ({}) · {} · {}", "running ({}) · {} · {}", pending.len(), duration(self.started.elapsed()), pending.join(", "));
+        let text = tr!(
+            "en cours ({}) · {} · {}",
+            "running ({}) · {} · {}",
+            pending.len(),
+            duration(self.started.elapsed()),
+            pending.join(", ")
+        );
         // La ligne ne doit jamais déborder, sinon l'effacement laisserait des restes.
         let columns = terminal_size::terminal_size().map_or(80, |(w, _)| w.0 as usize);
         let max = columns.saturating_sub(5);
@@ -171,7 +174,9 @@ pub fn summary(doc: &Doc, blocks: usize, destination: Option<&str>, elapsed: Dur
     let details = details.join(&format!(" {DIM}·{DIM:#} "));
     let mark = if failures > 0 { format!("{WARN}!{WARN:#}") } else { format!("{OK}✓{OK:#}") };
     match destination {
-        Some(dest) => eprintln!("{mark} {} {ACCENT}{dest}{ACCENT:#}  {DIM}│{DIM:#} {details}", t("Imprimé sur", "Printed to")),
+        Some(dest) => {
+            eprintln!("{mark} {} {ACCENT}{dest}{ACCENT:#}  {DIM}│{DIM:#} {details}", t("Imprimé sur", "Printed to"))
+        }
         None => eprintln!("{mark} {}  {DIM}│{DIM:#} {details}", t("Aperçu", "Preview")),
     }
 }
@@ -195,7 +200,13 @@ pub fn banner(listen: &str, destination: &str, claude: Option<&str>, cache: Opti
         "claude",
         match claude {
             Some(model) => format!("{OK}✓{OK:#} {model}"),
-            None => format!("{WARN}✗{WARN:#} {}", t("ANTHROPIC_API_KEY absente (horoscope et mot du jour indisponibles)", "ANTHROPIC_API_KEY missing (horoscope and word of the day unavailable)")),
+            None => format!(
+                "{WARN}✗{WARN:#} {}",
+                t(
+                    "ANTHROPIC_API_KEY absente (horoscope et mot du jour indisponibles)",
+                    "ANTHROPIC_API_KEY missing (horoscope and word of the day unavailable)"
+                )
+            ),
         },
     );
     row("cache", cache.map_or_else(|| format!("{WARN}{}{WARN:#}", t("désactivé", "disabled")), str::to_owned));
@@ -204,7 +215,10 @@ pub fn banner(listen: &str, destination: &str, claude: Option<&str>, cache: Opti
         if crate::blocks::barnum::available() {
             format!("{OK}✓{OK:#} {}", crate::blocks::barnum::command().join(" "))
         } else {
-            tr!("{WARN}✗{WARN:#} introuvable : bloc « Horoscope » indisponible (voir PRINTR_BARNUM)", "{WARN}✗{WARN:#} not found: \"Horoscope\" block unavailable (see PRINTR_BARNUM)")
+            tr!(
+                "{WARN}✗{WARN:#} introuvable : bloc « Horoscope » indisponible (voir PRINTR_BARNUM)",
+                "{WARN}✗{WARN:#} not found: \"Horoscope\" block unavailable (see PRINTR_BARNUM)"
+            )
         },
     );
     row(t("données", "data"), data.to_owned());
@@ -212,8 +226,15 @@ pub fn banner(listen: &str, destination: &str, claude: Option<&str>, cache: Opti
         "versions",
         if crate::update::enabled() {
             match crate::update::interval_minutes() {
-                1440 => t("vérification quotidienne sur GitHub (rien n'est installé tout seul)", "daily check on GitHub (nothing is installed automatically)").to_owned(),
-                m => tr!("vérification toutes les {m} min sur GitHub (rien n'est installé tout seul)", "checking every {m} min on GitHub (nothing is installed automatically)"),
+                1440 => t(
+                    "vérification quotidienne sur GitHub (rien n'est installé tout seul)",
+                    "daily check on GitHub (nothing is installed automatically)",
+                )
+                .to_owned(),
+                m => tr!(
+                    "vérification toutes les {m} min sur GitHub (rien n'est installé tout seul)",
+                    "checking every {m} min on GitHub (nothing is installed automatically)"
+                ),
             }
         } else {
             format!("{WARN}{}{WARN:#} (PRINTR_UPDATE_CHECK)", t("vérification désactivée", "update check disabled"))
@@ -222,7 +243,10 @@ pub fn banner(listen: &str, destination: &str, claude: Option<&str>, cache: Opti
     row(
         t("comptes", "accounts"),
         if users == 0 {
-            tr!("{WARN}aucun{WARN:#} : ouvre l'interface pour créer le premier", "{WARN}none{WARN:#}: open the interface to create the first")
+            tr!(
+                "{WARN}aucun{WARN:#} : ouvre l'interface pour créer le premier",
+                "{WARN}none{WARN:#}: open the interface to create the first"
+            )
         } else {
             plural(users, t("utilisateur", "user"))
         },

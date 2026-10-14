@@ -7,8 +7,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 /// Les réponses plus anciennes sont supprimées à l'ouverture du cache.
 const MAX_AGE: Duration = Duration::from_secs(14 * 24 * 3600);

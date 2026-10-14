@@ -164,7 +164,10 @@ fn dictionary(lang: Language, min_score: u32) -> Result<Arc<Dictionary>> {
     if let Some(dict) = dicts.get(&(lang.code(), min_score)) {
         return Ok(Arc::clone(dict));
     }
-    let path = wordlist::for_language(lang, |_| {}).context(crate::i18n::t("liste de mots de CrossWords indisponible (premier téléchargement)", "CrossWords word list unavailable (first download)"))?;
+    let path = wordlist::for_language(lang, |_| {}).context(crate::i18n::t(
+        "liste de mots de CrossWords indisponible (premier téléchargement)",
+        "CrossWords word list unavailable (first download)",
+    ))?;
     let file = File::open(&path).with_context(|| format!("{} illisible", path.display()))?;
     let dict = Arc::new(Dictionary::from_reader(BufReader::new(file), min_score)?);
     dicts.insert((lang.code(), min_score), Arc::clone(&dict));
@@ -206,7 +209,8 @@ fn generate(lang: Language, width: usize, height: usize, level: u8, seed: u64) -
     let dict = dictionary(lang, level_settings(level).min_score)?;
     let mut options = FlechesOptions::new(width, height).with_level(level);
     options.seed = seed;
-    let (fleches, _) = generate_fleches(&dict, &options).map_err(|e| anyhow!("{}", tr!("grille impossible : {e}", "could not build the grid: {e}")))?;
+    let (fleches, _) = generate_fleches(&dict, &options)
+        .map_err(|e| anyhow!("{}", tr!("grille impossible : {e}", "could not build the grid: {e}")))?;
     let defs = known_definitions(lang).at_level(level);
     parse(&fleches.to_json_in(Some(&defs), Some(seed), Some(level), lang))
 }
@@ -218,8 +222,9 @@ fn complete(lang: Language, grille: &mut Grille, level: u8) -> Result<usize> {
     if missing.is_empty() {
         return Ok(0);
     }
-    let report = autodefs::generate_for(lang, &missing, &known_definitions(lang), level, |_| {})
-        .map_err(|e| anyhow!("{}", tr!("définitions par Claude impossibles : {e}", "Claude could not write the clues: {e}")))?;
+    let report = autodefs::generate_for(lang, &missing, &known_definitions(lang), level, |_| {}).map_err(|e| {
+        anyhow!("{}", tr!("définitions par Claude impossibles : {e}", "Claude could not write the clues: {e}"))
+    })?;
     remember(lang, &report.definitions, level, &report.model)?;
     let written: HashMap<&str, &str> = report.definitions.iter().map(|(w, d)| (w.as_str(), d.as_str())).collect();
     for def in grille.definitions.iter_mut().filter(|d| d.texte.is_none()) {
@@ -304,8 +309,22 @@ fn render(g: &Grille, solution: bool) -> GrayImage {
             let (x, y) = at(word.ligne, word.colonne);
             let (x, y, s) = (x as f64, y as f64, cell as f64);
             match d.fleche.as_str() {
-                "droite" => triangle(&mut img, [(x + 2.0, y + s / 2.0 - a / 2.0), (x + 2.0, y + s / 2.0 + a / 2.0), (x + 2.0 + a * 0.8, y + s / 2.0)]),
-                "bas" => triangle(&mut img, [(x + s / 2.0 - a / 2.0, y + 2.0), (x + s / 2.0 + a / 2.0, y + 2.0), (x + s / 2.0, y + 2.0 + a * 0.8)]),
+                "droite" => triangle(
+                    &mut img,
+                    [
+                        (x + 2.0, y + s / 2.0 - a / 2.0),
+                        (x + 2.0, y + s / 2.0 + a / 2.0),
+                        (x + 2.0 + a * 0.8, y + s / 2.0),
+                    ],
+                ),
+                "bas" => triangle(
+                    &mut img,
+                    [
+                        (x + s / 2.0 - a / 2.0, y + 2.0),
+                        (x + s / 2.0 + a / 2.0, y + 2.0),
+                        (x + s / 2.0, y + 2.0 + a * 0.8),
+                    ],
+                ),
                 // Coudée : part vers la droite depuis la case de gauche, puis descend.
                 "droite-bas" => {
                     let (sx, sy) = (x + 2.0, y + s / 4.0);
@@ -358,13 +377,21 @@ pub fn build(ctx: &Ctx, options: &Options) -> Result<Doc> {
     if !grille.missing().is_empty() && !claude_tried && !ctx.preview && !options.solution {
         match complete(lang, &mut grille, level) {
             Ok(_) => claude_tried = true,
-            Err(e) => note = Some(tr!("Définitions indisponibles ({e}) : la longueur est indiquée.", "Clues unavailable ({e}): the word length is shown.")),
+            Err(e) => {
+                note = Some(tr!(
+                    "Définitions indisponibles ({e}) : la longueur est indiquée.",
+                    "Clues unavailable ({e}): the word length is shown."
+                ))
+            }
         }
         changed = true;
     }
     if claude_tried && !grille.missing().is_empty() && !options.solution {
         let n = grille.missing().len();
-        note = Some(tr!("{n} définition(s) n'ont pas pu être rédigées : la longueur est indiquée.", "{n} clue(s) could not be written: the word length is shown."));
+        note = Some(tr!(
+            "{n} définition(s) n'ont pas pu être rédigées : la longueur est indiquée.",
+            "{n} clue(s) could not be written: the word length is shown."
+        ));
     }
     if let Some(cache) = cache
         && changed
@@ -378,7 +405,13 @@ pub fn build(ctx: &Ctx, options: &Options) -> Result<Doc> {
         doc.header(crate::i18n::t("Solution des mots fléchés", "Arrow words solution"));
     } else {
         doc.header(&tr!("Mots fléchés · {}", "Arrow words · {}", level_label(level)));
-        doc.text(crate::i18n::t("Chaque numéro renvoie à sa définition ; la flèche montre où part le mot.", "Each number points to its clue; the arrow shows where the word starts."), Style::default().small().center());
+        doc.text(
+            crate::i18n::t(
+                "Chaque numéro renvoie à sa définition ; la flèche montre où part le mot.",
+                "Each number points to its clue; the arrow shows where the word starts.",
+            ),
+            Style::default().small().center(),
+        );
     }
     doc.feed(1);
     doc.image(render(&grille, options.solution));
@@ -396,7 +429,13 @@ pub fn build(ctx: &Ctx, options: &Options) -> Result<Doc> {
         }
         if ctx.preview && !grille.missing().is_empty() {
             doc.feed(1);
-            doc.text(crate::i18n::t("Les définitions manquantes seront rédigées par Claude à l'impression.", "Missing clues will be written by Claude when printing."), Style::default().small().center());
+            doc.text(
+                crate::i18n::t(
+                    "Les définitions manquantes seront rédigées par Claude à l'impression.",
+                    "Missing clues will be written by Claude when printing.",
+                ),
+                Style::default().small().center(),
+            );
         }
         if let Some(note) = note {
             doc.feed(1);
@@ -478,7 +517,8 @@ mod tests {
     #[test]
     fn real_grid_from_the_library_round_trips() {
         // Petit dictionnaire : pas de téléchargement, mais la vraie bibliothèque et le vrai JSON.
-        let dict = Dictionary::from_words(["ABC", "DEF", "GHI", "ADG", "BEH", "CFI", "AB", "DE", "GH", "AD", "BE", "CF"]);
+        let dict =
+            Dictionary::from_words(["ABC", "DEF", "GHI", "ADG", "BEH", "CFI", "AB", "DE", "GH", "AD", "BE", "CF"]);
         let mut opts = FlechesOptions::new(4, 4);
         opts.attempts = 20; // un dictionnaire minuscule : inutile d'insister
         if let Ok((fl, _)) = generate_fleches(&dict, &opts) {

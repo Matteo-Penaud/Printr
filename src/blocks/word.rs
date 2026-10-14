@@ -46,9 +46,15 @@ pub fn build(ctx: &Ctx) -> Result<Doc> {
     let from_cache = cached.is_some();
     let w = match cached {
         Some(w) => w,
-        None if ctx.preview => return Ok(super::ai_placeholder(i18n::t("Mot du jour", "Word of the day"), i18n::t("Le mot du jour", "The word of the day"))),
+        None if ctx.preview => {
+            return Ok(super::ai_placeholder(
+                i18n::t("Mot du jour", "Word of the day"),
+                i18n::t("Le mot du jour", "The word of the day"),
+            ));
+        }
         None => {
-            let claude = ctx.claude.as_ref().context(i18n::t("ANTHROPIC_API_KEY manquante", "ANTHROPIC_API_KEY is missing"))?;
+            let claude =
+                ctx.claude.as_ref().context(i18n::t("ANTHROPIC_API_KEY manquante", "ANTHROPIC_API_KEY is missing"))?;
             let past = cache.map(|c| c.history(history, HISTORY)).unwrap_or_default();
             // Une réponse incomplète est rare : on retente une fois avant d'abandonner.
             let w = match generate(claude, date, &past)? {

@@ -29,11 +29,7 @@ struct SunTimes {
 pub fn build(ctx: &Ctx, location: &str) -> Result<Doc> {
     let location_key: String = location.bytes().map(|byte| format!("{byte:02x}")).collect();
     let key = format!("{}-sun-v1-{location_key}", ctx.today);
-    let cached: Option<SunTimes> = ctx
-        .cache
-        .as_ref()
-        .filter(|_| !ctx.refresh)
-        .and_then(|cache| cache.get(&key));
+    let cached: Option<SunTimes> = ctx.cache.as_ref().filter(|_| !ctx.refresh).and_then(|cache| cache.get(&key));
     let from_cache = cached.is_some();
     let times = match cached {
         Some(times) => times,
@@ -51,15 +47,10 @@ pub fn build(ctx: &Ctx, location: &str) -> Result<Doc> {
                 .context(i18n::t("prévisions Open-Meteo injoignables", "Open-Meteo forecast unreachable"))?
                 .body_mut()
                 .read_json()?;
-            let index = forecast
-                .daily
-                .time
-                .iter()
-                .position(|date| *date == ctx.today)
-                .context(i18n::t(
-                    "horaires du soleil indisponibles pour aujourd'hui",
-                    "sun times unavailable for today",
-                ))?;
+            let index = forecast.daily.time.iter().position(|date| *date == ctx.today).context(i18n::t(
+                "horaires du soleil indisponibles pour aujourd'hui",
+                "sun times unavailable for today",
+            ))?;
             let sunrise = forecast
                 .daily
                 .sunrise
@@ -86,35 +77,19 @@ pub fn build(ctx: &Ctx, location: &str) -> Result<Doc> {
     if daylight.num_minutes() < 0 {
         bail!(
             "{}",
-            i18n::t(
-                "horaires de lever et coucher du soleil incohérents",
-                "sunrise and sunset times are inconsistent"
-            )
+            i18n::t("horaires de lever et coucher du soleil incohérents", "sunrise and sunset times are inconsistent")
         );
     }
     let mut doc = Doc::new();
     doc.from_cache = from_cache;
     doc.header(&tr!("Soleil · {location}", "Sun · {location}"));
+    doc.text(&i18n::capitalize(&i18n::long_date(ctx.today)), Style::default().small().center());
     doc.text(
-        &i18n::capitalize(&i18n::long_date(ctx.today)),
-        Style::default().small().center(),
-    );
-    doc.text(
-        &tr!(
-            "Lever {} · coucher {}",
-            "Sunrise {} · sunset {}",
-            sunrise.format("%H:%M"),
-            sunset.format("%H:%M")
-        ),
+        &tr!("Lever {} · coucher {}", "Sunrise {} · sunset {}", sunrise.format("%H:%M"), sunset.format("%H:%M")),
         Style::default().bold().center(),
     );
     doc.text(
-        &tr!(
-            "Jour : {} h {:02} min",
-            "Daylight: {}h {:02} min",
-            daylight.num_hours(),
-            daylight.num_minutes() % 60
-        ),
+        &tr!("Jour : {} h {:02} min", "Daylight: {}h {:02} min", daylight.num_hours(), daylight.num_minutes() % 60),
         Style::default().small().center(),
     );
     Ok(doc)
@@ -131,13 +106,7 @@ mod tests {
 
     #[test]
     fn parses_open_meteo_local_times() {
-        assert_eq!(
-            local_time("2026-10-07T07:58").unwrap(),
-            NaiveTime::from_hms_opt(7, 58, 0).unwrap()
-        );
-        assert_eq!(
-            local_time("19:17").unwrap(),
-            NaiveTime::from_hms_opt(19, 17, 0).unwrap()
-        );
+        assert_eq!(local_time("2026-10-07T07:58").unwrap(), NaiveTime::from_hms_opt(7, 58, 0).unwrap());
+        assert_eq!(local_time("19:17").unwrap(), NaiveTime::from_hms_opt(19, 17, 0).unwrap());
     }
 }

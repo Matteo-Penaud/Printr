@@ -49,7 +49,12 @@ mod tests {
 
     #[test]
     fn lists_items_and_authors() {
-        let item = |text: &str, by: &str| ShoppingItem { id: text.into(), text: text.into(), by: by.into(), added: chrono::Utc::now() };
+        let item = |text: &str, by: &str| ShoppingItem {
+            id: text.into(),
+            text: text.into(),
+            by: by.into(),
+            added: chrono::Utc::now(),
+        };
         let doc = render("Courses", &[item("Lait", "Camille"), item("Pain", "Léo"), item("Œufs", "Camille")]);
         let lines: Vec<&str> = doc
             .ops

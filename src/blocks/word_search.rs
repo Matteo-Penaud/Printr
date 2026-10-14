@@ -42,6 +42,7 @@ pub enum Theme {
     Ia,
 }
 
+#[rustfmt::skip]
 pub(crate) const THEMES: [Theme; 14] = [
     Theme::Animaux,
     Theme::FruitsLegumes,
@@ -83,6 +84,7 @@ impl Theme {
         if en() { english_words(self) } else { self.french_words() }
     }
 
+    #[rustfmt::skip]
     fn french_words(self) -> &'static [&'static str] {
         match self {
             Theme::Animaux => &[
@@ -174,6 +176,7 @@ impl Theme {
 }
 
 /// Mêmes thèmes en anglais : mots courants, 3 à 10 lettres, aucun mot contenu dans un autre.
+#[rustfmt::skip]
 fn english_words(theme: Theme) -> &'static [&'static str] {
     match theme {
         Theme::Animaux => &[
@@ -401,13 +404,7 @@ fn render(p: &Puzzle, solution: bool) -> image::GrayImage {
     img
 }
 
-pub fn build(
-    difficulty: Difficulty,
-    theme: Option<Theme>,
-    words: &[String],
-    seed: Option<u64>,
-    solution: bool,
-) -> Doc {
+pub fn build(difficulty: Difficulty, theme: Option<Theme>, words: &[String], seed: Option<u64>, solution: bool) -> Doc {
     let seed = seed.unwrap_or_else(|| rand::rng().random_range(1..100_000));
     let (_, count, _) = settings(difficulty);
     // Thème tiré de la graine, sans consommer d'aléa : préciser le thème ne change pas la grille.
@@ -517,7 +514,7 @@ mod tests {
 
     #[test]
     fn english_lists_fit_and_place_their_words() {
-        use crate::i18n::{with_lang, Lang};
+        use crate::i18n::{Lang, with_lang};
         with_lang(Lang::En, || {
             for theme in THEMES {
                 let words = theme_words(theme);

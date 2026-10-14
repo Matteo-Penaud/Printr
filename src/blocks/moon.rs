@@ -19,6 +19,7 @@ fn age(now: DateTime<Utc>) -> f64 {
 }
 
 fn name(age: f64) -> &'static str {
+    #[rustfmt::skip]
     const NAMES: [&str; 8] = [
         "Nouvelle lune",
         "Premier croissant",
@@ -29,6 +30,7 @@ fn name(age: f64) -> &'static str {
         "Dernier quartier",
         "Dernier croissant",
     ];
+    #[rustfmt::skip]
     const NAMES_EN: [&str; 8] = [
         "New moon",
         "Waxing crescent",

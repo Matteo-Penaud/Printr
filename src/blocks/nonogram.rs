@@ -2,8 +2,8 @@
 //! Chaque dessin a une solution unique, trouvable par simple déduction ligne à ligne (vérifié
 //! par les tests). Le numéro imprimé est celui du dessin : `solution: true` imprime le dessin.
 
-use rand::RngExt;
 use image::GrayImage;
+use rand::RngExt;
 
 use crate::doc::{Align, Doc, Style};
 use crate::draw;
@@ -11,6 +11,7 @@ use crate::draw;
 const N: usize = 10;
 
 /// (nom, dessin de 10×10, `#` = case noire)
+#[rustfmt::skip]
 const PICTURES: &[(&str, [&str; N])] = &[
     ("cœur", [
         ".##....##.",
@@ -135,6 +136,7 @@ const PICTURES: &[(&str, [&str; N])] = &[
 ];
 
 /// Noms des dessins, dans le même ordre que `PICTURES`.
+#[rustfmt::skip]
 const NAMES_EN: [&str; N] = [
     "heart",
     "fir tree",

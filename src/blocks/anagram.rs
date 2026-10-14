@@ -5,12 +5,13 @@ use rand::rngs::StdRng;
 use rand::seq::{IndexedRandom, SliceRandom};
 use rand::{RngExt, SeedableRng};
 
-use super::word_search::{grid_form, Theme};
+use super::word_search::{Theme, grid_form};
 use crate::doc::{Align, Doc, Style};
 use crate::i18n::t;
 
 /// Thèmes tirés au hasard : ceux qui parlent à toute la famille (les thèmes techniques
 /// restent disponibles en les demandant).
+#[rustfmt::skip]
 const FAMILY: &[Theme] = &[
     Theme::Animaux,
     Theme::FruitsLegumes,
@@ -78,7 +79,10 @@ pub fn build(theme: Option<Theme>, count: u8, seed: Option<u64>) -> Doc {
         .map(|(i, (_, _, word))| if count > 1 { format!("{}. {word}", i + 1) } else { word.to_string() })
         .collect();
     let plural = if count > 1 { "s" } else { "" };
-    doc.text(&tr!("Réponse{} : {}", "Answer{}: {}", plural, answers.join("  ")), Style::default().small().upside_down());
+    doc.text(
+        &tr!("Réponse{} : {}", "Answer{}: {}", plural, answers.join("  ")),
+        Style::default().small().upside_down(),
+    );
     doc
 }
 
@@ -102,7 +106,7 @@ mod tests {
 
     #[test]
     fn english_lines_fit_for_many_seeds() {
-        use crate::i18n::{with_lang, Lang};
+        use crate::i18n::{Lang, with_lang};
         with_lang(Lang::En, || {
             for seed in 0..100 {
                 let doc = build(None, 4, Some(seed));

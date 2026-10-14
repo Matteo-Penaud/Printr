@@ -4,6 +4,7 @@ use chrono::{Datelike, NaiveDate};
 
 use crate::doc::{Doc, Style};
 
+#[rustfmt::skip]
 const JANVIER: [&str; 31] = [
     "Jour de l'An", "St Basile", "Ste Geneviève", "St Odilon", "St Édouard", "St Mélaine", "St Raymond",
     "St Lucien", "Ste Alix", "St Guillaume", "St Paulin", "Ste Tatiana", "Ste Yvette", "Ste Nina",
@@ -11,6 +12,7 @@ const JANVIER: [&str; 31] = [
     "St Vincent", "St Barnard", "St François de Sales", "Conversion de St Paul", "Ste Paule",
     "Ste Angèle", "St Thomas d'Aquin", "St Gildas", "Ste Martine", "Ste Marcelle",
 ];
+#[rustfmt::skip]
 const FEVRIER: [&str; 29] = [
     "Ste Ella", "Présentation du Seigneur", "St Blaise", "Ste Véronique", "Ste Agathe", "St Gaston",
     "Ste Eugénie", "Ste Jacqueline", "Ste Apolline", "St Arnaud", "Notre-Dame de Lourdes", "St Félix",
@@ -18,6 +20,7 @@ const FEVRIER: [&str; 29] = [
     "St Gabin", "Ste Aimée", "St Damien", "Ste Isabelle", "St Lazare", "St Modeste", "St Roméo",
     "St Nestor", "Ste Honorine", "St Romain", "St Auguste",
 ];
+#[rustfmt::skip]
 const MARS: [&str; 31] = [
     "St Aubin", "St Charles le Bon", "St Guénolé", "St Casimir", "Ste Olive", "Ste Colette",
     "Ste Félicité", "St Jean de Dieu", "Ste Françoise", "St Vivien", "Ste Rosine", "Ste Justine",
@@ -26,6 +29,7 @@ const MARS: [&str; 31] = [
     "Annonciation", "Ste Larissa", "St Habib", "St Gontran", "Ste Gwladys", "St Amédée",
     "St Benjamin",
 ];
+#[rustfmt::skip]
 const AVRIL: [&str; 30] = [
     "St Hugues", "Ste Sandrine", "St Richard", "St Isidore", "Ste Irène", "St Marcellin",
     "St Jean-Baptiste de la Salle", "Ste Julie", "St Gautier", "St Fulbert", "St Stanislas",
@@ -33,6 +37,7 @@ const AVRIL: [&str; 30] = [
     "Ste Emma", "Ste Odette", "St Anselme", "St Alexandre", "St Georges", "St Fidèle", "St Marc",
     "Ste Alida", "Ste Zita", "Ste Valérie", "Ste Catherine de Sienne", "St Robert",
 ];
+#[rustfmt::skip]
 const MAI: [&str; 31] = [
     "Fête du Travail", "St Boris", "Sts Philippe et Jacques", "St Sylvain", "Ste Judith",
     "Ste Prudence", "Ste Gisèle", "Victoire 1945", "St Pacôme", "Ste Solange", "Ste Estelle",
@@ -41,6 +46,7 @@ const MAI: [&str; 31] = [
     "St Bérenger", "St Augustin de Cantorbéry", "St Germain", "St Aymar", "St Ferdinand",
     "Visitation de la Vierge Marie",
 ];
+#[rustfmt::skip]
 const JUIN: [&str; 30] = [
     "St Justin", "Ste Blandine", "St Kévin", "Ste Clotilde", "St Igor", "St Norbert", "St Gilbert",
     "St Médard", "Ste Diane", "St Landry", "St Barnabé", "St Guy", "St Antoine de Padoue",
@@ -48,6 +54,7 @@ const JUIN: [&str; 30] = [
     "St Silvère", "St Rodolphe", "St Alban", "Ste Audrey", "St Jean-Baptiste", "St Prosper",
     "St Anthelme", "St Fernand", "St Irénée", "Sts Pierre et Paul", "St Martial",
 ];
+#[rustfmt::skip]
 const JUILLET: [&str; 31] = [
     "St Thierry", "St Martinien", "St Thomas", "St Florent", "St Antoine", "Ste Mariette", "St Raoul",
     "St Thibaut", "Ste Amandine", "St Ulrich", "St Benoît", "St Olivier", "Sts Henri et Joël",
@@ -56,6 +63,7 @@ const JUILLET: [&str; 31] = [
     "St Jacques", "Sts Anne et Joachim", "Ste Nathalie", "St Samson", "Ste Marthe", "Ste Juliette",
     "St Ignace de Loyola",
 ];
+#[rustfmt::skip]
 const AOUT: [&str; 31] = [
     "St Alphonse", "St Julien Eymard", "Ste Lydie", "St Jean-Marie Vianney", "St Abel",
     "Transfiguration", "St Gaétan", "St Dominique", "St Amour", "St Laurent", "Ste Claire",
@@ -64,6 +72,7 @@ const AOUT: [&str; 31] = [
     "St Barthélemy", "St Louis", "Ste Natacha", "Ste Monique", "St Augustin", "Ste Sabine",
     "St Fiacre", "St Aristide",
 ];
+#[rustfmt::skip]
 const SEPTEMBRE: [&str; 30] = [
     "St Gilles", "Ste Ingrid", "St Grégoire", "Ste Rosalie", "Ste Raïssa", "St Bertrand", "Ste Reine",
     "Nativité de la Vierge Marie", "St Alain", "Ste Inès", "St Adelphe", "St Apollinaire", "St Aimé",
@@ -71,6 +80,7 @@ const SEPTEMBRE: [&str; 30] = [
     "St Matthieu", "St Maurice", "St Constant", "Ste Thècle", "St Hermann", "Sts Côme et Damien",
     "St Vincent de Paul", "St Venceslas", "Sts Michel, Gabriel et Raphaël", "St Jérôme",
 ];
+#[rustfmt::skip]
 const OCTOBRE: [&str; 31] = [
     "Ste Thérèse de l'Enfant-Jésus", "St Léger", "St Gérard", "St François d'Assise", "Ste Fleur",
     "St Bruno", "St Serge", "Ste Pélagie", "St Denis", "St Ghislain", "St Firmin", "St Wilfried",
@@ -78,6 +88,7 @@ const OCTOBRE: [&str; 31] = [
     "Ste Adeline", "Ste Céline", "Ste Élodie", "St Jean de Capistran", "St Florentin", "St Crépin",
     "St Dimitri", "Ste Émeline", "Sts Simon et Jude", "St Narcisse", "Ste Bienvenue", "St Quentin",
 ];
+#[rustfmt::skip]
 const NOVEMBRE: [&str; 30] = [
     "Toussaint", "Commémoration des défunts", "St Hubert", "St Charles", "Ste Sylvie", "Ste Bertille",
     "Ste Carine", "St Geoffroy", "St Théodore", "St Léon", "Armistice 1918", "St Christian",
@@ -86,6 +97,7 @@ const NOVEMBRE: [&str; 30] = [
     "Ste Catherine", "Ste Delphine", "St Séverin", "St Jacques de la Marche", "St Saturnin",
     "St André",
 ];
+#[rustfmt::skip]
 const DECEMBRE: [&str; 31] = [
     "Ste Florence", "Ste Viviane", "St François-Xavier", "Ste Barbara", "St Gérald", "St Nicolas",
     "St Ambroise", "Immaculée Conception", "St Pierre Fourier", "St Romaric", "St Daniel",
