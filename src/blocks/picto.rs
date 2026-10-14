@@ -47,7 +47,7 @@ impl Shape {
             Shape::Star => {
                 // Polygone à 10 sommets : pointes (rayon 0,98) et creux (rayon 0,4) alternés.
                 let vertex = |k: usize| {
-                    let radius = if k % 2 == 0 { 0.98 } else { 0.4 };
+                    let radius = if k.is_multiple_of(2) { 0.98 } else { 0.4 };
                     let a = -PI / 2.0 + k as f64 * PI / 5.0;
                     (radius * a.cos(), radius * a.sin() + 0.08)
                 };

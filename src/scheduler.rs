@@ -38,10 +38,10 @@ fn run_due(app: &App) {
                 }
             }
         }
-        if !due.is_empty() {
-            if let Err(e) = store.save() {
-                eprintln!("{}", tr!("planification non enregistrée : {e:#}", "schedule not saved: {e:#}"));
-            }
+        if !due.is_empty()
+            && let Err(e) = store.save()
+        {
+            eprintln!("{}", tr!("planification non enregistrée : {e:#}", "schedule not saved: {e:#}"));
         }
         due
     };

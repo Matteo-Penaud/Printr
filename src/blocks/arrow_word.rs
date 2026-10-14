@@ -159,7 +159,9 @@ fn language() -> Language {
 /// Dictionnaire par seuil de fréquence, chargé une fois (la liste est téléchargée par curl au
 /// tout premier usage, dans le cache de CrossWords).
 fn dictionary(lang: Language, min_score: u32) -> Result<Arc<Dictionary>> {
-    static DICTS: OnceLock<Mutex<HashMap<(&'static str, u32), Arc<Dictionary>>>> = OnceLock::new();
+    /// Dictionnaires chargés, par langue et seuil.
+    type Dicts = HashMap<(&'static str, u32), Arc<Dictionary>>;
+    static DICTS: OnceLock<Mutex<Dicts>> = OnceLock::new();
     let mut dicts = DICTS.get_or_init(Default::default).lock().unwrap_or_else(|e| e.into_inner());
     if let Some(dict) = dicts.get(&(lang.code(), min_score)) {
         return Ok(Arc::clone(dict));

@@ -244,10 +244,10 @@ impl Caller {
 
 fn caller(app: &App, request: &Request) -> Option<Caller> {
     let bearer = header(request, "Authorization").and_then(|h| h.strip_prefix("Bearer "));
-    if let (Some(token), Some(bearer)) = (&app.token, bearer) {
-        if same_secret(bearer.trim(), token) {
-            return Some(Caller::Script);
-        }
+    if let (Some(token), Some(bearer)) = (&app.token, bearer)
+        && same_secret(bearer.trim(), token)
+    {
+        return Some(Caller::Script);
     }
     let session = cookie(request, COOKIE)?;
     let store = app.lock_store();

@@ -235,7 +235,7 @@ pub fn build(number: Option<usize>, solution: bool) -> anyhow::Result<Doc> {
         None => rand::rng().random_range(0..PICTURES.len()),
     };
     let (name_fr, picture) = &PICTURES[index];
-    let name = crate::i18n::t(*name_fr, NAMES_EN[index]);
+    let name = crate::i18n::t(name_fr, NAMES_EN[index]);
     let grid = cells(picture);
 
     let mut doc = Doc::new();

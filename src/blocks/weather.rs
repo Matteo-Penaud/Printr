@@ -80,10 +80,10 @@ fn describe(code: u8) -> &'static str {
 
 /// « Lyon », ou des coordonnées « 45.76,4.83 ».
 pub fn locate(agent: &ureq::Agent, location: &str) -> Result<Place> {
-    if let Some((lat, lon)) = location.split_once(',') {
-        if let (Ok(latitude), Ok(longitude)) = (lat.trim().parse(), lon.trim().parse()) {
-            return Ok(Place { name: location.to_owned(), latitude, longitude });
-        }
+    if let Some((lat, lon)) = location.split_once(',')
+        && let (Ok(latitude), Ok(longitude)) = (lat.trim().parse(), lon.trim().parse())
+    {
+        return Ok(Place { name: location.to_owned(), latitude, longitude });
     }
     let geo: GeoResults = agent
         .get("https://geocoding-api.open-meteo.com/v1/search")
