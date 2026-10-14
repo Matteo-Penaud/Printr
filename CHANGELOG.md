@@ -5,9 +5,11 @@ each one is a `vX.Y.Z` tag on GitHub, which the server checks to tell the admin 
 
 Each minor version is named after a pioneer of printing, in alphabetical order (patch releases keep the
 name): Aldus Manutius, Giambattista Bodoni, William Caslon, the Didot family, Robert Estienne,
-Pierre-Simon Fournier, Johannes Gutenberg…
+Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
 
 ## [Unreleased]
+
+## [1.7.0] “Hoe” - 2026-10-15
 
 ### Added
 - Mental math ([#4](https://github.com/XNinety9/Printr/issues/4)): a **beginner** level (sums up to 10,
@@ -21,6 +23,9 @@ Pierre-Simon Fournier, Johannes Gutenberg…
   words in both languages (“meteo” and “weather” both find the weather block).
 - History: the administrator can **see each printed ticket** as it came out, for 30 days. Other accounts and
   the scripts token cannot.
+
+- `scripts/appli-demo.sh`: the web app with fake accounts and tickets, no printer and no Claude, to try it
+  out in one command.
 
 ### Fixed
 - Ticket preview: full-width lines (such as the mental math score) are no longer clipped at the end.
@@ -128,7 +133,8 @@ First release.
 - One-command installation on a Raspberry Pi, no sudo needed afterwards.
 - Windows development with a dev container and a printing relay.
 
-[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.6.1...HEAD
+[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/XNinety9/Printr/compare/v1.6.1...v1.7.0
 [1.6.1]: https://github.com/XNinety9/Printr/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/XNinety9/Printr/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/XNinety9/Printr/compare/v1.4.0...v1.5.0

@@ -15,13 +15,14 @@ Il faut une chaîne Rust stable (`rustup`). Pour l'émulateur et les captures, i
 git clone https://github.com/XNinety9/Printr && cd Printr
 cargo test                                               # tous les tests, sans réseau ni imprimante
 cargo run -- --preview print examples/complet.json       # aperçu du ticket complet dans le terminal
+scripts/appli-demo.sh                                    # l'appli avec des données fictives, sans imprimante ni Claude
 ```
 
 Quelques variables d'environnement utiles :
 
 | Variable | Rôle |
 | --- | --- |
-| `ANTHROPIC_API_KEY` | Blocs Claude (`horoscope`, `word_of_the_day`). Facultative : sans elle, ces blocs affichent une erreur et le reste du ticket sort normalement. |
+| `ANTHROPIC_API_KEY` | Blocs Claude (`horoscope`, `word_of_the_day`). Facultative : sans elle, ces blocs affichent une erreur et le reste du ticket sort normalement. Attention, `--preview` en ligne de commande appelle bien Claude (et fait rédiger les définitions manquantes des grilles) : retire la clé pour des essais gratuits. |
 | `PRINTR_BARNUM` | Commande de [Barnum](https://github.com/XNinety9/Barnum) pour le bloc `barnum`, par exemple `python3 ../Barnum/main.py`. |
 | `PRINTR_DATA_DIR` | Comptes, presets et historique de l'interface web. Utilise un dossier jetable pour tes essais. |
 | `PRINTR_GLITCH` | Fréquence des glitchs (une impression sur N, 20 par défaut, 0 : jamais). |

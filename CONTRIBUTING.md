@@ -15,13 +15,14 @@ You need a stable Rust toolchain (`rustup`). For the emulator and the screenshot
 git clone https://github.com/XNinety9/Printr && cd Printr
 cargo test                                               # all tests, no network or printer needed
 cargo run -- --preview print examples/complet.json       # preview of the full ticket in the terminal
+scripts/appli-demo.sh                                    # the web app with fake data, no printer and no Claude
 ```
 
 A few useful environment variables:
 
 | Variable | What it does |
 | --- | --- |
-| `ANTHROPIC_API_KEY` | Claude blocks (`horoscope`, `word_of_the_day`). Optional: without it, these blocks show an error and the rest of the ticket prints normally. |
+| `ANTHROPIC_API_KEY` | Claude blocks (`horoscope`, `word_of_the_day`). Optional: without it, these blocks show an error and the rest of the ticket prints normally. Note that `--preview` on the command line does call Claude (and writes missing arrow-word clues): unset the key for free tests. |
 | `PRINTR_BARNUM` | Command for [Barnum](https://github.com/XNinety9/Barnum) used by the `barnum` block, for example `python3 ../Barnum/main.py`. |
 | `PRINTR_DATA_DIR` | Accounts, presets and history of the web interface. Use a throwaway folder for your tests. |
 | `PRINTR_GLITCH` | How often glitches happen (one print in N, 20 by default, 0: never). |
