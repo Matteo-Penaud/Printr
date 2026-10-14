@@ -1,0 +1,41 @@
+name: Bug report
+description: Something doesn't work as expected (vous pouvez écrire en français)
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. A photo of the ticket helps!
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Printr version
+      description: Output of `printr --version`, or the number at the bottom of the app's sidebar.
+      placeholder: printr 1.6.0 “Gutenberg”
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: Machine and printer
+      placeholder: Raspberry Pi 4, Epson TM-T88V over USB
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen?
+      multiple: true
+      options:
+        - Web app (phone)
+        - Web app (computer)
+        - Printed ticket
+        - Command line
+        - Installation
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: "If relevant: `journalctl -u printr -n 50`. Remove any API key or password."
+      render: text

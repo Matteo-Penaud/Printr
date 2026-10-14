@@ -37,12 +37,13 @@ jobs:
           - arm-unknown-linux-gnueabihf   # Pi Zero W, Pi 1 (ARMv6)
           - x86_64-unknown-linux-gnu      # PC, serveur
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.TAG }}
+          persist-credentials: false
       # Licence et NOTICE de la branche principale : les versions publiées avant l'ajout de la
       # licence Apache 2.0 sont distribuées sous la même licence.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.repository.default_branch }}
           path: _main
@@ -50,12 +51,13 @@ jobs:
             LICENSE
             NOTICE
           sparse-checkout-cone-mode: false
-      - uses: dtolnay/rust-toolchain@stable
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
         with:
           targets: ${{ matrix.target }}
       # cross compile dans une image à glibc ancienne : le binaire tourne sur un Raspberry Pi OS
       # de quelques années, comme avec scripts/deploy.sh.
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: cross
       - run: cross build --release --locked --target ${{ matrix.target }}
@@ -68,7 +70,7 @@ jobs:
           for f in README.md README.fr.md CHANGELOG.md; do [ -f "$f" ] && cp "$f" "dist/$name/"; done
           cp _main/LICENSE _main/NOTICE "dist/$name/"
           tar -C dist -czf "dist/$name.tar.gz" "$name"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ matrix.target }}
           path: dist/*.tar.gz
@@ -81,10 +83,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.TAG }}
-      - uses: actions/download-artifact@v8
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: dist
           merge-multiple: true
