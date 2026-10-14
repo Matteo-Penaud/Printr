@@ -103,6 +103,8 @@ jobs:
               on && /^\[[^]]+\]: / { exit }
               on { print }
             ' CHANGELOG.md > notes.md
-            gh release create "$TAG" --verify-tag --title "Printr $version" --notes-file notes.md
+            # Titre : « Printr 1.7.0 “Hoe” », le nom de code venant du titre de la section.
+            name=$(grep -m1 "^## \[$version\]" CHANGELOG.md | sed -n 's/.*“\(.*\)”.*/\1/p')
+            gh release create "$TAG" --verify-tag --title "Printr $version${name:+ “$name”}" --notes-file notes.md
           fi
           gh release upload "$TAG" dist/*.tar.gz dist/SHA256SUMS --clobber

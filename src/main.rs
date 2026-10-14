@@ -39,6 +39,10 @@ const STYLES: Styles = Styles::styled()
     .invalid(AnsiColor::Red.on_default().bold())
     .error(AnsiColor::Red.on_default().bold());
 
+/// Nom de la version mineure en cours : un pionnier de l'imprimerie, par ordre alphabétique (voir
+/// le CHANGELOG). À changer à chaque nouvelle version mineure, en même temps que le CHANGELOG.
+const CODENAME: &str = "Gutenberg";
+
 /// Imprime des tickets sur une Epson TM-T88V (ESC/POS).
 #[derive(Parser)]
 #[command(
@@ -216,7 +220,9 @@ fn parse_cli() -> Cli {
             }
         })
     };
-    let mut command = headings(Cli::command()).mut_subcommands(headings);
+    // « printr 1.6.0 “Gutenberg” » ; une seule chaîne, construite une fois.
+    let version: &'static str = Box::leak(format!("{} “{CODENAME}”", env!("CARGO_PKG_VERSION")).into_boxed_str());
+    let mut command = headings(Cli::command().version(version)).mut_subcommands(headings);
     if i18n::en() {
         command = in_english(command);
     }
@@ -435,6 +441,15 @@ fn test_ticket() -> Doc {
 
 #[cfg(test)]
 mod tests {
+    /// Le nom de code est celui que le CHANGELOG donne à cette version (s'il la connaît déjà).
+    #[test]
+    fn codename_matches_changelog() {
+        let heading = format!("## [{}]", env!("CARGO_PKG_VERSION"));
+        if let Some(line) = include_str!("../CHANGELOG.md").lines().find(|l| l.starts_with(&heading)) {
+            assert!(line.contains(&format!("“{CODENAME}”")), "CODENAME = {CODENAME}, CHANGELOG : {line}");
+        }
+    }
+
     use super::*;
 
     #[test]
