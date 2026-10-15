@@ -286,6 +286,9 @@ d'exemple (voir `barnum.rs`).
 - L'interface vit dans `web/`. Avec `PRINTR_WEB_DIR=web`, un simple rechargement de la page
   suffit. Vérifie-la sur téléphone (390 px de large) comme sur ordinateur, en clair et en
   sombre.
+- **Avant chaque version**, `scripts/illustrations.sh` refait toutes les illustrations dans les deux
+  langues (exemples des blocs, captures de l'appli, tickets vitrines, image de partage), puis
+  construit le site ; `--sans-claude` évite tout appel à Claude (les blocs Claude gardent leur image).
 - Les captures du site et du README se régénèrent avec `docs/demo/photo-session.sh`, toujours
   sur des données fictives. N'y mets jamais de vraies données personnelles.
 - Les déclinaisons du logo se régénèrent avec

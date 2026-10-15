@@ -280,6 +280,9 @@ sample response (see `barnum.rs`).
 
 - The interface lives in `web/`. With `PRINTR_WEB_DIR=web`, a simple page reload is enough. Check
   it on a phone (390 px wide) as well as on a computer, in light and dark mode.
+- **Before each version**, `scripts/illustrations.sh` remakes every illustration in both languages
+  (block examples, app screenshots, showcase tickets, link preview image), then builds the site;
+  `--sans-claude` avoids any Claude call (Claude blocks keep their current image).
 - The screenshots for the site and the README are regenerated with `docs/demo/photo-session.sh`,
   always with fictional data. Never put real personal data in them.
 - The logo variants are regenerated with `uv run --with pillow python docs/brand/make-assets.py`.

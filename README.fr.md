@@ -451,6 +451,8 @@ uvx --with markdown --with pymdown-extensions python docs/build.py && python3 -m
 Ses illustrations sont générées avec des données fictives uniquement :
 
 ```sh
+scripts/illustrations.sh                                # tout, dans les deux langues, puis le site
+scripts/illustrations.sh --sans-claude                  # pareil, sans aucun appel à Claude
 docs/demo/photo-session.sh                              # captures de l'appli + tickets de l'émulateur
 uv run --with pillow python docs/brand/make-assets.py   # déclinaisons du logo et icônes de l'appli
 ```

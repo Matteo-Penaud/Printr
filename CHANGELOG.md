@@ -29,6 +29,9 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
 ### Changed
 - `--preview` on the command line no longer calls Claude, like the app's preview: Claude blocks show a
   placeholder. `--claude` allows the call when you want the real text.
+- `scripts/illustrations.sh`: remakes every illustration of the site and README in both languages (block
+  examples, app screenshots, showcase tickets, link preview), then builds the site; `--sans-claude` makes no
+  Claude call.
 
 ### Fixed
 - The app recognizes French block names used in JSON tickets (`mots_meles`, `enigme`…) instead of showing them raw.
