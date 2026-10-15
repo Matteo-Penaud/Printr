@@ -1803,7 +1803,18 @@ function HistoryPreview({ entry, onClose }) {
 function History({ users, me }) {
   const [entries, setEntries] = useState(null);
   const [shown, setShown] = useState(null);
-  useEffect(() => { api('GET', '/api/history').then(setEntries).catch((e) => { toast(e.message, 'error'); setEntries([]); }); }, []);
+  // Relu toutes les 10 s, au retour sur l'onglet et quand l'état de l'imprimante change : un ticket
+  // en attente passe à « imprimé » sans qu'on ait à recharger la page.
+  useEffect(() => {
+    const load = (first) => api('GET', '/api/history').then(setEntries)
+      .catch((e) => { if (first) { toast(e.message, 'error'); setEntries([]); } });
+    load(true);
+    const timer = setInterval(() => { if (!document.hidden) load(); }, 10000);
+    const onShow = () => { if (!document.hidden) load(); };
+    document.addEventListener('visibilitychange', onShow);
+    const off = bus.on('printer-changed', () => load());
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onShow); off(); };
+  }, []);
   const byName = Object.fromEntries((users || []).map((u) => [u.name, u]));
   const dayLabel = (d) => {
     const today = new Date(); const y = new Date(Date.now() - 864e5);
@@ -1954,7 +1965,11 @@ function App() {
     loadUsers();
     const status = () => api('GET', '/api/status').then((s) => {
       setVersion(s.version); setUpdate(s.update || null);
-      setPrinter({ ready: s.printer_ready !== false, queued: s.queued || 0 });
+      setPrinter((before) => {
+        const now = { ready: s.printer_ready !== false, queued: s.queued || 0 };
+        if (before.ready !== now.ready || before.queued !== now.queued) bus.emit('printer-changed');
+        return now;
+      });
     }).catch(() => {});
     status();
     const timer = setInterval(status, 30000);
