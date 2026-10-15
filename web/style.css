@@ -420,16 +420,8 @@ select.input { appearance: none; padding-right: 38px;
 }
 .cat-main:hover { border-color: var(--accent); box-shadow: var(--shadow-1); }
 .cat-main:active { transform: scale(.97); }
-/* Vignette : le haut du ticket d'exemple, sur fond de papier. */
-.cat-thumb {
-  display: block; width: 100%; height: 84px; overflow: hidden; border-radius: 8px; background: #fff;
-  border: 1px solid var(--line); -webkit-mask-image: linear-gradient(#000 70%, transparent);
-  mask-image: linear-gradient(#000 70%, transparent);
-}
-.cat-thumb img { display: block; width: 100%; height: auto; }
-/* Œil et étoile sur la ligne de l'emoji, sous la vignette (84 px + marges). */
+/* Œil (exemple, au clic) et étoile (favori), en haut à droite de la fiche. */
 .cat-tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 2px; }
-.cat-tools.below-thumb { top: 100px; }
 .cat-tools .iconbtn { width: 32px; height: 32px; border-radius: 10px; background: color-mix(in srgb, var(--surface) 88%, transparent); }
 .cat-tools .star { font-size: 18px; color: var(--muted); }
 .cat-tools .star.on { color: var(--accent); }

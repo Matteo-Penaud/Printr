@@ -1185,7 +1185,7 @@ function Home({ me, presets, reload, openComposer }) {
 // Écran : composer
 // ============================================================================
 
-// Ticket d'exemple de chaque bloc (celui du site, intégré au binaire) : vignettes du catalogue.
+// Ticket d'exemple de chaque bloc (celui du site, intégré au binaire), montré au clic sur l'œil.
 const EXAMPLE = {
   title: 'titre', text: 'texte', date: 'date', separator: 'separateur', feed: 'espace', image: 'image', qr: 'qr',
   picto: 'pictogramme', weather: 'meteo', barnum: 'horoscope', horoscope: 'horoscope_claude', word_of_the_day: 'mot_du_jour',
@@ -1239,11 +1239,10 @@ function CatalogItem({ block, favorite, onPick, onFavorite, onExample }) {
   const url = exampleUrl(block.type);
   return html`<div class="cat-item">
     <button type="button" class="cat-main" onClick=${() => onPick(block.type)}>
-      ${url && html`<span class="cat-thumb"><img src=${url} alt="" loading="lazy" /></span>`}
       <span class="emoji">${block.emoji}</span>
       <strong>${block.label}${block.ai && html` <span class="badge">Claude</span>`}</strong><span>${block.desc}</span>
     </button>
-    <div class="cat-tools ${url ? 'below-thumb' : ''}">
+    <div class="cat-tools">
       ${url && html`<button type="button" class="iconbtn" aria-label=${T(`Voir un exemple : ${block.label}`, `See an example: ${block.label}`)}
         title=${T('Voir un exemple', 'See an example')} onClick=${() => onExample(block)}><${Icon} name="eye" size=${18} /></button>`}
       <button type="button" class="iconbtn star ${favorite ? 'on' : ''}" aria-pressed=${favorite}
