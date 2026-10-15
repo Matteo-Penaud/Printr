@@ -31,16 +31,42 @@ LOGS=$(mktemp -d)
 trap 'rm -rf "$LOGS"' EXIT
 START=$SECONDS
 
-# Une étape : son nom, sa commande ; le détail va dans un journal, montré seulement en cas d'échec.
+# Une étape : son nom, le nombre d'images attendues (0 si on ne compte pas), sa commande. Le détail
+# va dans un journal, montré seulement en cas d'échec ; en attendant, la ligne de l'étape montre la
+# progression : chaque image produite est annoncée par une ligne « …/nom.png » dans le journal.
 run() {
-  local name=$1 log t=$SECONDS
-  log="$LOGS/$(echo "$1" | tr -c 'a-zA-Z0-9' '_').log"
-  shift
-  printf '%s▸%s %s' "$B$ORANGE" "$R" "$name"
-  if "$@" >"$log" 2>&1; then
-    printf ' %s✓%s %s(%ss)%s\n' "$GREEN" "$R" "$D" "$((SECONDS - t))" "$R"
+  local name=$1 total=$2 log t=$SECONDS
+  shift 2
+  log="$LOGS/$(echo "$name" | tr -c 'a-zA-Z0-9' '_').log"
+  "$@" >"$log" 2>&1 &
+  local pid=$! frame=0 spin=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
+  if [ -t 1 ]; then
+    while kill -0 "$pid" 2>/dev/null; do
+      local mark="$ORANGE${spin[frame++ % ${#spin[@]}]}$R" elapsed="$D$((SECONDS - t))s$R"
+      if [ "$total" -gt 0 ]; then
+        local n last bar
+        n=$(grep -c '\.png$' "$log" || true)
+        last=$(grep '\.png$' "$log" | tail -1 || true)
+        last=${last##*/}
+        last=${last%.png}
+        bar=''
+        for ((k = 0; k < 20; k++)); do
+          if ((k < n * 20 / total)); then bar+='█'; else bar+='░'; fi
+        done
+        # Avant la première image : compilation, démarrage de l'émulateur ou du navigateur.
+        [ "$n" = 0 ] && last="préparation…"
+        printf '\r\e[K%s %s  %s %s%d/%d%s %s %s' "$mark" "$name" "$bar" "$B" "$n" "$total" "$R" "$elapsed" "${last:+$D· $last$R}"
+      else
+        printf '\r\e[K%s %s  %s' "$mark" "$name" "$elapsed"
+      fi
+      sleep 0.2
+    done
+    printf '\r\e[K'
+  fi
+  if wait "$pid"; then
+    printf '%s▸%s %s %s✓%s %s(%ss)%s\n' "$B$ORANGE" "$R" "$name" "$GREEN" "$R" "$D" "$((SECONDS - t))" "$R"
   else
-    printf '\n%s✗ %s a échoué%s, fin du journal :\n' "$RED$B" "$name" "$R" >&2
+    printf '%s✗ %s a échoué%s, fin du journal :\n' "$RED$B" "$name" "$R" >&2
     tail -20 "$log" >&2
     exit 1
   fi
@@ -73,17 +99,23 @@ for group in catalogue:
   exemples() {
     if [ "$NO_CLAUDE" = 1 ]; then env -u ANTHROPIC_API_KEY docs/exemples/generer.sh "$@"; else docs/exemples/generer.sh "$@"; fi
   }
-  run "Exemples des blocs, en français (${#blocks[@]})" exemples "${blocks[@]}"
-  run "Exemples des blocs, en anglais (${#blocks[@]})" exemples --en "${blocks[@]}"
+  run "Exemples des blocs, en français" "${#blocks[@]}" exemples "${blocks[@]}"
+  run "Exemples des blocs, en anglais" "${#blocks[@]}" exemples --en "${blocks[@]}"
 fi
 
 if wanted captures; then
-  run "Captures de l'appli et tickets vitrines, en français" docs/demo/photo-session.sh
-  run "Captures de l'appli et tickets vitrines, en anglais" docs/demo/photo-session.sh --en
+  # Images attendues : chaque capture (celles de l'ordinateur deux fois, thème clair et sombre),
+  # plus les tickets vitrines.
+  shots=$(grep -c 'await snap(' docs/demo/capture.py)
+  desktop=$(grep -c 'await snap(page, f"{OUT}/desktop' docs/demo/capture.py)
+  tickets=$(find docs/demo/tickets -maxdepth 1 -name '*.json' | wc -l)
+  run "Captures de l'appli et tickets vitrines, en français" $((shots + desktop + tickets)) docs/demo/photo-session.sh
+  tickets=$(find docs/demo/tickets/en -maxdepth 1 -name '*.json' | wc -l)
+  run "Captures de l'appli et tickets vitrines, en anglais" $((shots + desktop + tickets)) docs/demo/photo-session.sh --en
 fi
 
 if wanted site || wanted partage; then
-  run "Construction du site" uvx -q --with markdown --with pymdown-extensions python docs/build.py
+  run "Construction du site" 0 uvx -q --with markdown --with pymdown-extensions python docs/build.py
 fi
 
 if wanted partage; then
@@ -102,9 +134,9 @@ import sys
 from PIL import Image
 Image.open(sys.argv[1]).convert('RGB').save(sys.argv[2], optimize=True)" "$LOGS/partage.png" docs/preview.png
   }
-  run "Image de partage (docs/preview.png)" partage
+  run "Image de partage (docs/preview.png)" 0 partage
   # Le site doit embarquer la nouvelle image.
-  run "Construction du site, avec l'image" uvx -q --with markdown --with pymdown-extensions python docs/build.py
+  run "Construction du site, avec l'image" 0 uvx -q --with markdown --with pymdown-extensions python docs/build.py
 fi
 
 changed=$(git status --short -- docs | wc -l)
