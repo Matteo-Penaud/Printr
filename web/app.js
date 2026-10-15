@@ -526,6 +526,27 @@ const BLOCKS = [
     summary: (b) => `${(b.items || []).filter(Boolean).length} ${T('élément(s)', 'item(s)')}`,
   },
   {
+    type: 'recipe', label: T('Recette', 'Recipe'), emoji: '🍳', group: G.org, desc: T('Une recette lue sur son site, sans la pub', 'A recipe read from its website, without the ads'),
+    defaults: { url: '', steps: true, qr: true },
+    fields: [
+      { key: 'url', label: T('Adresse de la recette', 'Recipe address'), kind: 'text', placeholder: 'https://…',
+        help: T('La plupart des sites de cuisine marchent (ils décrivent leurs recettes en données schema.org).', 'Most cooking websites work (they describe their recipes with schema.org data).') },
+      { key: 'steps', label: T('Imprimer les étapes', 'Print the steps'), kind: 'toggle', help: T('Sinon, seulement les ingrédients : une liste de courses.', 'Otherwise, only the ingredients: a shopping list.') },
+      { key: 'qr', label: T('QR code vers la page', 'QR code to the page'), kind: 'toggle' },
+    ],
+    summary: (b) => (b.url || '').replace(/^https?:\/\/(www\.)?/, '').slice(0, 40) || T('Aucune adresse', 'No address'),
+  },
+  {
+    type: 'recipe_claude', label: T('Recette par Claude', 'Claude recipe'), emoji: '👩‍🍳', group: G.org, desc: T('Le nom d’un plat, Claude écrit la recette', 'Name a dish, Claude writes the recipe'), ai: true,
+    defaults: { dish: '', servings: 4, steps: true },
+    fields: [
+      { key: 'dish', label: T('Plat', 'Dish'), kind: 'text', placeholder: T('Blanquette de veau, crêpes…', 'Lasagna, pancakes…') },
+      { key: 'servings', label: T('Pour combien de personnes', 'Servings'), kind: 'number', min: 1, max: 20 },
+      { key: 'steps', label: T('Imprimer les étapes', 'Print the steps'), kind: 'toggle', help: T('Sinon, seulement les ingrédients : une liste de courses.', 'Otherwise, only the ingredients: a shopping list.') },
+    ],
+    summary: (b) => (b.dish ? T(`${b.dish} · ${b.servings} pers.`, `${b.dish} · serves ${b.servings}`) : T('Aucun plat', 'No dish')),
+  },
+  {
     type: 'shopping', label: T('Liste de courses', 'Shopping list'), emoji: '🛒', group: G.org, desc: T('La liste partagée de l’appli', "The app's shared list"),
     defaults: { title: T('Liste de courses', 'Shopping list'), clear: true },
     fields: [
@@ -1200,7 +1221,7 @@ const EXAMPLE = {
   word_search: 'mots_meles', train_tracks: 'voie_ferree', arrow_word: 'mots_fleches', crossword: 'mots_croises', nonogram: 'logimage',
   petit_bac: 'petit_bac', mental_math: 'calcul_mental', anagram: 'mot_mystere', cipher: 'message_code',
   coloring: 'coloriage', coupon: 'bon', news: 'actualites', on_this_day: 'ephemeride', crypto: 'crypto', todo: 'a_faire',
-  shopping: 'courses', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
+  shopping: 'courses', recipe: 'recette', recipe_claude: 'recette_claude', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
 };
 const exampleUrl = (type) => EXAMPLE[type] && `/exemples/${EN ? 'en/' : ''}${EXAMPLE[type]}.png`;
 
@@ -1222,7 +1243,8 @@ const KEYWORDS = {
   anagram: 'mot mystere anagramme anagram lettres letters', cipher: 'message code secret cesar caesar morse',
   coloring: 'coloriage coloring mandala dessin', coupon: 'bon cadeau coupon gift offrir',
   news: 'actualites news rss presse journal', on_this_day: 'ephemeride histoire history wikipedia', crypto: 'crypto bitcoin ethereum',
-  todo: 'faire todo liste list taches tasks', shopping: 'courses shopping liste list', agenda: 'agenda calendar calendrier evenements ics',
+  todo: 'faire todo liste list taches tasks',
+  recipe: 'recette recipe cuisine cooking ingredients plat dish site', recipe_claude: 'recette recipe cuisine cooking ingredients plat dish claude ia ai', shopping: 'courses shopping liste list', agenda: 'agenda calendar calendrier evenements ics',
   bins: 'poubelles bins trash dechets recyclage', wifi: 'wifi invites guests reseau network', monthly_report: 'bilan mois monthly report statistiques stats',
 };
 

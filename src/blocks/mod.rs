@@ -24,6 +24,7 @@ mod on_this_day;
 mod petit_bac;
 mod picto;
 mod quote;
+mod recipe;
 mod riddle;
 mod saint;
 mod shopping;
@@ -49,6 +50,10 @@ use crate::cache::Cache;
 use crate::claude::Claude;
 use crate::doc::{Align, Doc, Style};
 use crate::{i18n, raster};
+
+fn four() -> u8 {
+    4
+}
 
 fn yes() -> bool {
     true
@@ -430,6 +435,27 @@ pub enum Block {
         #[serde(default)]
         solution: bool,
     },
+    /// Recette lue sur une page web (données schema.org) : ingrédients à cocher, étapes.
+    #[serde(alias = "recette")]
+    Recipe {
+        url: String,
+        /// Imprimer les étapes (sinon, seulement les ingrédients : liste de courses).
+        #[serde(default = "yes")]
+        steps: bool,
+        /// QR code vers la page, en bas du ticket.
+        #[serde(default = "yes")]
+        qr: bool,
+    },
+    /// Recette d'un plat, rédigée par Claude (Haiku par défaut) à l'impression.
+    #[serde(alias = "recette_claude")]
+    RecipeClaude {
+        #[serde(alias = "plat")]
+        dish: String,
+        #[serde(default = "four")]
+        servings: u8,
+        #[serde(default = "yes")]
+        steps: bool,
+    },
     /// Mandala à colorier.
     #[serde(alias = "coloriage")]
     Coloring {
@@ -555,6 +581,8 @@ impl Block {
             Block::Coloring { .. } => i18n::t("coloriage", "coloring page"),
             Block::ArrowWord { .. } => i18n::t("mots fléchés", "arrow words"),
             Block::Crossword { .. } => i18n::t("mots croisés", "crossword"),
+            Block::Recipe { .. } => i18n::t("recette", "recipe"),
+            Block::RecipeClaude { .. } => i18n::t("recette par Claude", "Claude recipe"),
             Block::Title { .. } => i18n::t("titre", "title"),
             Block::Text { .. } => i18n::t("texte", "text"),
             Block::Glitch { .. } => "glitch",
@@ -637,6 +665,8 @@ impl Block {
                 size.label(),
                 if *solution { ", solution" } else { "" }
             )),
+            Block::Recipe { url, .. } => Some(url.split("://").nth(1).unwrap_or(url).chars().take(32).collect()),
+            Block::RecipeClaude { dish, servings, .. } => Some(format!("{dish}, {servings}")),
             Block::Countdown { label, .. } => Some(label.clone()),
             Block::Crypto { coins, .. } => Some(coins.join(", ")),
             Block::Sun { location } => Some(location.clone()),
@@ -808,6 +838,10 @@ impl Block {
             Block::ArrowWord { size, level, seed, solution } => {
                 let options = arrow_word::Options { size: *size, level: *level, seed: *seed, solution: *solution };
                 doc = arrow_word::build(ctx, &options)?;
+            }
+            Block::Recipe { url, steps, qr } => doc = recipe::build(ctx, url, *steps, *qr)?,
+            Block::RecipeClaude { dish, servings, steps } => {
+                doc = recipe::build_with_claude(ctx, dish, *servings, *steps)?
             }
             Block::Crossword { size, level, seed, solution } => {
                 let options = crossword::Options { size: *size, level: *level, seed: *seed, solution: *solution };

@@ -460,6 +460,27 @@
      "fr": "Qui a imprimé quoi, façon ticket de caisse.",
      "en": "Who printed what, as a till receipt."
     }
+   },
+   {
+    "id": "recette",
+    "emoji": "🍳",
+    "fr": "Recette",
+    "en": "Recipe",
+    "description": {
+     "fr": "Une recette lue sur son site (données schema.org) : ingrédients à cocher et étapes, sans publicité.",
+     "en": "A recipe read from its website (schema.org data): ingredients to tick and steps, without ads."
+    }
+   },
+   {
+    "id": "recette_claude",
+    "emoji": "👩‍🍳",
+    "fr": "Recette par Claude",
+    "en": "Claude recipe",
+    "description": {
+     "fr": "Le nom d'un plat, et Claude rédige la recette : ingrédients à cocher et étapes.",
+     "en": "Name a dish and Claude writes the recipe: ingredients to tick and steps."
+    },
+    "claude": true
    }
   ]
  }

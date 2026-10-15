@@ -18,6 +18,10 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
   a “printer missing, the ticket will come out when it is back” message, and “waiting” / “came out at 9:12,
   late” in the history.
 - A print that blocks (printer on but stuck) gives up after 30 seconds instead of hanging.
+- **Recipe** block: paste the address of a recipe, Printr reads its schema.org data (found on most cooking
+  sites) and prints the title, servings and times, ingredients to tick and numbered steps, without the ads.
+- **Claude recipe** block: name a dish, Claude (Haiku by default) writes the recipe at print time, with the
+  same layout; cached per dish and number of servings.
 
 ### Changed
 - `--preview` on the command line no longer calls Claude, like the app's preview: Claude blocks show a
