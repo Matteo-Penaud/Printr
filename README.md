@@ -24,7 +24,7 @@
 <p align="center"><a href="README.fr.md">🇫🇷 Version française</a></p>
 
 Printr turns an **Epson TM-T88V** receipt printer into a family gadget. You compose a ticket from
-**40 blocks** (weather, horoscope, sudoku, word search, riddles, news, photos…), print it from your
+**46 blocks** (weather, horoscope, sudoku, word search, riddles, news, photos…), print it from your
 phone, **schedule** it for 7:30 on weekdays, or send a **little note with a photo** to the people
 who stayed home. A single Rust binary, running on a Raspberry Pi, that speaks ESC/POS directly to
 the printer.
@@ -37,15 +37,18 @@ the printer.
   <img src="docs/tickets/en/petit-mot.png" alt="Little note with a photo" width="240">
 </p>
 
-- **40 blocks**: weather, calendar, horoscope (serious, whimsical, snarky or downright insulting),
-  word of the day, arrow words, sudoku, nonogram, word search, Categories, coloring, riddles
+- **46 blocks**: weather, tonight's sky (planets, ISS passes), calendar, horoscope (serious, whimsical,
+  snarky or downright insulting), word of the day, recipes, crosswords and arrow words, sudoku, nonogram,
+  word search, Categories, coloring, riddles
   with their answer printed upside down, workout challenge, shopping list, bin collection days,
   guest Wi-Fi, gift coupons, a receipt-style monthly report, news from RSS feeds, photos…
 - **A web app for the family**: accounts, saved and shared tickets, live preview,
   scheduling in 24-hour format, history.
+- **Never loses a ticket**: printer off or unplugged? The ticket waits for it to come back, and the
+  app says so.
 - **Lean**: almost everything is computed locally or comes from free APIs that need no key. Claude
-  only writes the horoscope and the word of the day (one small call to Claude Haiku, cached for
-  the day).
+  only writes what needs a pen (horoscope, word of the day, puzzle clues, recipes on demand), with
+  small Claude Haiku calls, always cached.
 - **A tidy CLI**: preview in the terminal, progress block by block, readable errors.
 
 <p align="center">

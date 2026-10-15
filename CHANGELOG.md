@@ -30,6 +30,9 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
 - `--preview` on the command line no longer calls Claude, like the app's preview: Claude blocks show a
   placeholder. `--claude` allows the call when you want the real text.
 
+### Fixed
+- The app recognizes French block names used in JSON tickets (`mots_meles`, `enigme`…) instead of showing them raw.
+
 ## [1.7.0] “Hoe” - 2026-10-15
 
 ### Added

@@ -607,6 +607,17 @@ const BLOCKS = [
   },
 ];
 const BLOCK = Object.fromEntries(BLOCKS.map((b) => [b.type, b]));
+// Noms français acceptés par le serveur dans les tickets JSON (scripts, exemples) : l'appli les
+// reconnaît aussi, au lieu d'afficher « mots_meles ».
+const ALIASES = {
+  mots_meles: 'word_search', mots_caches: 'word_search', mots_en_grille: 'word_search', voie_ferree: 'train_tracks',
+  rails: 'train_tracks', defi_sportif: 'workout', enigme: 'riddle', calcul_mental: 'mental_math', mot_mystere: 'anagram',
+  anagramme: 'anagram', logimage: 'nonogram', picross: 'nonogram', message_code: 'cipher', courses: 'shopping',
+  bon: 'coupon', poubelles: 'bins', bilan: 'monthly_report', mots_fleches: 'arrow_word', fleches: 'arrow_word',
+  mots_croises: 'crossword', croises: 'crossword', recette: 'recipe', recette_claude: 'recipe_claude', ciel: 'sky',
+  coloriage: 'coloring',
+};
+for (const [alias, type] of Object.entries(ALIASES)) BLOCK[alias] = BLOCK[type];
 // Ancien nom accepté par le serveur.
 BLOCK.enigme = BLOCK.riddle;
 BLOCK.defi_sportif = BLOCK.workout;
