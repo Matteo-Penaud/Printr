@@ -155,6 +155,7 @@ an error, so typos get caught.
 | `air_quality` | `location` | European air quality index, particles, pollen (Open-Meteo) |
 | `crypto` | `coins` (`["bitcoin", "ethereum"]`, CoinGecko IDs), `currency` (`eur`) | Prices and 24-hour change |
 | `sun` | `location` | Sunrise, sunset and day length via Open-Meteo, no key |
+| `sky` (or `ciel`) | `location` | Tonight's sky: visible planets (direction and height), visible International Space Station passes until dawn, moon and shooting stars. Computed locally (JPL orbital elements, SGP4); only the ISS orbit comes from CelesTrak, once a day |
 | `riddle` (or `enigme`) | `kind` (`devinette`/`charade`/`logique`/`calcul`), `number`, `answer` (`envers`/`lendemain`/`dessous`/`aucune`) | 125 riddles, one per day, never repeated. By default the answer is printed upside down: turn the ticket over to read it |
 | `workout` (or `defi_sportif`) | `level` (`facile`/`moyen`/`difficile`), `number` | Workout challenge of the day, no equipment needed, 25 challenges per level |
 | `news` | `title`, `feeds` (RSS/Atom URLs), `count` (3, max 5), `qr` (2, max 2), `themes`, `exclude`, `max_age_hours` (24) | News digest without AI: see below |

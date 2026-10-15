@@ -172,6 +172,16 @@
     }
    },
    {
+    "id": "ciel",
+    "emoji": "🔭",
+    "fr": "Le ciel ce soir",
+    "en": "Tonight's sky",
+    "description": {
+     "fr": "Planètes visibles, passages de la Station spatiale internationale, lune et étoiles filantes, calculés pour sa ville.",
+     "en": "Visible planets, International Space Station passes, moon and shooting stars, computed for your city."
+    }
+   },
+   {
     "id": "air",
     "emoji": "🍃",
     "fr": "Qualité de l'air",

@@ -18,6 +18,9 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
   a “printer missing, the ticket will come out when it is back” message, and “waiting” / “came out at 9:12,
   late” in the history.
 - A print that blocks (printer on but stuck) gives up after 30 seconds instead of hanging.
+- **Tonight's sky** block: visible planets with their direction and height, visible International Space Station
+  passes until dawn, moon phase and shooting star showers, for your city. Computed locally (JPL orbital
+  elements for the planets, SGP4 for the ISS, whose orbit comes from CelesTrak once a day).
 - **Recipe** block: paste the address of a recipe, Printr reads its schema.org data (found on most cooking
   sites) and prints the title, servings and times, ingredients to tick and numbered steps, without the ads.
 - **Claude recipe** block: name a dish, Claude (Haiku by default) writes the recipe at print time, with the

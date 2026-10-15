@@ -28,6 +28,7 @@ mod recipe;
 mod riddle;
 mod saint;
 mod shopping;
+mod sky;
 mod sudoku;
 mod sun;
 mod train_tracks;
@@ -456,6 +457,11 @@ pub enum Block {
         #[serde(default = "yes")]
         steps: bool,
     },
+    /// Le ciel ce soir : planètes visibles, passages de l'ISS, lune, étoiles filantes.
+    #[serde(alias = "ciel")]
+    Sky {
+        location: String,
+    },
     /// Mandala à colorier.
     #[serde(alias = "coloriage")]
     Coloring {
@@ -582,6 +588,7 @@ impl Block {
             Block::ArrowWord { .. } => i18n::t("mots fléchés", "arrow words"),
             Block::Crossword { .. } => i18n::t("mots croisés", "crossword"),
             Block::Recipe { .. } => i18n::t("recette", "recipe"),
+            Block::Sky { .. } => i18n::t("ciel ce soir", "tonight's sky"),
             Block::RecipeClaude { .. } => i18n::t("recette par Claude", "Claude recipe"),
             Block::Title { .. } => i18n::t("titre", "title"),
             Block::Text { .. } => i18n::t("texte", "text"),
@@ -669,7 +676,7 @@ impl Block {
             Block::RecipeClaude { dish, servings, .. } => Some(format!("{dish}, {servings}")),
             Block::Countdown { label, .. } => Some(label.clone()),
             Block::Crypto { coins, .. } => Some(coins.join(", ")),
-            Block::Sun { location } => Some(location.clone()),
+            Block::Sun { location } | Block::Sky { location } => Some(location.clone()),
             Block::News { title, .. } => Some(title.clone()),
             Block::Workout { level, .. } => Some(level.label().to_owned()),
             Block::Picto { shape, .. } => Some(shape.label().to_owned()),
@@ -840,6 +847,7 @@ impl Block {
                 doc = arrow_word::build(ctx, &options)?;
             }
             Block::Recipe { url, steps, qr } => doc = recipe::build(ctx, url, *steps, *qr)?,
+            Block::Sky { location } => doc = sky::build(ctx, location)?,
             Block::RecipeClaude { dish, servings, steps } => {
                 doc = recipe::build_with_claude(ctx, dish, *servings, *steps)?
             }

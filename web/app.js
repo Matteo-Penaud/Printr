@@ -300,6 +300,12 @@ const BLOCKS = [
     summary: (b) => b.location,
   },
   {
+    type: 'sky', label: T('Le ciel ce soir', "Tonight's sky"), emoji: '🔭', group: G.daily, desc: T('Planètes, passages de l’ISS, lune, étoiles filantes', 'Planets, ISS passes, moon, shooting stars'),
+    defaults: { location: 'Lyon' },
+    fields: [{ key: 'location', label: T('Ville', 'City'), kind: 'text' }],
+    summary: (b) => b.location,
+  },
+  {
     type: 'air_quality', label: T("Qualité de l'air", 'Air quality'), emoji: '🍃', group: G.daily, desc: T('Pollution et pollens', 'Pollution and pollen'),
     defaults: { location: 'Lyon' },
     fields: [{ key: 'location', label: T('Ville', 'City'), kind: 'text' }],
@@ -1216,7 +1222,7 @@ function Home({ me, presets, reload, openComposer }) {
 const EXAMPLE = {
   title: 'titre', text: 'texte', date: 'date', separator: 'separateur', feed: 'espace', image: 'image', qr: 'qr',
   picto: 'pictogramme', weather: 'meteo', barnum: 'horoscope', horoscope: 'horoscope_claude', word_of_the_day: 'mot_du_jour',
-  saint: 'saint', quote: 'citation', moon: 'lune', sun: 'soleil', air_quality: 'air', holidays: 'jours_feries',
+  saint: 'saint', quote: 'citation', moon: 'lune', sun: 'soleil', sky: 'ciel', air_quality: 'air', holidays: 'jours_feries',
   countdown: 'compte_a_rebours', riddle: 'enigme', workout: 'defi_sportif', sudoku: 'sudoku', maze: 'labyrinthe',
   word_search: 'mots_meles', train_tracks: 'voie_ferree', arrow_word: 'mots_fleches', crossword: 'mots_croises', nonogram: 'logimage',
   petit_bac: 'petit_bac', mental_math: 'calcul_mental', anagram: 'mot_mystere', cipher: 'message_code',
@@ -1233,6 +1239,7 @@ const KEYWORDS = {
   weather: 'meteo weather pluie rain temps soleil sun temperature', barnum: 'horoscope astrologie astrology signe sign zodiaque ciel sky',
   horoscope: 'horoscope astrologie astrology signe sign zodiaque claude ia ai', word_of_the_day: 'mot word definition vocabulaire vocabulary claude',
   saint: 'saint fete name day prenom', quote: 'citation quote phrase', moon: 'lune moon phase', sun: 'soleil sun lever coucher sunrise sunset',
+  sky: 'ciel sky etoiles stars planetes planets iss station spatiale space astronomie astronomy nuit night',
   air_quality: 'air pollution pollen qualite quality', holidays: 'feries holidays conge vacances',
   countdown: 'compte rebours countdown jours days vacances', riddle: 'enigme riddle devinette charade logique',
   workout: 'sport defi workout exercice exercise', sudoku: 'sudoku grille chiffres numbers puzzle', maze: 'labyrinthe maze',
