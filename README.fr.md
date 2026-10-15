@@ -84,7 +84,7 @@ Rédigé chaque jour par Claude, sur un thème tiré au hasard. Extraits authent
 ```sh
 printr print examples/matin.json    # ticket composé de blocs (voir plus bas)
 cat ticket.json | printr print      # idem, depuis l'entrée standard
-printr --preview print ticket.json  # aperçu dans le terminal, sans imprimer
+printr --preview print ticket.json  # aperçu dans le terminal, sans imprimer ni appeler Claude (--claude pour l'autoriser)
 printr --refresh print ticket.json  # régénère ce qui est en cache : soleil, horoscopes, mot du jour
 printr -q print ticket.json         # silencieux, n'affiche que les erreurs
 printr test                         # ticket de test (styles, accents, QR code)

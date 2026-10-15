@@ -86,7 +86,7 @@ French output):
 ```sh
 printr print examples/matin.json    # ticket made of blocks (see below)
 cat ticket.json | printr print      # same, from standard input
-printr --preview print ticket.json  # preview in the terminal, nothing printed
+printr --preview print ticket.json  # preview in the terminal, nothing printed, no Claude call (--claude to allow it)
 printr --refresh print ticket.json  # regenerates what is cached: sun, horoscopes, word of the day
 printr -q print ticket.json         # quiet, only shows errors
 printr test                         # test ticket (styles, accents, QR code)

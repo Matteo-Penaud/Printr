@@ -9,6 +9,10 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
 
 ## [Unreleased]
 
+### Changed
+- `--preview` on the command line no longer calls Claude, like the app's preview: Claude blocks show a
+  placeholder. `--claude` allows the call when you want the real text.
+
 ## [1.7.0] “Hoe” - 2026-10-15
 
 ### Added
