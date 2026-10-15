@@ -9,6 +9,16 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
 
 ## [Unreleased]
 
+### Added
+- **Printer missing? Tickets wait.** The server checks every 10 seconds that the printer is there (USB device
+  present, network printer accepting connections). When it is not, tickets — already laid out — go into a
+  queue that survives restarts, and print on their own when the printer comes back, schedules included.
+  After 12 hours (`PRINTR_QUEUE_HOURS`), a waiting ticket is dropped and the history says why.
+- The app shows the printer state (sidebar), a banner with the number of waiting tickets when it is missing,
+  a “printer missing, the ticket will come out when it is back” message, and “waiting” / “came out at 9:12,
+  late” in the history.
+- A print that blocks (printer on but stuck) gives up after 30 seconds instead of hanging.
+
 ### Changed
 - `--preview` on the command line no longer calls Claude, like the app's preview: Claude blocks show a
   placeholder. `--claude` allows the call when you want the real text.

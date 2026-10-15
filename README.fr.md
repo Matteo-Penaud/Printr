@@ -285,6 +285,11 @@ printr user remove Camille
 printr user list
 ```
 
+**Imprimante absente** (débranchée, éteinte, hors réseau) : l'appli l'affiche, et les tickets, déjà mis
+en page, attendent son retour puis sortent tout seuls, planifications comprises (« sorti à 9 h 12, en
+retard » dans l'historique). Au-delà de 12 heures (`PRINTR_QUEUE_HOURS`), un ticket en attente est
+abandonné : le brief du matin n'a plus d'intérêt le soir.
+
 Les données (comptes, presets, historique, photos) vivent dans `$PRINTR_DATA_DIR`, sinon
 `~/.local/share/printr`, ou `/var/lib/printr` avec le service systemd. Pour travailler sur
 l'interface sans recompiler : `PRINTR_WEB_DIR=web printr serve`.

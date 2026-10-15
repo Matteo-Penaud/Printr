@@ -288,6 +288,11 @@ printr user remove Camille
 printr user list
 ```
 
+**Printer missing** (unplugged, off, off the network): the app shows it, and tickets, already laid out,
+wait for it to come back, then print on their own, schedules included (“came out at 9:12, late” in the
+history). After 12 hours (`PRINTR_QUEUE_HOURS`), a waiting ticket is dropped: the morning brief is of
+no use in the evening.
+
 Data (accounts, presets, history, photos) lives in `$PRINTR_DATA_DIR`, otherwise
 `~/.local/share/printr`, or `/var/lib/printr` with the systemd service. To work on the interface
 without recompiling: `PRINTR_WEB_DIR=web printr serve`.

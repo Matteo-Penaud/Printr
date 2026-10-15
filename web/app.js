@@ -41,6 +41,15 @@ async function api(method, path, body) {
 }
 
 const toast = (message, kind = 'ok', emoji) => bus.emit('toast', { message, kind, emoji });
+
+// Réponse d'une impression : imprimé, imprimé avec des blocs en erreur, ou en attente de
+// l'imprimante (absente : le ticket sortira à son retour).
+function printedToast(r, message = T('Imprimé !', 'Printed!'), emoji = '🧾') {
+  bus.emit('printer');
+  if (r?.queued) return toast(T('Imprimante absente : le ticket sortira dès son retour.', 'Printer missing: the ticket will come out as soon as it is back.'), 'warn', '⏳');
+  if (r?.errors?.length) return toast(T(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, `Printed, with ${r.errors.length} block(s) in error`), 'error', '⚠️');
+  return toast(message, 'ok', emoji);
+}
 const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const uid = () => Math.random().toString(36).slice(2, 10);
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -1144,10 +1153,7 @@ function Home({ me, presets, reload, openComposer }) {
 
   const print = async (preset) => {
     try {
-      const r = await api('POST', `/api/presets/${preset.id}/print`);
-      r.errors?.length
-        ? toast(T(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, `Printed, with ${r.errors.length} block(s) in error`), 'error', '⚠️')
-        : toast(T('Imprimé !', 'Printed!'), 'ok', '🧾');
+      printedToast(await api('POST', `/api/presets/${preset.id}/print`));
     } catch (e) { toast(e.message, 'error'); }
   };
   const remove = (preset) => setConfirm({
@@ -1549,10 +1555,7 @@ function Composer({ initial, onSaved }) {
   const print = async () => {
     setPrinting(true);
     try {
-      const r = await api('POST', '/api/print', { ticket, label: state.name || T('Ticket composé', 'Composed ticket') });
-      r.errors?.length
-        ? toast(T(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, `Printed, with ${r.errors.length} block(s) in error`), 'error', '⚠️')
-        : toast(T('Imprimé !', 'Printed!'), 'ok', '🧾');
+      printedToast(await api('POST', '/api/print', { ticket, label: state.name || T('Ticket composé', 'Composed ticket') }));
     } catch (e) { toast(e.message, 'error'); } finally { setPrinting(false); }
   };
 
@@ -1645,9 +1648,9 @@ function Message({ me, onSaved }) {
   const print = async () => {
     setPrinting(true);
     try {
-      await api('POST', '/api/print', { ticket, label: `${T('Petit mot', 'Little note')}${title.trim() ? ` · ${title.trim()}` : ''}` });
+      const r = await api('POST', '/api/print', { ticket, label: `${T('Petit mot', 'Little note')}${title.trim() ? ` · ${title.trim()}` : ''}` });
       setDone(true);
-      toast(T('Envoyé à l’imprimante !', 'Sent to the printer!'), 'ok', '💌');
+      printedToast(r, T('Envoyé à l’imprimante !', 'Sent to the printer!'), '💌');
       setTimeout(() => setDone(false), 2400);
     } catch (e) { toast(e.message, 'error'); } finally { setPrinting(false); }
   };
@@ -1705,8 +1708,8 @@ function Shopping({ users }) {
     setBusy(true);
     try {
       const ticket = { cut: true, spacing: 1, blocks: [{ type: 'date' }, { type: 'shopping', clear }] };
-      await api('POST', '/api/print', { ticket, label: T('Liste de courses', 'Shopping list') });
-      toast(T('Liste imprimée, bonnes courses !', 'List printed, happy shopping!'), 'ok', '🛒');
+      printedToast(await api('POST', '/api/print', { ticket, label: T('Liste de courses', 'Shopping list') }),
+        T('Liste imprimée, bonnes courses !', 'List printed, happy shopping!'), '🛒');
       load();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   };
@@ -1783,11 +1786,12 @@ function History({ users, me }) {
         <div class="history-time">${new Date(e.at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })}</div>
         ${byName[e.by] ? html`<${Avatar} user=${byName[e.by]} size="small" />` : html`<span class="chip" style="height:22px;padding:0 6px"><${Icon} name="clock" /></span>`}
         <div class="grow"><strong>${e.label}</strong>
-          <div class="muted" style="font-size:13px">${e.by === 'planification' ? T('Impression planifiée', 'Scheduled print') : T(`par ${e.by}`, `by ${e.by}`)}</div>
+          <div class="muted" style="font-size:13px">${e.by === 'planification' ? T('Impression planifiée', 'Scheduled print') : T(`par ${e.by}`, `by ${e.by}`)}${e.printed_at
+            ? T(` · sorti à ${new Date(e.printed_at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })}, en retard`, ` · came out at ${new Date(e.printed_at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })}, late`) : ''}</div>
           ${e.errors?.length > 0 && html`<ul class="history-errors">${e.errors.map((err) => html`<li>${err}</li>`)}</ul>`}</div>
-        <span class="chip ${e.ok ? (e.errors?.length ? 'warn' : 'ok') : 'danger'}">${e.ok
+        ${e.queued ? html`<span class="chip warn">${T('En attente', 'Waiting')}</span>` : html`<span class="chip ${e.ok ? (e.errors?.length ? 'warn' : 'ok') : 'danger'}">${e.ok
           ? (e.errors?.length ? T('Partiel', 'Partial') : T('Imprimé', 'Printed'))
-          : T('Échec', 'Failed')}</span>
+          : T('Échec', 'Failed')}</span>`}
         ${me?.admin && e.preview && html`<button class="iconbtn" aria-label=${T('Voir le ticket', 'See the ticket')} title=${T('Voir le ticket', 'See the ticket')}
           onClick=${() => setShown(e)}><${Icon} name="eye" /></button>`}
       </div>`)}
@@ -1889,6 +1893,8 @@ function App() {
   const [users, setUsers] = useState([]);
   const [version, setVersion] = useState(null);
   const [update, setUpdate] = useState(null); // version plus récente publiée sur GitHub
+  // L'imprimante est-elle là ? Et combien de tickets attendent son retour ? (vérifié toutes les 30 s)
+  const [printer, setPrinter] = useState({ ready: true, queued: 0 });
   const [presets, setPresets] = useState(null);
   const [composer, setComposer] = useState(() => store.get('printr.draft', null) || emptyComposer());
   const [scrolled, setScrolled] = useState(false);
@@ -1906,7 +1912,14 @@ function App() {
     if (!me) return;
     loadPresets();
     loadUsers();
-    api('GET', '/api/status').then((s) => { setVersion(s.version); setUpdate(s.update || null); }).catch(() => {});
+    const status = () => api('GET', '/api/status').then((s) => {
+      setVersion(s.version); setUpdate(s.update || null);
+      setPrinter({ ready: s.printer_ready !== false, queued: s.queued || 0 });
+    }).catch(() => {});
+    status();
+    const timer = setInterval(status, 30000);
+    const off = bus.on('printer', () => setTimeout(status, 600));
+    return () => { clearInterval(timer); off(); };
   }, [me]);
   useEffect(() => {
     const onScroll = () => setScrolled(scrollY > 4);
@@ -1938,6 +1951,7 @@ function App() {
         onClick=${n.hash === '#/compose' ? (e) => { if (route.hash !== '#/compose') { e.preventDefault(); openComposer(store.get('printr.draft', null) || emptyComposer()); } } : undefined}>
         <${Icon} name=${n.icon} />${n.label}</a>`)}
       <div class="spacer"></div>
+      <div class="printer-state ${printer.ready ? 'ok' : 'off'}">${printer.ready ? T('Imprimante prête', 'Printer ready') : T('Imprimante déconnectée', 'Printer disconnected')}</div>
       ${version && html`<div class="version">printr ${version}${me.admin && update && html` · <a href=${update.url} target="_blank" rel="noopener">${T(`${update.version} disponible`, `${update.version} available`)}</a>`}</div>`}
       <div class="account-row">
         <button type="button" class="navlink account" onClick=${() => setMenu(true)}><${Avatar} user=${me} />
@@ -1952,6 +1966,9 @@ function App() {
         ${route.hash === '#/compose' && composer.id && html`<button class="btn ghost small" onClick=${() => openComposer(emptyComposer())}><${Icon} name="plus" size=${16} /> ${T('Nouveau', 'New')}</button>`}
         <button class="me" aria-label=${T('Mon compte', 'My account')} title=${T('Mon compte', 'My account')} onClick=${() => setMenu(true)}><${Avatar} user=${me} /><span>${T('Mon compte', 'My account')}</span></button>
       </header>
+      ${!printer.ready && html`<div class="printer-banner" role="status"><span class="emoji">🔌</span>
+        <span>${T('Imprimante déconnectée : les tickets attendront son retour.', 'Printer disconnected: tickets will wait for it to come back.')}
+        ${printer.queued > 0 && html` <strong>${T(`${printer.queued} en attente`, `${printer.queued} waiting`)}</strong>`}</span></div>`}
       ${page}
     </main>
     <nav class="tabbar" aria-label=${T('Navigation', 'Navigation')}>

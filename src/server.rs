@@ -46,12 +46,19 @@ pub struct App {
     max_per_hour: usize,
     /// Version plus récente publiée sur GitHub, trouvée par la vérification quotidienne.
     latest: Arc<Mutex<Option<crate::update::Available>>>,
+    /// L'imprimante répondait à la dernière vérification (voir `watch_printer`).
+    printer_ready: std::sync::atomic::AtomicBool,
+    /// Au-delà de ce délai, un ticket en attente est abandonné (le brief du matin n'a plus
+    /// d'intérêt le soir) : `PRINTR_QUEUE_HOURS`, 12 heures par défaut.
+    queue_hours: i64,
 }
 
 /// Résultat d'une impression, renvoyé à l'interface.
 pub struct Printed {
     pub errors: Vec<String>,
     pub failure: Option<String>,
+    /// Imprimante absente : le ticket attend son retour (la raison, pour le journal).
+    pub queued: Option<String>,
 }
 
 impl App {
@@ -88,38 +95,133 @@ impl App {
         store
     }
 
-    /// Construit, imprime et note dans l'historique un ticket.
+    /// Construit, imprime et note dans l'historique un ticket. Si l'imprimante est absente, le
+    /// ticket, déjà mis en page, attend son retour dans la file.
     pub fn print(&self, ticket: &Ticket, by: &str, label: &str) -> Printed {
         let started = Utc::now();
         let (doc, reports) = ticket.build(&Ctx::web(false), &mut Silent);
         let errors: Vec<String> =
             reports.iter().filter_map(|r| r.error.as_ref().map(|e| format!("{} : {e}", r.label))).collect();
-        let failure = {
-            let printer = self.printer.lock().unwrap_or_else(|e| e.into_inner());
-            printer.send(&doc, ticket.cut).err().map(|e| format!("{e:#}"))
+        let (failure, queued) = match crate::output::render(&doc, ticket.cut) {
+            Err(e) => (Some(format!("{e:#}")), None),
+            Ok(bytes) => {
+                let sent = self.printer.lock().unwrap_or_else(|e| e.into_inner()).write(&bytes);
+                match sent {
+                    Ok(()) => (None, None),
+                    Err(e) => {
+                        self.printer_ready.store(false, std::sync::atomic::Ordering::Relaxed);
+                        let id = crate::store::new_id(8);
+                        match crate::store::save_job(&id, &bytes) {
+                            Ok(()) => (None, Some((id, format!("{e:#}")))),
+                            Err(_) => (Some(format!("{e:#}")), None),
+                        }
+                    }
+                }
+            }
         };
         // Le ticket tel qu'imprimé (ou tel qu'il aurait dû l'être), pour l'aperçu de l'admin.
         let preview = crate::store::save_preview(&doc.to_json());
         let mut store = self.lock_store();
+        if let Some((id, _)) = &queued {
+            store.data.queue.push(crate::store::QueuedJob {
+                id: id.clone(),
+                at: Utc::now(),
+                by: by.to_owned(),
+                label: label.to_owned(),
+            });
+        }
         store.record(HistoryEntry {
             preview,
+            queued: queued.as_ref().map(|(id, _)| id.clone()),
+            printed_at: None,
             at: Utc::now(),
             by: by.to_owned(),
             label: label.to_owned(),
-            ok: failure.is_none(),
+            ok: failure.is_none() && queued.is_none(),
             errors: failure.iter().chain(&errors).cloned().collect(),
             blocks: ticket.blocks.iter().map(|b| b.name().to_owned()).collect(),
             paper_mm: Some((doc.height_dots() as f64 * 25.4 / 180.0).round() as u32),
         });
         // Liste de courses imprimée avec `clear` : on retire ce qui y figurait (pas ce qui a été
-        // ajouté pendant l'impression).
-        if failure.is_none() && ticket.blocks.iter().any(|b| matches!(b, Block::Shopping { clear: true, .. })) {
+        // ajouté pendant l'impression). Un ticket en attente ne vide rien : la liste peut encore servir.
+        let printed_now = failure.is_none() && queued.is_none();
+        if printed_now && ticket.blocks.iter().any(|b| matches!(b, Block::Shopping { clear: true, .. })) {
             store.data.shopping.retain(|item| item.added > started);
         }
         if let Err(e) = store.save() {
             eprintln!("{}", tr!("historique non enregistré : {e:#}", "history not saved: {e:#}"));
         }
-        Printed { errors, failure }
+        Printed { errors, failure, queued: queued.map(|(_, reason)| reason) }
+    }
+
+    /// Vérifie que l'imprimante est là, et lui envoie les tickets qui l'attendaient. Les tickets
+    /// trop anciens sont abandonnés et notés comme tels dans l'historique.
+    fn watch_printer(&self) {
+        let ready = self.printer.lock().unwrap_or_else(|e| e.into_inner()).available();
+        let was = self.printer_ready.swap(ready, std::sync::atomic::Ordering::Relaxed);
+        if ready != was {
+            eprintln!(
+                "{}",
+                if ready {
+                    t("imprimante de retour", "printer is back")
+                } else {
+                    t("imprimante absente", "printer missing")
+                }
+            );
+        }
+        let jobs = self.lock_store().data.queue.clone();
+        let limit = Utc::now() - chrono::Duration::hours(self.queue_hours);
+        for job in jobs {
+            let outcome = if job.at < limit {
+                Err(tr!(
+                    "abandonné : imprimante absente pendant plus de {} h",
+                    "dropped: printer missing for more than {} h",
+                    self.queue_hours
+                ))
+            } else if !ready {
+                break;
+            } else {
+                match crate::store::load_job(&job.id) {
+                    None => Err(t("ticket en attente perdu", "queued ticket lost").to_owned()),
+                    Some(bytes) => match self.printer.lock().unwrap_or_else(|e| e.into_inner()).write(&bytes) {
+                        Ok(()) => Ok(()),
+                        // Toujours absente : on réessaiera au prochain tour.
+                        Err(_) => {
+                            self.printer_ready.store(false, std::sync::atomic::Ordering::Relaxed);
+                            break;
+                        }
+                    },
+                }
+            };
+            crate::store::remove_job(&job.id);
+            let mut store = self.lock_store();
+            store.data.queue.retain(|j| j.id != job.id);
+            if let Some(entry) = store.data.history.iter_mut().find(|e| e.queued.as_deref() == Some(&job.id)) {
+                entry.queued = None;
+                match &outcome {
+                    Ok(()) => {
+                        entry.ok = entry.errors.is_empty();
+                        entry.printed_at = Some(Utc::now());
+                    }
+                    Err(reason) => entry.errors.insert(0, reason.clone()),
+                }
+            }
+            if let Err(e) = store.save() {
+                eprintln!("{}", tr!("historique non enregistré : {e:#}", "history not saved: {e:#}"));
+            }
+            match outcome {
+                Ok(()) => eprintln!(
+                    "{}",
+                    tr!(
+                        "« {} » imprimé (en attente depuis {})",
+                        "\"{}\" printed (queued since {})",
+                        job.label,
+                        job.at.with_timezone(&chrono::Local).format("%H:%M")
+                    )
+                ),
+                Err(reason) => eprintln!("« {} » : {reason}", job.label),
+            }
+        }
     }
 }
 
@@ -133,6 +235,12 @@ struct Reply {
 }
 
 impl Reply {
+    /// Même réponse, avec un autre code (202 : accepté, imprimé plus tard).
+    fn with_status(mut self, status: u16) -> Self {
+        self.status = status;
+        self
+    }
+
     fn json(status: u16, value: Value) -> Self {
         Self {
             status,
@@ -676,6 +784,8 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             let claude = crate::claude::Claude::from_env();
             Reply::ok(json!({
                 "printer": app.destination,
+                "printer_ready": app.printer_ready.load(std::sync::atomic::Ordering::Relaxed),
+                "queued": app.lock_store().data.queue.len(),
                 "claude": claude.as_ref().map(|c| c.model().to_owned()),
                 "version": env!("CARGO_PKG_VERSION"),
                 "update": *app.latest.lock().unwrap_or_else(|e| e.into_inner()),
@@ -931,6 +1041,11 @@ fn handle(app: &App, request: &mut Request) -> Reply {
 }
 
 fn printed_reply(printed: Printed, label: &str) -> Reply {
+    if let Some(reason) = printed.queued {
+        return Reply::ok(json!({ "ok": true, "queued": true, "errors": printed.errors }))
+            .with_status(202)
+            .note(tr!("« {label} » en attente ({reason})", "\"{label}\" queued ({reason})"));
+    }
     match printed.failure {
         None => {
             let failed = if printed.errors.is_empty() {
@@ -963,6 +1078,8 @@ pub fn serve(listen: &str, token: Option<String>, target: Target) -> Result<()> 
             .and_then(|v| v.trim().parse().ok())
             .unwrap_or(DEFAULT_MAX_PER_HOUR),
         latest: Arc::new(Mutex::new(None)),
+        printer_ready: std::sync::atomic::AtomicBool::new(true),
+        queue_hours: std::env::var("PRINTR_QUEUE_HOURS").ok().and_then(|v| v.trim().parse().ok()).unwrap_or(12),
     });
     crate::update::spawn(Arc::clone(&app.latest));
     let server = Server::http(listen).map_err(|e| {
@@ -974,6 +1091,16 @@ pub fn serve(listen: &str, token: Option<String>, target: Target) -> Result<()> 
     ui::banner(listen, &destination, ctx.claude.as_ref().map(|c| c.model()), cache.as_deref(), &data, users);
 
     crate::scheduler::spawn(Arc::clone(&app));
+    // L'imprimante est-elle là ? Toutes les 10 secondes ; c'est aussi ce qui vide la file d'attente.
+    {
+        let app = Arc::clone(&app);
+        std::thread::spawn(move || {
+            loop {
+                app.watch_printer();
+                std::thread::sleep(std::time::Duration::from_secs(10));
+            }
+        });
+    }
 
     for mut request in server.incoming_requests() {
         let app = Arc::clone(&app);
