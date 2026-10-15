@@ -71,6 +71,23 @@ impl Target {
 /// Au-delà, une écriture est considérée comme bloquée (imprimante allumée mais en défaut).
 const WRITE_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// L'imprimante a accepté la connexion mais ne prend plus les données (capot ouvert, plus de
+/// papier) : l'envoi reste en suspens et aboutira quand elle sera prête. Le ticket ne doit donc pas
+/// être renvoyé : il sortirait deux fois.
+#[derive(Debug)]
+pub struct Stalled;
+
+impl std::fmt::Display for Stalled {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(t(
+            "l'imprimante ne prend plus rien (capot, papier ?) : le ticket sortira quand elle sera prête",
+            "the printer is not taking anything (cover, paper?): the ticket will come out when it is ready",
+        ))
+    }
+}
+
+impl std::error::Error for Stalled {}
+
 fn connect(addr: &str, timeout: Duration) -> Result<TcpStream> {
     let target = addr
         .to_socket_addrs()
@@ -100,14 +117,7 @@ fn write_device(path: &Path, bytes: &[u8]) -> Result<()> {
     });
     match wait.recv_timeout(WRITE_TIMEOUT) {
         Ok(result) => result.with_context(|| tr!("écriture sur {} impossible", "cannot write to {}", path.display())),
-        Err(_) => anyhow::bail!(
-            "{}",
-            tr!(
-                "l'imprimante ne répond plus ({}) : papier, capot ?",
-                "the printer is not responding ({}): paper, cover?",
-                path.display()
-            )
-        ),
+        Err(_) => Err(Stalled.into()),
     }
 }
 

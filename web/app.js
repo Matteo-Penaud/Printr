@@ -46,6 +46,7 @@ const toast = (message, kind = 'ok', emoji) => bus.emit('toast', { message, kind
 // l'imprimante (absente : le ticket sortira à son retour).
 function printedToast(r, message = T('Imprimé !', 'Printed!'), emoji = '🧾') {
   bus.emit('printer');
+  if (r?.stalled) return toast(T('L’imprimante ne prend plus rien (capot, papier ?) : le ticket sortira quand elle sera prête.', 'The printer is not taking anything (cover, paper?): the ticket will come out when it is ready.'), 'warn', '⏳');
   if (r?.queued) return toast(T('Imprimante absente : le ticket sortira dès son retour.', 'Printer missing: the ticket will come out as soon as it is back.'), 'warn', '⏳');
   if (r?.errors?.length) return toast(T(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, `Printed, with ${r.errors.length} block(s) in error`), 'error', '⚠️');
   return toast(message, 'ok', emoji);

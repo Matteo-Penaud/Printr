@@ -59,6 +59,8 @@ pub struct Printed {
     pub failure: Option<String>,
     /// Imprimante absente : le ticket attend son retour (la raison, pour le journal).
     pub queued: Option<String>,
+    /// Envoyé, mais l'imprimante ne prend plus rien (capot, papier) : il sortira quand elle sera prête.
+    pub stalled: bool,
 }
 
 impl App {
@@ -102,12 +104,18 @@ impl App {
         let (doc, reports) = ticket.build(&Ctx::web(false), &mut Silent);
         let errors: Vec<String> =
             reports.iter().filter_map(|r| r.error.as_ref().map(|e| format!("{} : {e}", r.label))).collect();
+        let mut stalled = false;
         let (failure, queued) = match crate::output::render(&doc, ticket.cut) {
             Err(e) => (Some(format!("{e:#}")), None),
             Ok(bytes) => {
                 let sent = self.printer.lock().unwrap_or_else(|e| e.into_inner()).write(&bytes);
                 match sent {
                     Ok(()) => (None, None),
+                    // En suspens chez l'imprimante : il sortira tout seul, ne pas le remettre en file.
+                    Err(e) if e.is::<crate::output::Stalled>() => {
+                        stalled = true;
+                        (None, None)
+                    }
                     Err(e) => {
                         self.printer_ready.store(false, std::sync::atomic::Ordering::Relaxed);
                         let id = crate::store::new_id(8);
@@ -138,7 +146,12 @@ impl App {
             by: by.to_owned(),
             label: label.to_owned(),
             ok: failure.is_none() && queued.is_none(),
-            errors: failure.iter().chain(&errors).cloned().collect(),
+            errors: failure
+                .iter()
+                .chain(&errors)
+                .cloned()
+                .chain(stalled.then(|| crate::output::Stalled.to_string()))
+                .collect(),
             blocks: ticket.blocks.iter().map(|b| b.name().to_owned()).collect(),
             paper_mm: Some((doc.height_dots() as f64 * 25.4 / 180.0).round() as u32),
         });
@@ -151,7 +164,7 @@ impl App {
         if let Err(e) = store.save() {
             eprintln!("{}", tr!("historique non enregistré : {e:#}", "history not saved: {e:#}"));
         }
-        Printed { errors, failure, queued: queued.map(|(_, reason)| reason) }
+        Printed { errors, failure, queued: queued.map(|(_, reason)| reason), stalled }
     }
 
     /// Vérifie que l'imprimante est là, et lui envoie les tickets qui l'attendaient. Les tickets
@@ -185,6 +198,8 @@ impl App {
                     None => Err(t("ticket en attente perdu", "queued ticket lost").to_owned()),
                     Some(bytes) => match self.printer.lock().unwrap_or_else(|e| e.into_inner()).write(&bytes) {
                         Ok(()) => Ok(()),
+                        // Confié à l'imprimante, qui le sortira quand elle sera prête.
+                        Err(e) if e.is::<crate::output::Stalled>() => Ok(()),
                         // Toujours absente : on réessaiera au prochain tour.
                         Err(_) => {
                             self.printer_ready.store(false, std::sync::atomic::Ordering::Relaxed);
@@ -1041,6 +1056,11 @@ fn handle(app: &App, request: &mut Request) -> Reply {
 }
 
 fn printed_reply(printed: Printed, label: &str) -> Reply {
+    if printed.stalled {
+        return Reply::ok(json!({ "ok": true, "stalled": true, "errors": printed.errors }))
+            .with_status(202)
+            .note(tr!("« {label} » en suspens (capot, papier ?)", "\"{label}\" stalled (cover, paper?)"));
+    }
     if let Some(reason) = printed.queued {
         return Reply::ok(json!({ "ok": true, "queued": true, "errors": printed.errors }))
             .with_status(202)
