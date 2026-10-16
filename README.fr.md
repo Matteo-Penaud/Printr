@@ -234,8 +234,42 @@ par Claude pour les mots inconnus : moins d'un centime par grille neuve aux nive
 (Claude Haiku), une dizaine aux niveaux 3 et 4 (Claude Opus). L'aperçu n'appelle jamais Claude,
 et un mot que Claude n'a pas su définir n'est pas redemandé : sa longueur est imprimée.
 
-Les blocs `horoscope` et `word_of_the_day` utilisent l'API Claude : définir `ANTHROPIC_API_KEY`
-(et optionnellement `PRINTR_CLAUDE_MODEL`, `claude-haiku-5-5` par défaut).
+### Claude : clé API ou abonnement
+
+Les blocs Claude (`horoscope`, `word_of_the_day`, `recipe_claude`, définitions des grilles)
+passent par l'un de ces deux chemins :
+
+| | API Claude | CLI Claude Code |
+|---|---|---|
+| Accès | une clé `ANTHROPIC_API_KEY` | un abonnement Claude (Pro, Max…) |
+| Coût | facturé à l'appel (quelques centimes par jour) | compté dans les limites de l'abonnement |
+| Durée d'un appel | quelques secondes | quelques secondes de plus (lancement de la CLI) |
+| Mémoire | rien de plus | environ 260 Mo pendant l'appel |
+| Machines | toutes | 64 bits seulement (`aarch64`, `x86_64`) |
+
+Le chemin se choisit avec `PRINTR_CLAUDE_BACKEND` :
+
+- `auto` (par défaut) : l'API si `ANTHROPIC_API_KEY` est définie, sinon la CLI si elle est installée ;
+- `api` : toujours l'API (sans clé, les blocs Claude sont indisponibles) ;
+- `cli` : toujours la CLI, même si une clé est définie.
+
+Avec la CLI, printr lance `claude -p` en le réduisant à un simple appel au modèle : ni outils, ni
+réglages, ni `CLAUDE.md`, ni serveurs MCP, ni skills, ni session gardée. Le contexte envoyé reste
+ainsi aussi léger qu'avec l'API. La CLI utilise sa propre connexion : printr lui retire
+`ANTHROPIC_API_KEY`. Les appels passent un par un, et un appel qui dépasse deux minutes est abandonné.
+
+| Variable | Rôle |
+|---|---|
+| `ANTHROPIC_API_KEY` | Clé de l'API Claude |
+| `PRINTR_CLAUDE_BACKEND` | `auto`, `api` ou `cli` |
+| `PRINTR_CLAUDE_CLI` | Programme de la CLI : nom cherché dans le `PATH` ou chemin complet (`claude` par défaut) |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Jeton de la CLI, pour une machine sans session ouverte (le service systemd) |
+| `PRINTR_CLAUDE_MODEL` | Modèle, `claude-haiku-5-5` par défaut (les deux chemins) |
+
+Sur un poste où tu es déjà connecté à Claude Code, il n'y a rien à faire : sans clé API, printr
+trouve `claude` et l'utilise. Pour le service systemd, voir
+[Claude par l'abonnement](#claude-par-labonnement) dans l'installation. La bannière du serveur dit
+quel chemin est utilisé (`claude-haiku-5-5 (CLI)`), comme `/api/status` (`"claude_backend": "CLI"`).
 
 Les contenus dépendant d'une date sont **mis en cache** : réimprimer le même ticket redonne les
 mêmes résultats, sans nouvel appel. `--refresh` force une nouvelle génération. Le cache vit dans
@@ -268,8 +302,8 @@ France, nommés en anglais.
 </p>
 
 - **Composer** : ajouter des blocs (à la fin ou entre deux autres), les régler et les réordonner en les faisant glisser par leur poignée, avec l'aperçu du ticket en direct.
-  Les blocs Claude (horoscope, mot du jour) n'appellent pas l'API en aperçu : ils ne coûtent
-  qu'à l'impression.
+  Les blocs Claude (horoscope, mot du jour) n'appellent pas Claude en aperçu : ils ne sont
+  rédigés qu'à l'impression.
 - **Mes tickets** : les tickets enregistrés (presets), à imprimer en un geste, à partager avec
   la famille et à **planifier** (jours et heure). Une échéance manquée de plus de 15 minutes
   n'est pas rattrapée.
@@ -383,7 +417,7 @@ scripts/demo.sh examples/extras.json     # ou n'importe quel ticket
 ```
 
 Le script lance l'émulateur, imprime le ticket, attend le rendu puis arrête l'émulateur.
-Les blocs Claude demandent `ANTHROPIC_API_KEY` dans l'environnement.
+Les blocs Claude demandent `ANTHROPIC_API_KEY` dans l'environnement, ou la CLI Claude.
 
 À la main, dans deux terminaux :
 
@@ -471,7 +505,8 @@ scripts/deploy.sh --local               # cette machine
 Le script détecte l'architecture de la machine, compile pour elle (avec
 [`cross`](https://github.com/cross-rs/cross), pour une glibc compatible), envoie le programme
 et lance [`deploy/install.sh`](deploy/install.sh), qui demande le mot de passe `sudo` **une
-seule fois** et la clé Claude (facultative). L'installation :
+seule fois** et la clé Claude (facultative, voir aussi
+[Claude par l'abonnement](#claude-par-labonnement)). L'installation :
 
 - crée l'utilisateur système `printr` et ajoute ton compte aux groupes `printr` et `lp` ;
 - installe le programme dans `/opt/printr` (et la commande `printr`) ;
@@ -498,7 +533,33 @@ journalctl -u printr -f                 # suivre les impressions
 `--install` relance l'installation complète (nouveau fichier de service, nouvelle règle udev…).
 Pour une imprimante réseau, définir `PRINTR_TCP=adresse:9100` dans `/etc/printr.env`. Sur la
 machine, la commande `printr` lit aussi ce fichier : un ticket lancé à la main utilise la même
-imprimante et la même clé que le serveur.
+imprimante et le même accès à Claude que le serveur.
+
+### Claude par l'abonnement
+
+Sans clé API, le service peut passer par la CLI Claude Code et ton abonnement Claude (voir
+[Claude : clé API ou abonnement](#claude--clé-api-ou-abonnement)). Le service tourne sous
+l'utilisateur `printr`, qui n'a pas accès aux dossiers personnels : la CLI doit être installée
+ailleurs, et se connecter par un jeton. Sur la machine (64 bits) :
+
+```sh
+curl -fsSL https://claude.ai/install.sh | bash                        # installe la CLI dans ~/.local
+sudo install -m 755 "$(readlink -f ~/.local/bin/claude)" /usr/local/bin/claude
+claude setup-token                                                    # connexion, affiche un jeton
+```
+
+`claude setup-token` peut aussi se lancer sur un autre ordinateur : seul le jeton compte. Puis,
+dans `/etc/printr.env` (laisser `ANTHROPIC_API_KEY` vide) :
+
+```sh
+PRINTR_CLAUDE_CLI=/usr/local/bin/claude
+CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-…
+```
+
+et `systemctl restart printr` : la bannière (`journalctl -u printr`) affiche
+`claude-haiku-5-5 (CLI)`. La CLI garde ses fichiers dans le dossier de `printr`
+(`/var/lib/printr/.claude`). Le service peut utiliser jusqu'à 768 Mo de mémoire, pour laisser de
+la place à la CLI. Pour la mettre à jour, recopier le nouveau programme dans `/usr/local/bin`.
 
 **Binaires prêts à l'emploi** : chaque [release](https://github.com/XNinety9/Printr/releases) propose une
 archive par machine (`aarch64` pour un Pi 3, 4, 5 ou Zero 2 W en 64 bits, `armv7`, `arm` pour un Pi

@@ -237,8 +237,42 @@ for the words it does not know: less than a cent per new grid at levels 1 and 2 
 about ten cents at levels 3 and 4 (Claude Opus). Previews never call Claude, and a word that
 Claude could not define is not asked for again: its length is printed instead.
 
-The `horoscope` and `word_of_the_day` blocks use the Claude API: set `ANTHROPIC_API_KEY` (and
-optionally `PRINTR_CLAUDE_MODEL`, `claude-haiku-5-5` by default).
+### Claude: API key or subscription
+
+Claude blocks (`horoscope`, `word_of_the_day`, `recipe_claude`, puzzle clues) go one of two ways:
+
+| | Claude API | Claude Code CLI |
+|---|---|---|
+| Access | an `ANTHROPIC_API_KEY` key | a Claude subscription (Pro, Max…) |
+| Cost | billed per call (a few cents a day) | counted against the subscription's limits |
+| Call time | a few seconds | a few seconds more (the CLI starts up) |
+| Memory | nothing more | about 260 MB during the call |
+| Machines | all | 64-bit only (`aarch64`, `x86_64`) |
+
+`PRINTR_CLAUDE_BACKEND` picks the way:
+
+- `auto` (default): the API if `ANTHROPIC_API_KEY` is set, otherwise the CLI if it is installed;
+- `api`: always the API (without a key, Claude blocks are unavailable);
+- `cli`: always the CLI, even when a key is set.
+
+With the CLI, printr runs `claude -p` cut down to a plain model call: no tools, no settings, no
+`CLAUDE.md`, no MCP servers, no skills, no saved session. The context sent stays as light as with
+the API. The CLI uses its own login: printr removes `ANTHROPIC_API_KEY` from its environment.
+Calls run one at a time, and a call that takes more than two minutes is given up.
+
+| Variable | Role |
+|---|---|
+| `ANTHROPIC_API_KEY` | Claude API key |
+| `PRINTR_CLAUDE_BACKEND` | `auto`, `api` or `cli` |
+| `PRINTR_CLAUDE_CLI` | CLI program: a name looked up in `PATH`, or a full path (`claude` by default) |
+| `CLAUDE_CODE_OAUTH_TOKEN` | CLI token, for a machine with no logged-in session (the systemd service) |
+| `PRINTR_CLAUDE_MODEL` | Model, `claude-haiku-5-5` by default (both ways) |
+
+On a computer where you are already logged in to Claude Code, there is nothing to do: with no API
+key, printr finds `claude` and uses it. For the systemd service, see
+[Claude through a subscription](#claude-through-a-subscription) in the installation section. The
+server banner says which way is used (`claude-haiku-5-5 (CLI)`), as does `/api/status`
+(`"claude_backend": "CLI"`).
 
 Date-dependent content is **cached**: reprinting the same ticket gives the same results, without
 a new API call. `--refresh` forces a new generation. The cache lives in `~/.cache/printr` (or
@@ -272,8 +306,8 @@ English.
 
 - **Compose**: add blocks (at the end or between two others), adjust them, and reorder them by
   dragging their handle, with a live preview of the ticket.
-  Claude blocks (horoscope, word of the day) don't call the API in preview: they only cost
-  something when printed.
+  Claude blocks (horoscope, word of the day) don't call Claude in preview: they are only
+  written when printed.
 - **My tickets**: saved tickets (presets), printed in one tap, shared with the family, and
   **scheduled** (days and time). A missed schedule more than 15 minutes late is not caught up.
 - **Little note**: a photo taken with the phone, a drawing (heart, star…), a few words.
@@ -385,7 +419,7 @@ scripts/demo.sh examples/extras.json     # or any ticket
 ```
 
 The script starts the emulator, prints the ticket, waits for the rendering, then stops the
-emulator. Claude blocks need `ANTHROPIC_API_KEY` in the environment.
+emulator. Claude blocks need `ANTHROPIC_API_KEY` in the environment, or the Claude CLI.
 
 By hand, in two terminals:
 
@@ -475,7 +509,8 @@ scripts/deploy.sh --local               # this machine
 The script detects the machine's architecture, compiles for it (with
 [`cross`](https://github.com/cross-rs/cross), for a compatible glibc), sends the program over and
 runs [`deploy/install.sh`](deploy/install.sh), which asks for the `sudo` password **only once**,
-and for the Claude key (optional). The installation:
+and for the Claude key (optional, see also
+[Claude through a subscription](#claude-through-a-subscription)). The installation:
 
 - creates the `printr` system user and adds your account to the `printr` and `lp` groups;
 - installs the program in `/opt/printr` (and the `printr` command);
@@ -503,7 +538,33 @@ journalctl -u printr -f                 # follow the prints
 For an English installation, set `PRINTR_LANG=en` in `/etc/printr.env` and restart the service.
 For a network printer, set `PRINTR_TCP=address:9100` in `/etc/printr.env`. On the machine, the
 `printr` command also reads this file: a ticket launched by hand uses the same printer and the
-same key as the server.
+same access to Claude as the server.
+
+### Claude through a subscription
+
+With no API key, the service can go through the Claude Code CLI and your Claude subscription (see
+[Claude: API key or subscription](#claude-api-key-or-subscription)). The service runs as the
+`printr` user, which cannot read home folders: the CLI must be installed elsewhere, and log in
+with a token. On the machine (64-bit):
+
+```sh
+curl -fsSL https://claude.ai/install.sh | bash                        # installs the CLI in ~/.local
+sudo install -m 755 "$(readlink -f ~/.local/bin/claude)" /usr/local/bin/claude
+claude setup-token                                                    # logs in, prints a token
+```
+
+`claude setup-token` can also run on another computer: only the token matters. Then, in
+`/etc/printr.env` (leave `ANTHROPIC_API_KEY` empty):
+
+```sh
+PRINTR_CLAUDE_CLI=/usr/local/bin/claude
+CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-…
+```
+
+and `systemctl restart printr`: the banner (`journalctl -u printr`) shows
+`claude-haiku-5-5 (CLI)`. The CLI keeps its files in the `printr` folder
+(`/var/lib/printr/.claude`). The service may use up to 768 MB of memory, to leave room for the
+CLI. To update it, copy the new program into `/usr/local/bin` again.
 
 **Prebuilt binaries**: each [release](https://github.com/XNinety9/Printr/releases) has an archive per
 machine (`aarch64` for a Pi 3, 4, 5 or Zero 2 W in 64-bit, `armv7`, `arm` for a Pi Zero W or Pi 1,

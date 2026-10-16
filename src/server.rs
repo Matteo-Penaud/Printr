@@ -802,6 +802,7 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                 "printer_ready": app.printer_ready.load(std::sync::atomic::Ordering::Relaxed),
                 "queued": app.lock_store().data.queue.len(),
                 "claude": claude.as_ref().map(|c| c.model().to_owned()),
+                "claude_backend": claude.as_ref().map(|c| c.backend()),
                 "version": env!("CARGO_PKG_VERSION"),
                 "update": *app.latest.lock().unwrap_or_else(|e| e.into_inner()),
             }))
@@ -1108,7 +1109,14 @@ pub fn serve(listen: &str, token: Option<String>, target: Target) -> Result<()> 
 
     let ctx = Ctx::web(false);
     let cache = ctx.cache.as_ref().map(|c| c.dir().display().to_string());
-    ui::banner(listen, &destination, ctx.claude.as_ref().map(|c| c.model()), cache.as_deref(), &data, users);
+    ui::banner(
+        listen,
+        &destination,
+        ctx.claude.as_ref().map(|c| (c.model(), c.backend())),
+        cache.as_deref(),
+        &data,
+        users,
+    );
 
     crate::scheduler::spawn(Arc::clone(&app));
     // L'imprimante est-elle là ? Toutes les 10 secondes ; c'est aussi ce qui vide la file d'attente.

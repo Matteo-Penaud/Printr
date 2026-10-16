@@ -1551,8 +1551,8 @@ function SaveSheet({ state, onSave, onClose, focusSchedule }) {
     <${ScheduleEditor} schedules=${draft.schedules} onChange=${(schedules) => set({ schedules })} />
     ${ai && draft.schedules.length > 0 && html`<p class="help muted" style="font-size:13px;margin-bottom:0">
       🔮 ${T(
-        'Ce ticket utilise Claude : un petit appel payant par impression (le contenu est gardé en cache pour la journée).',
-        'This ticket uses Claude: a small paid call per print (the content is cached for the day).',
+        'Ce ticket utilise Claude : un petit appel par impression, facturé avec une clé API ou compté sur l’abonnement avec la CLI (le contenu est gardé en cache pour la journée).',
+        'This ticket uses Claude: a small call per print, billed with an API key or counted against the subscription with the CLI (the content is cached for the day).',
       )}</p>`}
   </${Sheet}>`;
 }

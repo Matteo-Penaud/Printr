@@ -25,8 +25,13 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
   sites) and prints the title, servings and times, ingredients to tick and numbered steps, without the ads.
 - **Claude recipe** block: name a dish, Claude (Haiku by default) writes the recipe at print time, with the
   same layout; cached per dish and number of servings.
+- **Claude without an API key.** When `ANTHROPIC_API_KEY` is not set and the Claude Code CLI is installed,
+  Claude blocks go through `claude -p` and its own login (a Claude subscription). `PRINTR_CLAUDE_BACKEND`
+  forces `api` or `cli`, `PRINTR_CLAUDE_CLI` gives the program's path; the startup banner and `/api/status`
+  (`claude_backend`) say which way is used.
 
 ### Changed
+- The systemd service may now use up to 768 MB of memory (400 MB before), for the Claude CLI.
 - `--preview` on the command line no longer calls Claude, like the app's preview: Claude blocks show a
   placeholder. `--claude` allows the call when you want the real text.
 - `scripts/illustrations.sh`: remakes every illustration of the site and README in both languages (block

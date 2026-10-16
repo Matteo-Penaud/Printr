@@ -378,8 +378,7 @@ pub fn build_with_claude(ctx: &Ctx, dish: &str, servings: u8, steps: bool) -> Re
             ));
         }
         None => {
-            let claude =
-                ctx.claude.as_ref().context(i18n::t("ANTHROPIC_API_KEY manquante", "ANTHROPIC_API_KEY is missing"))?;
+            let claude = ctx.claude.as_ref().context(crate::claude::missing())?;
             let recipe = ask_claude(claude, dish, servings)?;
             if let Some(cache) = cache {
                 cache.put(&key, &recipe);
