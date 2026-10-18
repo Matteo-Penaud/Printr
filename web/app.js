@@ -182,7 +182,9 @@ const label = (options, value) => options.find(([v]) => v === value)?.[1] ?? val
 const inDays = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
 
 const G = {
-  layout: T('Mise en page', 'Layout'), daily: T('Au quotidien', 'Everyday'), fun: T('Jeux & défis', 'Games & challenges'),
+  layout: T('Mise en page', 'Layout'), daily: T('Au quotidien', 'Everyday'),
+  grids: T('Jeux : grilles et chiffres', 'Games: grids and numbers'), words: T('Jeux : mots et lettres', 'Games: words and letters'),
+  challenges: T('Jeux : défis et créativité', 'Games: challenges and creativity'),
   gift: T('Petites attentions', 'Little gifts'), info: T('Infos', 'Info'), org: T('Organisation', 'Organization'),
 };
 const FAMILY_THEMES = WORD_THEMES.filter(([v]) => !['developpement', 'devops', 'reseaux', 'ia'].includes(v));
@@ -330,7 +332,7 @@ const BLOCKS = [
     summary: (b) => `${b.label} · ${b.date}`,
   },
   {
-    type: 'riddle', label: T('Énigme', 'Riddle'), emoji: '🧩', group: G.fun, desc: T('125 énigmes, réponse à l’envers', 'Riddles, charades, logic, the answer upside down'),
+    type: 'riddle', label: T('Énigme', 'Riddle'), emoji: '🧩', group: G.challenges, desc: T('125 énigmes, réponse à l’envers', 'Riddles, charades, logic, the answer upside down'),
     defaults: { answer: 'envers' },
     fields: [
       { key: 'kind', label: T('Famille', 'Type'), kind: 'select', options: [['', T('Toutes', 'All')], ['devinette', T('Devinettes', 'Classic riddles')], ['charade', T('Charades', 'Charades')], ['logique', T('Logique', 'Logic')], ['calcul', T('Calcul', 'Maths')]] },
@@ -338,13 +340,13 @@ const BLOCKS = [
     ],
   },
   {
-    type: 'workout', label: T('Défi sportif', 'Workout challenge'), emoji: '💪', group: G.fun, desc: T('Sans équipement, trois niveaux', 'No equipment, three levels'),
+    type: 'workout', label: T('Défi sportif', 'Workout challenge'), emoji: '💪', group: G.challenges, desc: T('Sans équipement, trois niveaux', 'No equipment, three levels'),
     defaults: { level: 'moyen' },
     fields: [{ key: 'level', label: T('Niveau', 'Level'), kind: 'segmented', options: LEVELS }],
     summary: (b) => label(LEVELS, b.level),
   },
   {
-    type: 'sudoku', label: 'Sudoku', emoji: '🔢', group: G.fun, desc: T('Une grille à remplir au stylo', 'A grid to fill in with a pen'),
+    type: 'sudoku', label: 'Sudoku', emoji: '🔢', group: G.grids, desc: T('Une grille à remplir au stylo', 'A grid to fill in with a pen'),
     defaults: { difficulty: 'moyen' },
     fields: [
       { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
@@ -354,7 +356,7 @@ const BLOCKS = [
     summary: (b) => label(LEVELS, b.difficulty),
   },
   {
-    type: 'word_search', label: T('Mots mêlés', 'Word search'), emoji: '🔤', group: G.fun, desc: T('Des mots cachés dans une grille de lettres', 'Hidden words in a grid of letters'),
+    type: 'word_search', label: T('Mots mêlés', 'Word search'), emoji: '🔤', group: G.words, desc: T('Des mots cachés dans une grille de lettres', 'Hidden words in a grid of letters'),
     defaults: { difficulty: 'moyen', theme: '', words: [] },
     fields: [
       { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
@@ -366,7 +368,7 @@ const BLOCKS = [
     summary: (b) => [(b.words || []).length ? T('mes mots', 'my words') : label(WORD_THEMES, b.theme || ''), label(LEVELS, b.difficulty)].join(' · '),
   },
   {
-    type: 'train_tracks', label: T('Voie ferrée', 'Railway track'), emoji: '🚂', group: G.fun, desc: T('Relier A à B en une seule voie', 'Connect A to B with a single track'),
+    type: 'train_tracks', label: T('Voie ferrée', 'Railway track'), emoji: '🚂', group: G.grids, desc: T('Relier A à B en une seule voie', 'Connect A to B with a single track'),
     defaults: { difficulty: 'moyen' },
     fields: [
       { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
@@ -376,7 +378,7 @@ const BLOCKS = [
     summary: (b) => label(LEVELS, b.difficulty),
   },
   {
-    type: 'maze', label: T('Labyrinthe', 'Maze'), emoji: '🌀', group: G.fun, desc: T('Entrée en haut, sortie en bas', 'Entrance at the top, exit at the bottom'),
+    type: 'maze', label: T('Labyrinthe', 'Maze'), emoji: '🌀', group: G.grids, desc: T('Entrée en haut, sortie en bas', 'Entrance at the top, exit at the bottom'),
     defaults: { width: 12, height: 16 },
     fields: [
       { key: 'width', label: T('Largeur', 'Width'), kind: 'number', min: 4, max: 40 },
@@ -385,7 +387,7 @@ const BLOCKS = [
     summary: (b) => `${b.width} × ${b.height}`,
   },
   {
-    type: 'arrow_word', label: T('Mots fléchés', 'Arrow words'), emoji: '✍️', group: G.fun, desc: T('Une grille de mots fléchés, définitions par Claude', 'An arrow-word grid, clues written by Claude'), ai: true,
+    type: 'arrow_word', label: T('Mots fléchés', 'Arrow words'), emoji: '✍️', group: G.words, desc: T('Une grille de mots fléchés, définitions par Claude', 'An arrow-word grid, clues written by Claude'), ai: true,
     defaults: { level: 2, size: 'moyen' },
     fields: [
       { key: 'level', label: T('Niveau', 'Level'), kind: 'segmented', options: [[1, T('Facile', 'Easy')], [2, T('Moyen', 'Medium')], [3, T('Difficile', 'Hard')], [4, 'Expert']],
@@ -401,7 +403,7 @@ const BLOCKS = [
     },
   },
   {
-    type: 'crossword', label: T('Mots croisés', 'Crossword'), emoji: '🔤', group: G.fun, desc: T('Une grille de mots croisés, définitions par Claude', 'A crossword grid, clues written by Claude'), ai: true,
+    type: 'crossword', label: T('Mots croisés', 'Crossword'), emoji: '🔤', group: G.words, desc: T('Une grille de mots croisés, définitions par Claude', 'A crossword grid, clues written by Claude'), ai: true,
     defaults: { level: 2, size: 'moyen' },
     fields: [
       { key: 'level', label: T('Niveau', 'Level'), kind: 'segmented', options: [[1, T('Facile', 'Easy')], [2, T('Moyen', 'Medium')], [3, T('Difficile', 'Hard')], [4, 'Expert']],
@@ -417,7 +419,7 @@ const BLOCKS = [
     },
   },
   {
-    type: 'nonogram', label: T('Logimage', 'Nonogram'), emoji: '🖍️', group: G.fun, desc: T('Noircir des cases pour révéler un dessin', 'Shade squares to reveal a picture'),
+    type: 'nonogram', label: T('Logimage', 'Nonogram'), emoji: '🖍️', group: G.grids, desc: T('Noircir des cases pour révéler un dessin', 'Shade squares to reveal a picture'),
     defaults: {},
     fields: [
       { key: 'number', label: T('Numéro du dessin (1 à 10)', 'Picture number (1 to 10)'), kind: 'number', min: 1, max: 10, optional: true },
@@ -425,7 +427,7 @@ const BLOCKS = [
     ],
   },
   {
-    type: 'petit_bac', label: T('Petit bac', 'Categories'), emoji: '✏️', group: G.fun, desc: T('Une lettre, des catégories, à jouer en famille', 'One letter, some categories, to play as a family'),
+    type: 'petit_bac', label: T('Petit bac', 'Categories'), emoji: '✏️', group: G.words, desc: T('Une lettre, des catégories, à jouer en famille', 'One letter, some categories, to play as a family'),
     defaults: { players: 1, count: 6, categories: [] },
     fields: [
       { key: 'players', label: T('Joueurs (une feuille chacun)', 'Players (one sheet each)'), kind: 'number', min: 1, max: 6 },
@@ -439,7 +441,7 @@ const BLOCKS = [
     ),
   },
   {
-    type: 'mental_math', label: T('Calcul mental', 'Mental math'), emoji: '➗', group: G.fun, desc: T('Une fiche d’opérations, résultats à l’envers', 'A sheet of sums, answers upside down'),
+    type: 'mental_math', label: T('Calcul mental', 'Mental math'), emoji: '➗', group: G.grids, desc: T('Une fiche d’opérations, résultats à l’envers', 'A sheet of sums, answers upside down'),
     defaults: { difficulty: 'facile', count: 10, operations: [], tables: [] },
     fields: [
       { key: 'difficulty', label: T('Niveau', 'Level'), kind: 'segmented', options: MATH_LEVELS },
@@ -456,7 +458,7 @@ const BLOCKS = [
     },
   },
   {
-    type: 'anagram', label: T('Mot mystère', 'Mystery word'), emoji: '🔀', group: G.fun, desc: T('Des lettres mélangées à remettre dans l’ordre', 'Scrambled letters to put back in order'),
+    type: 'anagram', label: T('Mot mystère', 'Mystery word'), emoji: '🔀', group: G.words, desc: T('Des lettres mélangées à remettre dans l’ordre', 'Scrambled letters to put back in order'),
     defaults: { count: 3, theme: '' },
     fields: [
       { key: 'theme', label: T('Thème', 'Theme'), kind: 'select', options: FAMILY_THEMES },
@@ -468,7 +470,7 @@ const BLOCKS = [
     ),
   },
   {
-    type: 'cipher', label: T('Message codé', 'Coded message'), emoji: '🕵️', group: G.fun, desc: T('César, morse ou nombres, à déchiffrer', 'Caesar, Morse or numbers, to decode'),
+    type: 'cipher', label: T('Message codé', 'Coded message'), emoji: '🕵️', group: G.words, desc: T('César, morse ou nombres, à déchiffrer', 'Caesar, Morse or numbers, to decode'),
     defaults: { cipher: 'cesar', answer: true, message: '' },
     fields: [
       { key: 'cipher', label: T('Code', 'Code'), kind: 'segmented', options: [['cesar', T('César', 'Caesar')], ['morse', 'Morse'], ['nombres', T('Nombres', 'Numbers')]] },
@@ -478,7 +480,7 @@ const BLOCKS = [
     summary: (b) => ({ cesar: T('César', 'Caesar'), morse: 'Morse', nombres: T('Nombres', 'Numbers') })[b.cipher] || '',
   },
   {
-    type: 'coloring', label: T('Coloriage', 'Coloring'), emoji: '🎨', group: G.fun, desc: T('Un mandala à colorier, toujours différent', 'A mandala to color, always different'),
+    type: 'coloring', label: T('Coloriage', 'Coloring'), emoji: '🎨', group: G.challenges, desc: T('Un mandala à colorier, toujours différent', 'A mandala to color, always different'),
     defaults: {},
     fields: [{ key: 'seed', label: T('Numéro du mandala', 'Mandala number'), kind: 'number', optional: true, help: T('Laisse vide pour un nouveau mandala.', 'Leave empty for a new mandala.') }],
   },
@@ -1267,6 +1269,24 @@ const KEYWORDS = {
   bins: 'poubelles bins trash dechets recyclage', wifi: 'wifi invites guests reseau network', monthly_report: 'bilan mois monthly report statistiques stats',
 };
 
+// Étiquettes des blocs, pour les filtres du catalogue et la recherche (« Claude » vient de `ai`).
+const KIDS = ['picto', 'riddle', 'workout', 'word_search', 'maze', 'nonogram', 'petit_bac', 'mental_math', 'anagram', 'cipher', 'coloring'];
+const TOGETHER = ['riddle', 'workout', 'petit_bac', 'anagram'];
+// Ni réseau ni Claude : tout est calculé sur place, gratuitement.
+const OFFLINE = [
+  'title', 'text', 'date', 'separator', 'feed', 'image', 'qr', 'picto', 'barnum', 'saint', 'quote', 'moon', 'holidays', 'countdown',
+  'riddle', 'workout', 'sudoku', 'word_search', 'train_tracks', 'maze', 'nonogram', 'petit_bac', 'mental_math', 'anagram', 'cipher',
+  'coloring', 'coupon', 'todo', 'shopping', 'bins', 'wifi', 'monthly_report',
+];
+const FILTERS = [
+  { id: 'kids', emoji: '🧒', label: T('Pour les enfants', 'For kids'), words: 'enfants enfant kids children', test: (b) => KIDS.includes(b.type) },
+  { id: 'offline', emoji: '📴', label: T('Hors ligne et gratuit', 'Offline and free'), words: 'hors ligne gratuit offline free', test: (b) => OFFLINE.includes(b.type) },
+  { id: 'together', emoji: '👥', label: T('À plusieurs', 'Together'), words: 'plusieurs ensemble famille together group family', test: (b) => TOGETHER.includes(b.type) },
+  { id: 'claude', emoji: '✨', label: 'Claude', words: 'claude ia ai', test: (b) => !!b.ai },
+];
+const tagWords = (b) => FILTERS.filter((f) => f.test(b)).map((f) => f.words).join(' ');
+const GROUP_ORDER = Object.values(G);
+
 // Sans accents ni majuscules : « meteo » trouve « Météo ».
 const fold = (text) => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -1302,13 +1322,16 @@ function CatalogItem({ block, favorite, onPick, onFavorite, onExample }) {
 
 function Catalog({ onPick, onClose }) {
   const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState(null);
   const [favorites, setFavorites] = useState(() => store.get(FAVORITES, []));
   const [example, setExample] = useState(null);
   const recent = useMemo(() => store.get(RECENT, []), []);
   const q = fold(query.trim());
-  const matches = BLOCKS.filter((b) => !q || q.split(/\s+/).every((word) =>
-    fold(`${b.label} ${b.desc} ${b.type} ${KEYWORDS[b.type] || ''}`).includes(word)));
-  const groups = [...new Set(matches.map((b) => b.group))];
+  const only = FILTERS.find((f) => f.id === filter);
+  const matches = BLOCKS.filter((b) => (!only || only.test(b)) && (!q || q.split(/\s+/).every((word) =>
+    fold(`${b.label} ${b.desc} ${b.type} ${KEYWORDS[b.type] || ''} ${tagWords(b)}`).includes(word))));
+  const groups = [...new Set(matches.map((b) => b.group))].sort((a, b) => GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b));
+  const browsing = !q && !only;
 
   // Le bloc ajouté passe en tête des récents (sur cet appareil).
   const pick = (type) => {
@@ -1329,9 +1352,13 @@ function Catalog({ onPick, onClose }) {
 
   return html`<${Sheet} title=${T('Ajouter un bloc', 'Add a block')} onClose=${onClose} wide>
     <div class="catalog-search"><input class="input" placeholder=${T('Rechercher : météo, photo, sudoku…', 'Search: weather, photo, sudoku…')} value=${query}
-      onInput=${(e) => setQuery(e.target.value)} autofocus /></div>
-    ${!q && section(T('Mes favoris', 'My favorites'), favoriteBlocks)}
-    ${!q && section(T('Récemment ajoutés', 'Recently added'), recentBlocks)}
+      onInput=${(e) => setQuery(e.target.value)} autofocus />
+      <div class="cat-filters" role="group" aria-label=${T('Filtrer les blocs', 'Filter blocks')}>
+        ${FILTERS.map((f) => html`<button type="button" key=${f.id} class=${filter === f.id ? 'on' : ''} aria-pressed=${filter === f.id}
+          onClick=${() => setFilter(filter === f.id ? null : f.id)}><span aria-hidden="true">${f.emoji}</span> ${f.label}</button>`)}
+      </div></div>
+    ${browsing && section(T('Mes favoris', 'My favorites'), favoriteBlocks)}
+    ${browsing && section(T('Récemment ajoutés', 'Recently added'), recentBlocks)}
     ${groups.map((g) => html`<div key=${g}>${section(g, matches.filter((b) => b.group === g))}</div>`)}
     ${matches.length === 0 && html`<p class="muted" style="text-align:center;padding:24px">${T('Aucun bloc ne correspond.', 'No block matches.')}</p>`}
     ${example && html`<${ExampleSheet} block=${example} onPick=${(t) => { setExample(null); pick(t); }} onClose=${() => setExample(null)} />`}

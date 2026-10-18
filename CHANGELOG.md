@@ -9,6 +9,17 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
 
 ## [Unreleased]
 
+### Added
+- Block catalog: **filters** at the top — for kids, offline and free, together, Claude. Search knows them too
+  (“kids”, “free”, “together”…).
+
+### Changed
+- Block catalog: games are split into three groups — grids and numbers, words and letters, challenges and
+  creativity.
+
+### Fixed
+- Block catalog: blocks no longer show above the search field while scrolling.
+
 ## [1.8.0] “Ives” - 2026-10-18
 
 ### Added
