@@ -1287,6 +1287,13 @@ const FILTERS = [
 const tagWords = (b) => FILTERS.filter((f) => f.test(b)).map((f) => f.words).join(' ');
 const GROUP_ORDER = Object.values(G);
 
+// Ce que le serveur dit du catalogue (relu avec `/api/status`) : blocs retirés par l'administrateur,
+// Claude disponible ou non.
+const CATALOG = { hidden: [], claude: true };
+// Sans Claude, ces blocs n'impriment rien d'utile ; les grilles, elles, gardent leurs définitions en cache.
+const NEEDS_CLAUDE = ['horoscope', 'word_of_the_day', 'recipe_claude'];
+const offered = (b) => !CATALOG.hidden.includes(b.type) && (CATALOG.claude || !NEEDS_CLAUDE.includes(b.type));
+
 // Sans accents ni majuscules : « meteo » trouve « Météo ».
 const fold = (text) => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -1328,7 +1335,8 @@ function Catalog({ onPick, onClose }) {
   const recent = useMemo(() => store.get(RECENT, []), []);
   const q = fold(query.trim());
   const only = FILTERS.find((f) => f.id === filter);
-  const matches = BLOCKS.filter((b) => (!only || only.test(b)) && (!q || q.split(/\s+/).every((word) =>
+  const filters = FILTERS.filter((f) => f.id !== 'claude' || CATALOG.claude);
+  const matches = BLOCKS.filter((b) => offered(b) && (!only || only.test(b)) && (!q || q.split(/\s+/).every((word) =>
     fold(`${b.label} ${b.desc} ${b.type} ${KEYWORDS[b.type] || ''} ${tagWords(b)}`).includes(word))));
   const groups = [...new Set(matches.map((b) => b.group))].sort((a, b) => GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b));
   const browsing = !q && !only;
@@ -1346,7 +1354,7 @@ function Catalog({ onPick, onClose }) {
   const item = (b) => html`<${CatalogItem} key=${b.type} block=${b} favorite=${favorites.includes(b.type)}
     onPick=${pick} onFavorite=${toggleFavorite} onExample=${setExample} />`;
   const section = (title, blocks) => blocks.length > 0 && html`<div class="catalog-group"><h4>${title}</h4><div class="catalog">${blocks.map(item)}</div></div>`;
-  const known = (types) => types.map((t) => BLOCK[t]).filter(Boolean);
+  const known = (types) => types.map((t) => BLOCK[t]).filter((b) => b && offered(b));
   const favoriteBlocks = known(favorites);
   const recentBlocks = known(recent).filter((b) => !favorites.includes(b.type)).slice(0, 4);
 
@@ -1354,7 +1362,7 @@ function Catalog({ onPick, onClose }) {
     <div class="catalog-search"><input class="input" placeholder=${T('Rechercher : météo, photo, sudoku…', 'Search: weather, photo, sudoku…')} value=${query}
       onInput=${(e) => setQuery(e.target.value)} autofocus />
       <div class="cat-filters" role="group" aria-label=${T('Filtrer les blocs', 'Filter blocks')}>
-        ${FILTERS.map((f) => html`<button type="button" key=${f.id} class=${filter === f.id ? 'on' : ''} aria-pressed=${filter === f.id}
+        ${filters.map((f) => html`<button type="button" key=${f.id} class=${filter === f.id ? 'on' : ''} aria-pressed=${filter === f.id}
           onClick=${() => setFilter(filter === f.id ? null : f.id)}><span aria-hidden="true">${f.emoji}</span> ${f.label}</button>`)}
       </div></div>
     ${browsing && section(T('Mes favoris', 'My favorites'), favoriteBlocks)}
@@ -1895,6 +1903,45 @@ function Toasts() {
     <span class="emoji">${t.emoji || (t.kind === 'error' ? '⚠️' : '✓')}</span><span>${t.message}</span></div>`)}</div>`;
 }
 
+// Réglage de l'administrateur : les blocs proposés à toute la famille dans le catalogue.
+function HiddenBlocksSheet({ onClose }) {
+  const [hidden, setHidden] = useState(() => new Set(CATALOG.hidden));
+  const [busy, setBusy] = useState(false);
+  const toggle = (type) => setHidden((before) => {
+    const next = new Set(before);
+    if (next.has(type)) next.delete(type); else next.add(type);
+    return next;
+  });
+  const save = async () => {
+    setBusy(true);
+    try {
+      const blocks = [...hidden];
+      await api('PUT', '/api/settings/hidden-blocks', { blocks });
+      CATALOG.hidden = blocks;
+      toast(T('Catalogue enregistré', 'Catalog saved'), 'ok', '🧩');
+      onClose();
+    } catch (e) { toast(e.message, 'error'); } finally { setBusy(false); }
+  };
+  return html`<${Sheet} title=${T('Blocs proposés', 'Offered blocks')} onClose=${onClose} wide footer=${html`
+    <button class="btn secondary" onClick=${onClose}>${T('Annuler', 'Cancel')}</button>
+    <button class="btn primary grow" disabled=${busy} onClick=${save}><${Icon} name="check" /> ${T('Enregistrer', 'Save')}</button>`}>
+    <p class="muted" style="margin:0">${T(
+      'Touche un bloc pour le retirer du catalogue de toute la famille, ou pour l’y remettre. Les tickets qui l’utilisent déjà continuent de fonctionner.',
+      'Tap a block to remove it from the whole family’s catalog, or to bring it back. Tickets that already use it keep working.',
+    )}</p>
+    ${!CATALOG.claude && html`<p class="muted" style="margin:8px 0 0">${T(
+      'Claude n’est pas disponible : l’horoscope Claude, le mot du jour et la recette par Claude sont déjà masqués.',
+      'Claude is not available: the Claude horoscope, word of the day and Claude recipe are already hidden.',
+    )}</p>`}
+    ${GROUP_ORDER.map((g) => html`<div class="catalog-group" key=${g}><h4>${g}</h4>
+      <div class="block-toggles">${BLOCKS.filter((b) => b.group === g).map((b) => {
+        const shown = !hidden.has(b.type);
+        return html`<button type="button" key=${b.type} class=${shown ? '' : 'off'} aria-pressed=${shown}
+          onClick=${() => toggle(b.type)}><span aria-hidden="true">${b.emoji}</span> ${b.label}</button>`;
+      })}</div></div>`)}
+  </${Sheet}>`;
+}
+
 // Mon compte : la famille (ajouter, retirer), mon mot de passe, la déconnexion.
 function AccountSheet({ me, users, version, update, reloadUsers, onLogout, onClose }) {
   const [name, setName] = useState('');
@@ -1902,6 +1949,7 @@ function AccountSheet({ me, users, version, update, reloadUsers, onLogout, onClo
   const [mine, setMine] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(null);
+  const [picking, setPicking] = useState(false);
   const run = async (fn) => { setBusy(true); try { await fn(); } catch (e) { toast(e.message, 'error'); } finally { setBusy(false); } };
   const add = (e) => { e.preventDefault(); run(async () => {
     const { user } = await api('POST', '/api/users', { name, password });
@@ -1946,6 +1994,15 @@ function AccountSheet({ me, users, version, update, reloadUsers, onLogout, onClo
       <button class="btn secondary" disabled=${busy || !name.trim() || password.length < 8}><${Icon} name="plus" size=${16} /> ${T('Ajouter', 'Add')}</button>
     </form>
 
+    ${me.admin && html`<div class="section-title">${T('Catalogue de la famille', 'The family’s catalog')}</div>
+      <button type="button" class="setting-card" onClick=${() => setPicking(true)}>
+        <span class="big-emoji" aria-hidden="true">🧩</span>
+        <span class="grow"><strong>${T('Blocs proposés', 'Offered blocks')}</strong>
+          <span class="muted">${CATALOG.hidden.length
+            ? T(`${CATALOG.hidden.length} bloc(s) retiré(s) du catalogue`, `${CATALOG.hidden.length} block(s) removed from the catalog`)
+            : T('Tous les blocs sont proposés', 'All blocks are offered')}</span></span>
+        <${Icon} name="sliders" size=${18} /></button>`}
+
     <div class="section-title">${T('Mon mot de passe', 'My password')}</div>
     <form class="family-add" onSubmit=${changePassword}>
       <input class="input" type="password" placeholder=${T('Nouveau mot de passe (8 caractères minimum)', 'New password (8 characters minimum)')} autocomplete="new-password" value=${mine} onInput=${(e) => setMine(e.target.value)} />
@@ -1955,6 +2012,7 @@ function AccountSheet({ me, users, version, update, reloadUsers, onLogout, onClo
     <button class="btn danger block" style="margin-top:22px" onClick=${onLogout}><${Icon} name="logout" /> ${T('Se déconnecter', 'Sign out')}</button>
     ${version && html`<p class="version">printr ${version}</p>`}
     ${confirm && html`<${Confirm} ...${confirm} onClose=${() => setConfirm(null)} />`}
+    ${picking && html`<${HiddenBlocksSheet} onClose=${() => setPicking(false)} />`}
   </${Sheet}>`;
 }
 
@@ -1993,6 +2051,8 @@ function App() {
     loadUsers();
     const status = () => api('GET', '/api/status').then((s) => {
       setVersion(s.version); setUpdate(s.update || null);
+      CATALOG.hidden = s.hidden_blocks || [];
+      CATALOG.claude = !!s.claude;
       setPrinter((before) => {
         const now = { ready: s.printer_ready !== false, queued: s.queued || 0 };
         if (before.ready !== now.ready || before.queued !== now.queued) bus.emit('printer-changed');

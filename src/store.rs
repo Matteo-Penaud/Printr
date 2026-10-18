@@ -230,6 +230,10 @@ pub struct Data {
     /// octets ESC/POS sont dans `queue/`.
     #[serde(default)]
     pub queue: Vec<QueuedJob>,
+    /// Blocs retirés du catalogue par l'administrateur (ceux dont la famille ne se sert pas). Les
+    /// tickets qui les utilisent déjà continuent de fonctionner.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hidden_blocks: Vec<String>,
 }
 
 /// Un ticket prêt, qui attend l'imprimante.

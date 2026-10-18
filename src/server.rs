@@ -567,6 +567,17 @@ struct NewPassword {
     password: String,
 }
 
+/// Blocs à retirer du catalogue (types : « sudoku », « weather »…).
+#[derive(Deserialize)]
+struct HiddenBlocks {
+    blocks: Vec<String>,
+}
+
+/// Un nom de type de bloc plausible : lettres minuscules et soulignés, rien d'autre à stocker.
+fn is_block_type(name: &str) -> bool {
+    (1..=40).contains(&name.len()) && name.bytes().all(|c| c.is_ascii_lowercase() || c == b'_')
+}
+
 /// Cookie de session ; `Secure` quand la page est servie en HTTPS (derrière le reverse proxy).
 fn session_cookie(token: &str, https: bool) -> String {
     let secure = if https { "; Secure" } else { "" };
@@ -888,15 +899,48 @@ fn handle(app: &App, request: &mut Request) -> Reply {
         },
         (Method::Get, ["api", "status"]) => {
             let claude = crate::claude::Claude::from_env();
+            let (queued, hidden_blocks) = {
+                let store = app.lock_store();
+                (store.data.queue.len(), store.data.hidden_blocks.clone())
+            };
             Reply::ok(json!({
                 "printer": app.destination,
                 "printer_ready": app.printer_ready.load(std::sync::atomic::Ordering::Relaxed),
-                "queued": app.lock_store().data.queue.len(),
+                "queued": queued,
+                "hidden_blocks": hidden_blocks,
                 "claude": claude.as_ref().map(|c| c.model().to_owned()),
                 "claude_backend": claude.as_ref().map(|c| c.backend()),
                 "version": env!("CARGO_PKG_VERSION"),
                 "update": *app.latest.lock().unwrap_or_else(|e| e.into_inner()),
             }))
+        }
+        (Method::Put, ["api", "settings", "hidden-blocks"]) => {
+            let input: HiddenBlocks = try_reply!(json_body(request));
+            let mut store = app.lock_store();
+            if !user_id.as_deref().is_some_and(|me| store.is_admin(me)) {
+                return Reply::error(
+                    403,
+                    t(
+                        "seul l'administrateur peut régler le catalogue",
+                        "only the administrator can set up the catalog",
+                    ),
+                );
+            }
+            let mut blocks = input.blocks;
+            if blocks.len() > 200 || blocks.iter().any(|b| !is_block_type(b)) {
+                return Reply::error(400, t("liste de blocs invalide", "invalid block list"));
+            }
+            blocks.sort();
+            blocks.dedup();
+            let count = blocks.len();
+            store.data.hidden_blocks = blocks;
+            match store.save() {
+                Ok(()) => Reply::ok(json!({ "ok": true })).note(tr!(
+                    "catalogue : {count} bloc(s) masqué(s) par {by}",
+                    "catalog: {count} block(s) hidden by {by}"
+                )),
+                Err(e) => Reply::error(500, format!("{e:#}")),
+            }
         }
         (Method::Post, ["api", "preview"]) => {
             let input: PrintRequest = try_reply!(json_body(request));
@@ -1271,6 +1315,13 @@ mod tests {
         assert!(same_secret("abc", "abc"));
         assert!(!same_secret("abc", "abd"));
         assert!(!same_secret("abc", "abcd"));
+    }
+
+    #[test]
+    fn hidden_block_names_are_checked() {
+        assert!(is_block_type("sudoku") && is_block_type("word_of_the_day"));
+        assert!(!is_block_type("") && !is_block_type("Sudoku") && !is_block_type("../x") && !is_block_type("a b"));
+        assert!(!is_block_type(&"a".repeat(41)));
     }
 
     #[test]

@@ -12,6 +12,11 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
 ### Added
 - Block catalog: **filters** at the top — for kids, offline and free, together, Claude. Search knows them too
   (“kids”, “free”, “together”…).
+- The administrator can **hide blocks** from the whole family's catalog (My account → Offered blocks): the
+  ones nobody uses. Tickets that already use them keep working.
+- When Claude is not available (no API key, no Claude CLI), the blocks that cannot work without it — Claude
+  horoscope, word of the day, Claude recipe — leave the catalog on their own. Crosswords and arrow words stay:
+  their clues come from the cache.
 
 ### Changed
 - Block catalog: games are split into three groups — grids and numbers, words and letters, challenges and

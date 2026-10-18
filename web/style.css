@@ -702,6 +702,24 @@ select.input { appearance: none; padding-right: 38px;
 .update-card .grow { display: grid; gap: 2px; }
 .update-card .muted { font-size: 13px; }
 .update-card svg { color: var(--accent); flex-shrink: 0; }
+/* Réglage de l'administrateur (blocs proposés) : une carte qu'on touche pour l'ouvrir. */
+.setting-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; text-align: left;
+  border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  font: inherit; cursor: pointer; transition: border-color .15s;
+}
+.setting-card:hover { border-color: var(--line-strong); }
+.setting-card .big-emoji { font-size: 26px; }
+.setting-card .grow { display: grid; gap: 2px; }
+.setting-card .muted { font-size: 13px; }
+.setting-card svg { color: var(--muted); flex-shrink: 0; }
+.block-toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.block-toggles button {
+  height: 34px; padding: 0 12px; border: 1.5px solid var(--line-strong); border-radius: 999px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s, opacity .15s;
+}
+.block-toggles button.off { background: var(--surface-2); border-color: transparent; color: var(--muted); text-decoration: line-through; opacity: .75; }
 .version a { color: var(--accent); font-weight: 700; text-decoration: none; }
 
 /* Historique : rappel discret que l'administrateur peut revoir les tickets. */
