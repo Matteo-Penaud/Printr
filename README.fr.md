@@ -24,7 +24,7 @@
 <p align="center"><a href="README.md">🇬🇧 English version</a></p>
 
 Printr transforme une imprimante à tickets **Epson TM-T88V** en gadget familial. On compose un
-ticket à partir de **40 blocs** (météo, horoscope, sudoku, mots mêlés, énigmes, actualités,
+ticket à partir de **46 blocs** (météo, horoscope, sudoku, mots mêlés, énigmes, actualités,
 photos…), on l'imprime depuis son téléphone, on le **planifie** pour 7 h 30 en semaine, ou on
 envoie un **petit mot avec une photo** à ceux qui sont restés à la maison. Un seul binaire Rust,
 sur un Raspberry Pi, qui parle ESC/POS directement à l'imprimante.
@@ -37,15 +37,18 @@ sur un Raspberry Pi, qui parle ESC/POS directement à l'imprimante.
   <img src="docs/tickets/petit-mot.png" alt="Petit mot avec une photo" width="240">
 </p>
 
-- **40 blocs** : météo, agenda, horoscope (sérieux, farfelu, vachard ou franchement insultant),
-  mot du jour, mots fléchés, sudoku, logimage, mots mêlés, petit bac, coloriage, énigmes à
+- **46 blocs** : météo, ciel du soir (planètes, passages de l'ISS), agenda, horoscope (sérieux,
+  farfelu, vachard ou franchement insultant), mot du jour, recettes, mots croisés et fléchés, sudoku,
+  logimage, mots mêlés, petit bac, coloriage, énigmes à
   réponse imprimée à l'envers, défi sportif, liste de courses, poubelles, Wi-Fi invités, bons à
   offrir, bilan du mois façon ticket de caisse, actualités par flux RSS, photos…
 - **Une appli web pour la famille** : comptes, tickets enregistrés et partagés, aperçu en direct,
   planification au format 24 h, historique.
+- **Ne perd aucun ticket** : imprimante éteinte ou débranchée ? Le ticket attend son retour, et
+  l'appli le signale.
 - **Sobre** : presque tout est calculé localement ou vient d'API gratuites et sans clé. Claude
-  n'écrit que l'horoscope et le mot du jour (un petit appel à Claude Haiku, en cache pour la
-  journée).
+  n'écrit que ce qui demande une plume (horoscope, mot du jour, définitions des grilles, recettes à la
+  demande), par de petits appels à Claude Haiku, toujours mis en cache.
 - **Une CLI soignée** : aperçu dans le terminal, progression bloc par bloc, erreurs lisibles.
 
 <p align="center">
@@ -84,7 +87,7 @@ Rédigé chaque jour par Claude, sur un thème tiré au hasard. Extraits authent
 ```sh
 printr print examples/matin.json    # ticket composé de blocs (voir plus bas)
 cat ticket.json | printr print      # idem, depuis l'entrée standard
-printr --preview print ticket.json  # aperçu dans le terminal, sans imprimer
+printr --preview print ticket.json  # aperçu dans le terminal, sans imprimer ni appeler Claude (--claude pour l'autoriser)
 printr --refresh print ticket.json  # régénère ce qui est en cache : soleil, horoscopes, mot du jour
 printr -q print ticket.json         # silencieux, n'affiche que les erreurs
 printr test                         # ticket de test (styles, accents, QR code)
@@ -136,6 +139,8 @@ Un paramètre inconnu est une erreur, pour repérer les fautes de frappe.
 | `horoscope` | `sign`, `tone` (`serieux`/`farfelu`/`vachard`/`insultant`) | Généré par Claude, sur un thème tiré au hasard. Signe en français ou en anglais |
 | `saint` | — | Calendrier local, hors ligne |
 | `todo` | `items`, `title` (« À faire ») | Cases à cocher |
+| `recipe` (ou `recette`) | `url`, `steps` (true), `qr` (true) | Recette lue sur son site (données schema.org, présentes sur la plupart des sites de cuisine) : ingrédients à cocher et étapes numérotées, sans la publicité ; `"steps": false` n'imprime que les ingrédients |
+| `recipe_claude` (ou `recette_claude`) | `dish` (ou `plat`), `servings` (4), `steps` (true) | Recette d'un plat rédigée par Claude à l'impression, même présentation ; gardée en cache par plat |
 | `sudoku` | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | Le n° imprimé est la graine : même `seed` + `"solution": true` imprime la solution |
 | `word_search` (ou `mots_meles`, `mots_caches`, `mots_en_grille`) | `difficulty` (`facile`/`moyen`/`difficile`), `theme`, `words`, `seed`, `solution` | Mots mêlés en français. `theme` : `animaux`, `fruits_legumes`, `cuisine`, `nature`, `sport`, `metiers`, `maison`, `voyage`, `musique`, `ecole`, `developpement`, `devops`, `reseaux`, `ia` (tiré du n° si absent) ; ou ses propres mots dans `words`. Facile : 10×10, 8 mots, → ↓ ; moyen : 12×12, 12 mots, + diagonales ; difficile : 14×14, 16 mots, dans tous les sens. Même n° + `"solution": true` imprime la solution |
 | `train_tracks` (ou `voie_ferree`, `rails`) | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | Relier A (bord gauche) à B (bord bas) par une seule voie, d'après le nombre de cases de voie de chaque ligne et colonne et quelques pièces posées. Grilles de 6×6, 8×8 et 10×10, à solution unique. Même `seed` + `"solution": true` imprime la solution |
@@ -151,6 +156,7 @@ Un paramètre inconnu est une erreur, pour repérer les fautes de frappe.
 | `air_quality` | `location` | Indice européen, particules, pollens (Open-Meteo) |
 | `crypto` | `coins` (`["bitcoin", "ethereum"]`, identifiants CoinGecko), `currency` (`eur`) | Cours et variation sur 24 h |
 | `sun` | `location` | Lever, coucher et durée du jour via Open-Meteo, sans clé |
+| `sky` (ou `ciel`) | `location` | Le ciel ce soir : planètes visibles (direction et hauteur), passages visibles de la Station spatiale internationale jusqu'à l'aube, lune et étoiles filantes. Calculé sur place (éléments orbitaux du JPL, SGP4) ; seule l'orbite de l'ISS vient de CelesTrak, une fois par jour |
 | `riddle` (ou `enigme`) | `kind` (`devinette`/`charade`/`logique`/`calcul`), `number`, `answer` (`envers`/`lendemain`/`dessous`/`aucune`) | 125 énigmes, une par jour sans répétition. Par défaut, la réponse est imprimée à l'envers : on retourne le ticket pour la lire |
 | `workout` (ou `defi_sportif`) | `level` (`facile`/`moyen`/`difficile`), `number` | Défi sportif du jour, sans équipement, 25 défis par niveau |
 | `news` | `title`, `feeds` (URL RSS/Atom), `count` (3, max 5), `qr` (2, max 2), `themes`, `exclude`, `max_age_hours` (24) | Revue de presse sans IA : voir ci-dessous |
@@ -228,8 +234,42 @@ par Claude pour les mots inconnus : moins d'un centime par grille neuve aux nive
 (Claude Haiku), une dizaine aux niveaux 3 et 4 (Claude Opus). L'aperçu n'appelle jamais Claude,
 et un mot que Claude n'a pas su définir n'est pas redemandé : sa longueur est imprimée.
 
-Les blocs `horoscope` et `word_of_the_day` utilisent l'API Claude : définir `ANTHROPIC_API_KEY`
-(et optionnellement `PRINTR_CLAUDE_MODEL`, `claude-haiku-5-5` par défaut).
+### Claude : clé API ou abonnement
+
+Les blocs Claude (`horoscope`, `word_of_the_day`, `recipe_claude`, définitions des grilles)
+passent par l'un de ces deux chemins :
+
+| | API Claude | CLI Claude Code |
+|---|---|---|
+| Accès | une clé `ANTHROPIC_API_KEY` | un abonnement Claude (Pro, Max…) |
+| Coût | facturé à l'appel (quelques centimes par jour) | compté dans les limites de l'abonnement |
+| Durée d'un appel | quelques secondes | quelques secondes de plus (lancement de la CLI) |
+| Mémoire | rien de plus | environ 260 Mo pendant l'appel |
+| Machines | toutes | 64 bits seulement (`aarch64`, `x86_64`) |
+
+Le chemin se choisit avec `PRINTR_CLAUDE_BACKEND` :
+
+- `auto` (par défaut) : l'API si `ANTHROPIC_API_KEY` est définie, sinon la CLI si elle est installée ;
+- `api` : toujours l'API (sans clé, les blocs Claude sont indisponibles) ;
+- `cli` : toujours la CLI, même si une clé est définie.
+
+Avec la CLI, printr lance `claude -p` en le réduisant à un simple appel au modèle : ni outils, ni
+réglages, ni `CLAUDE.md`, ni serveurs MCP, ni skills, ni session gardée. Le contexte envoyé reste
+ainsi aussi léger qu'avec l'API. La CLI utilise sa propre connexion : printr lui retire
+`ANTHROPIC_API_KEY`. Les appels passent un par un, et un appel qui dépasse deux minutes est abandonné.
+
+| Variable | Rôle |
+|---|---|
+| `ANTHROPIC_API_KEY` | Clé de l'API Claude |
+| `PRINTR_CLAUDE_BACKEND` | `auto`, `api` ou `cli` |
+| `PRINTR_CLAUDE_CLI` | Programme de la CLI : nom cherché dans le `PATH` ou chemin complet (`claude` par défaut) |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Jeton de la CLI, pour une machine sans session ouverte (le service systemd) |
+| `PRINTR_CLAUDE_MODEL` | Modèle, `claude-haiku-5-5` par défaut (les deux chemins) |
+
+Sur un poste où tu es déjà connecté à Claude Code, il n'y a rien à faire : sans clé API, printr
+trouve `claude` et l'utilise. Pour le service systemd, voir
+[Claude par l'abonnement](#claude-par-labonnement) dans l'installation. La bannière du serveur dit
+quel chemin est utilisé (`claude-haiku-5-5 (CLI)`), comme `/api/status` (`"claude_backend": "CLI"`).
 
 Les contenus dépendant d'une date sont **mis en cache** : réimprimer le même ticket redonne les
 mêmes résultats, sans nouvel appel. `--refresh` force une nouvelle génération. Le cache vit dans
@@ -262,8 +302,8 @@ France, nommés en anglais.
 </p>
 
 - **Composer** : ajouter des blocs (à la fin ou entre deux autres), les régler et les réordonner en les faisant glisser par leur poignée, avec l'aperçu du ticket en direct.
-  Les blocs Claude (horoscope, mot du jour) n'appellent pas l'API en aperçu : ils ne coûtent
-  qu'à l'impression.
+  Les blocs Claude (horoscope, mot du jour) n'appellent pas Claude en aperçu : ils ne sont
+  rédigés qu'à l'impression.
 - **Mes tickets** : les tickets enregistrés (presets), à imprimer en un geste, à partager avec
   la famille et à **planifier** (jours et heure). Une échéance manquée de plus de 15 minutes
   n'est pas rattrapée.
@@ -284,6 +324,11 @@ printr user passwd Camille
 printr user remove Camille
 printr user list
 ```
+
+**Imprimante absente** (débranchée, éteinte, hors réseau) : l'appli l'affiche, et les tickets, déjà mis
+en page, attendent son retour puis sortent tout seuls, planifications comprises (« sorti à 9 h 12, en
+retard » dans l'historique). Au-delà de 12 heures (`PRINTR_QUEUE_HOURS`), un ticket en attente est
+abandonné : le brief du matin n'a plus d'intérêt le soir.
 
 Les données (comptes, presets, historique, photos) vivent dans `$PRINTR_DATA_DIR`, sinon
 `~/.local/share/printr`, ou `/var/lib/printr` avec le service systemd. Pour travailler sur
@@ -372,7 +417,7 @@ scripts/demo.sh examples/extras.json     # ou n'importe quel ticket
 ```
 
 Le script lance l'émulateur, imprime le ticket, attend le rendu puis arrête l'émulateur.
-Les blocs Claude demandent `ANTHROPIC_API_KEY` dans l'environnement.
+Les blocs Claude demandent `ANTHROPIC_API_KEY` dans l'environnement, ou la CLI Claude.
 
 À la main, dans deux terminaux :
 
@@ -440,6 +485,8 @@ uvx --with markdown --with pymdown-extensions python docs/build.py && python3 -m
 Ses illustrations sont générées avec des données fictives uniquement :
 
 ```sh
+scripts/illustrations.sh                                # tout, dans les deux langues, puis le site
+scripts/illustrations.sh --sans-claude                  # pareil, sans aucun appel à Claude
 docs/demo/photo-session.sh                              # captures de l'appli + tickets de l'émulateur
 uv run --with pillow python docs/brand/make-assets.py   # déclinaisons du logo et icônes de l'appli
 ```
@@ -458,7 +505,8 @@ scripts/deploy.sh --local               # cette machine
 Le script détecte l'architecture de la machine, compile pour elle (avec
 [`cross`](https://github.com/cross-rs/cross), pour une glibc compatible), envoie le programme
 et lance [`deploy/install.sh`](deploy/install.sh), qui demande le mot de passe `sudo` **une
-seule fois** et la clé Claude (facultative). L'installation :
+seule fois** et la clé Claude (facultative, voir aussi
+[Claude par l'abonnement](#claude-par-labonnement)). L'installation :
 
 - crée l'utilisateur système `printr` et ajoute ton compte aux groupes `printr` et `lp` ;
 - installe le programme dans `/opt/printr` (et la commande `printr`) ;
@@ -485,7 +533,33 @@ journalctl -u printr -f                 # suivre les impressions
 `--install` relance l'installation complète (nouveau fichier de service, nouvelle règle udev…).
 Pour une imprimante réseau, définir `PRINTR_TCP=adresse:9100` dans `/etc/printr.env`. Sur la
 machine, la commande `printr` lit aussi ce fichier : un ticket lancé à la main utilise la même
-imprimante et la même clé que le serveur.
+imprimante et le même accès à Claude que le serveur.
+
+### Claude par l'abonnement
+
+Sans clé API, le service peut passer par la CLI Claude Code et ton abonnement Claude (voir
+[Claude : clé API ou abonnement](#claude--clé-api-ou-abonnement)). Le service tourne sous
+l'utilisateur `printr`, qui n'a pas accès aux dossiers personnels : la CLI doit être installée
+ailleurs, et se connecter par un jeton. Sur la machine (64 bits) :
+
+```sh
+curl -fsSL https://claude.ai/install.sh | bash                        # installe la CLI dans ~/.local
+sudo install -m 755 "$(readlink -f ~/.local/bin/claude)" /usr/local/bin/claude
+claude setup-token                                                    # connexion, affiche un jeton
+```
+
+`claude setup-token` peut aussi se lancer sur un autre ordinateur : seul le jeton compte. Puis,
+dans `/etc/printr.env` (laisser `ANTHROPIC_API_KEY` vide) :
+
+```sh
+PRINTR_CLAUDE_CLI=/usr/local/bin/claude
+CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-…
+```
+
+et `systemctl restart printr` : la bannière (`journalctl -u printr`) affiche
+`claude-haiku-5-5 (CLI)`. La CLI garde ses fichiers dans le dossier de `printr`
+(`/var/lib/printr/.claude`). Le service peut utiliser jusqu'à 768 Mo de mémoire, pour laisser de
+la place à la CLI. Pour la mettre à jour, recopier le nouveau programme dans `/usr/local/bin`.
 
 **Binaires prêts à l'emploi** : chaque [release](https://github.com/XNinety9/Printr/releases) propose une
 archive par machine (`aarch64` pour un Pi 3, 4, 5 ou Zero 2 W en 64 bits, `armv7`, `arm` pour un Pi

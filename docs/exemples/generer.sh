@@ -88,7 +88,13 @@ for name in "${names[@]}"; do
   source="docs/exemples/$name.json"
   [ -f "$OUT/$name.json" ] && source="$OUT/$name.json"
   $BIN -q --tcp "127.0.0.1:$PORT" print "$source"
-  until [ "$(find emulator/receipts -name '*.png' | wc -l)" -gt "$before" ]; do sleep 0.3; done
+  # Un ticket vide ne produit aucun rendu : on n'attend pas indéfiniment, on passe au suivant.
+  waited=0
+  until [ "$(find emulator/receipts -name '*.png' | wc -l)" -gt "$before" ]; do
+    sleep 0.3
+    waited=$((waited + 1))
+    if [ "$waited" -ge 200 ]; then echo "$name : pas de rendu après 60 s, ignoré" >&2; continue 2; fi
+  done
   cp "$(ls -t emulator/receipts/*.png | head -1)" "$OUT/$name.png"
   chmod 644 "$OUT/$name.png"
   echo "$OUT/$name.png"

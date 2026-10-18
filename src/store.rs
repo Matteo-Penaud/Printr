@@ -45,6 +45,37 @@ pub fn uploads_dir() -> Option<PathBuf> {
     data_dir().map(|d| d.join("images"))
 }
 
+/// Octets ESC/POS des tickets en file d'attente.
+fn queue_dir() -> Option<PathBuf> {
+    data_dir().map(|d| d.join("queue"))
+}
+
+fn queue_file(id: &str) -> Option<PathBuf> {
+    (!id.is_empty() && id.chars().all(|c| c.is_ascii_hexdigit()))
+        .then(|| queue_dir().map(|d| d.join(format!("{id}.bin"))))
+        .flatten()
+}
+
+/// Garde les octets d'un ticket qui attend l'imprimante.
+pub fn save_job(id: &str, bytes: &[u8]) -> Result<()> {
+    let path = queue_file(id).context(t("répertoire de données introuvable", "data directory not found"))?;
+    if let Some(dir) = path.parent() {
+        fs::create_dir_all(dir)?;
+    }
+    fs::write(&path, bytes)?;
+    Ok(())
+}
+
+pub fn load_job(id: &str) -> Option<Vec<u8>> {
+    fs::read(queue_file(id)?).ok()
+}
+
+pub fn remove_job(id: &str) {
+    if let Some(path) = queue_file(id) {
+        let _ = fs::remove_file(path);
+    }
+}
+
 /// Tickets imprimés gardés pour l'aperçu de l'historique (réservé à l'administrateur).
 fn previews_dir() -> Option<PathBuf> {
     data_dir().map(|d| d.join("previews"))
@@ -149,6 +180,12 @@ pub struct Preset {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct HistoryEntry {
+    /// Ticket en file d'attente (imprimante absente) : identifiant de la tâche, tant qu'il attend.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub queued: Option<String>,
+    /// Imprimé plus tard que demandé, sorti de la file d'attente à cette heure-là.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub printed_at: Option<DateTime<Utc>>,
     /// Identifiant de l'aperçu gardé (voir `save_preview`), pour l'administrateur.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub preview: Option<String>,
@@ -189,6 +226,19 @@ pub struct Data {
     pub history: Vec<HistoryEntry>,
     #[serde(default)]
     pub shopping: Vec<ShoppingItem>,
+    /// Tickets qui attendent le retour de l'imprimante, du plus ancien au plus récent ; leurs
+    /// octets ESC/POS sont dans `queue/`.
+    #[serde(default)]
+    pub queue: Vec<QueuedJob>,
+}
+
+/// Un ticket prêt, qui attend l'imprimante.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct QueuedJob {
+    pub id: String,
+    pub at: DateTime<Utc>,
+    pub by: String,
+    pub label: String,
 }
 
 /// Lit les données sur le disque, sans rien créer : pour les blocs (liste de courses, bilan).

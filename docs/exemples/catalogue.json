@@ -172,6 +172,16 @@
     }
    },
    {
+    "id": "ciel",
+    "emoji": "🔭",
+    "fr": "Le ciel ce soir",
+    "en": "Tonight's sky",
+    "description": {
+     "fr": "Planètes visibles, passages de la Station spatiale internationale, lune et étoiles filantes, calculés pour sa ville.",
+     "en": "Visible planets, International Space Station passes, moon and shooting stars, computed for your city."
+    }
+   },
+   {
     "id": "air",
     "emoji": "🍃",
     "fr": "Qualité de l'air",
@@ -460,6 +470,27 @@
      "fr": "Qui a imprimé quoi, façon ticket de caisse.",
      "en": "Who printed what, as a till receipt."
     }
+   },
+   {
+    "id": "recette",
+    "emoji": "🍳",
+    "fr": "Recette",
+    "en": "Recipe",
+    "description": {
+     "fr": "Une recette lue sur son site (données schema.org) : ingrédients à cocher et étapes, sans publicité.",
+     "en": "A recipe read from its website (schema.org data): ingredients to tick and steps, without ads."
+    }
+   },
+   {
+    "id": "recette_claude",
+    "emoji": "👩‍🍳",
+    "fr": "Recette par Claude",
+    "en": "Claude recipe",
+    "description": {
+     "fr": "Le nom d'un plat, et Claude rédige la recette : ingrédients à cocher et étapes.",
+     "en": "Name a dish and Claude writes the recipe: ingredients to tick and steps."
+    },
+    "claude": true
    }
   ]
  }

@@ -41,6 +41,16 @@ async function api(method, path, body) {
 }
 
 const toast = (message, kind = 'ok', emoji) => bus.emit('toast', { message, kind, emoji });
+
+// Réponse d'une impression : imprimé, imprimé avec des blocs en erreur, ou en attente de
+// l'imprimante (absente : le ticket sortira à son retour).
+function printedToast(r, message = T('Imprimé !', 'Printed!'), emoji = '🧾') {
+  bus.emit('printer');
+  if (r?.stalled) return toast(T('L’imprimante ne prend plus rien (capot, papier ?) : le ticket sortira quand elle sera prête.', 'The printer is not taking anything (cover, paper?): the ticket will come out when it is ready.'), 'warn', '⏳');
+  if (r?.queued) return toast(T('Imprimante absente : le ticket sortira dès son retour.', 'Printer missing: the ticket will come out as soon as it is back.'), 'warn', '⏳');
+  if (r?.errors?.length) return toast(T(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, `Printed, with ${r.errors.length} block(s) in error`), 'error', '⚠️');
+  return toast(message, 'ok', emoji);
+}
 const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const uid = () => Math.random().toString(36).slice(2, 10);
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -291,6 +301,12 @@ const BLOCKS = [
     summary: (b) => b.location,
   },
   {
+    type: 'sky', label: T('Le ciel ce soir', "Tonight's sky"), emoji: '🔭', group: G.daily, desc: T('Planètes, passages de l’ISS, lune, étoiles filantes', 'Planets, ISS passes, moon, shooting stars'),
+    defaults: { location: 'Lyon' },
+    fields: [{ key: 'location', label: T('Ville', 'City'), kind: 'text' }],
+    summary: (b) => b.location,
+  },
+  {
     type: 'air_quality', label: T("Qualité de l'air", 'Air quality'), emoji: '🍃', group: G.daily, desc: T('Pollution et pollens', 'Pollution and pollen'),
     defaults: { location: 'Lyon' },
     fields: [{ key: 'location', label: T('Ville', 'City'), kind: 'text' }],
@@ -517,6 +533,27 @@ const BLOCKS = [
     summary: (b) => `${(b.items || []).filter(Boolean).length} ${T('élément(s)', 'item(s)')}`,
   },
   {
+    type: 'recipe', label: T('Recette', 'Recipe'), emoji: '🍳', group: G.org, desc: T('Une recette lue sur son site, sans la pub', 'A recipe read from its website, without the ads'),
+    defaults: { url: '', steps: true, qr: true },
+    fields: [
+      { key: 'url', label: T('Adresse de la recette', 'Recipe address'), kind: 'text', placeholder: 'https://…',
+        help: T('La plupart des sites de cuisine marchent (ils décrivent leurs recettes en données schema.org).', 'Most cooking websites work (they describe their recipes with schema.org data).') },
+      { key: 'steps', label: T('Imprimer les étapes', 'Print the steps'), kind: 'toggle', help: T('Sinon, seulement les ingrédients : une liste de courses.', 'Otherwise, only the ingredients: a shopping list.') },
+      { key: 'qr', label: T('QR code vers la page', 'QR code to the page'), kind: 'toggle' },
+    ],
+    summary: (b) => (b.url || '').replace(/^https?:\/\/(www\.)?/, '').slice(0, 40) || T('Aucune adresse', 'No address'),
+  },
+  {
+    type: 'recipe_claude', label: T('Recette par Claude', 'Claude recipe'), emoji: '👩‍🍳', group: G.org, desc: T('Le nom d’un plat, Claude écrit la recette', 'Name a dish, Claude writes the recipe'), ai: true,
+    defaults: { dish: '', servings: 4, steps: true },
+    fields: [
+      { key: 'dish', label: T('Plat', 'Dish'), kind: 'text', placeholder: T('Blanquette de veau, crêpes…', 'Lasagna, pancakes…') },
+      { key: 'servings', label: T('Pour combien de personnes', 'Servings'), kind: 'number', min: 1, max: 20 },
+      { key: 'steps', label: T('Imprimer les étapes', 'Print the steps'), kind: 'toggle', help: T('Sinon, seulement les ingrédients : une liste de courses.', 'Otherwise, only the ingredients: a shopping list.') },
+    ],
+    summary: (b) => (b.dish ? T(`${b.dish} · ${b.servings} pers.`, `${b.dish} · serves ${b.servings}`) : T('Aucun plat', 'No dish')),
+  },
+  {
     type: 'shopping', label: T('Liste de courses', 'Shopping list'), emoji: '🛒', group: G.org, desc: T('La liste partagée de l’appli', "The app's shared list"),
     defaults: { title: T('Liste de courses', 'Shopping list'), clear: true },
     fields: [
@@ -571,6 +608,17 @@ const BLOCKS = [
   },
 ];
 const BLOCK = Object.fromEntries(BLOCKS.map((b) => [b.type, b]));
+// Noms français acceptés par le serveur dans les tickets JSON (scripts, exemples) : l'appli les
+// reconnaît aussi, au lieu d'afficher « mots_meles ».
+const ALIASES = {
+  mots_meles: 'word_search', mots_caches: 'word_search', mots_en_grille: 'word_search', voie_ferree: 'train_tracks',
+  rails: 'train_tracks', defi_sportif: 'workout', enigme: 'riddle', calcul_mental: 'mental_math', mot_mystere: 'anagram',
+  anagramme: 'anagram', logimage: 'nonogram', picross: 'nonogram', message_code: 'cipher', courses: 'shopping',
+  bon: 'coupon', poubelles: 'bins', bilan: 'monthly_report', mots_fleches: 'arrow_word', fleches: 'arrow_word',
+  mots_croises: 'crossword', croises: 'crossword', recette: 'recipe', recette_claude: 'recipe_claude', ciel: 'sky',
+  coloriage: 'coloring',
+};
+for (const [alias, type] of Object.entries(ALIASES)) BLOCK[alias] = BLOCK[type];
 // Ancien nom accepté par le serveur.
 BLOCK.enigme = BLOCK.riddle;
 BLOCK.defi_sportif = BLOCK.workout;
@@ -1144,10 +1192,7 @@ function Home({ me, presets, reload, openComposer }) {
 
   const print = async (preset) => {
     try {
-      const r = await api('POST', `/api/presets/${preset.id}/print`);
-      r.errors?.length
-        ? toast(T(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, `Printed, with ${r.errors.length} block(s) in error`), 'error', '⚠️')
-        : toast(T('Imprimé !', 'Printed!'), 'ok', '🧾');
+      printedToast(await api('POST', `/api/presets/${preset.id}/print`));
     } catch (e) { toast(e.message, 'error'); }
   };
   const remove = (preset) => setConfirm({
@@ -1189,12 +1234,12 @@ function Home({ me, presets, reload, openComposer }) {
 const EXAMPLE = {
   title: 'titre', text: 'texte', date: 'date', separator: 'separateur', feed: 'espace', image: 'image', qr: 'qr',
   picto: 'pictogramme', weather: 'meteo', barnum: 'horoscope', horoscope: 'horoscope_claude', word_of_the_day: 'mot_du_jour',
-  saint: 'saint', quote: 'citation', moon: 'lune', sun: 'soleil', air_quality: 'air', holidays: 'jours_feries',
+  saint: 'saint', quote: 'citation', moon: 'lune', sun: 'soleil', sky: 'ciel', air_quality: 'air', holidays: 'jours_feries',
   countdown: 'compte_a_rebours', riddle: 'enigme', workout: 'defi_sportif', sudoku: 'sudoku', maze: 'labyrinthe',
   word_search: 'mots_meles', train_tracks: 'voie_ferree', arrow_word: 'mots_fleches', crossword: 'mots_croises', nonogram: 'logimage',
   petit_bac: 'petit_bac', mental_math: 'calcul_mental', anagram: 'mot_mystere', cipher: 'message_code',
   coloring: 'coloriage', coupon: 'bon', news: 'actualites', on_this_day: 'ephemeride', crypto: 'crypto', todo: 'a_faire',
-  shopping: 'courses', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
+  shopping: 'courses', recipe: 'recette', recipe_claude: 'recette_claude', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
 };
 const exampleUrl = (type) => EXAMPLE[type] && `/exemples/${EN ? 'en/' : ''}${EXAMPLE[type]}.png`;
 
@@ -1206,6 +1251,7 @@ const KEYWORDS = {
   weather: 'meteo weather pluie rain temps soleil sun temperature', barnum: 'horoscope astrologie astrology signe sign zodiaque ciel sky',
   horoscope: 'horoscope astrologie astrology signe sign zodiaque claude ia ai', word_of_the_day: 'mot word definition vocabulaire vocabulary claude',
   saint: 'saint fete name day prenom', quote: 'citation quote phrase', moon: 'lune moon phase', sun: 'soleil sun lever coucher sunrise sunset',
+  sky: 'ciel sky etoiles stars planetes planets iss station spatiale space astronomie astronomy nuit night',
   air_quality: 'air pollution pollen qualite quality', holidays: 'feries holidays conge vacances',
   countdown: 'compte rebours countdown jours days vacances', riddle: 'enigme riddle devinette charade logique',
   workout: 'sport defi workout exercice exercise', sudoku: 'sudoku grille chiffres numbers puzzle', maze: 'labyrinthe maze',
@@ -1216,7 +1262,8 @@ const KEYWORDS = {
   anagram: 'mot mystere anagramme anagram lettres letters', cipher: 'message code secret cesar caesar morse',
   coloring: 'coloriage coloring mandala dessin', coupon: 'bon cadeau coupon gift offrir',
   news: 'actualites news rss presse journal', on_this_day: 'ephemeride histoire history wikipedia', crypto: 'crypto bitcoin ethereum',
-  todo: 'faire todo liste list taches tasks', shopping: 'courses shopping liste list', agenda: 'agenda calendar calendrier evenements ics',
+  todo: 'faire todo liste list taches tasks',
+  recipe: 'recette recipe cuisine cooking ingredients plat dish site', recipe_claude: 'recette recipe cuisine cooking ingredients plat dish claude ia ai', shopping: 'courses shopping liste list', agenda: 'agenda calendar calendrier evenements ics',
   bins: 'poubelles bins trash dechets recyclage', wifi: 'wifi invites guests reseau network', monthly_report: 'bilan mois monthly report statistiques stats',
 };
 
@@ -1504,8 +1551,8 @@ function SaveSheet({ state, onSave, onClose, focusSchedule }) {
     <${ScheduleEditor} schedules=${draft.schedules} onChange=${(schedules) => set({ schedules })} />
     ${ai && draft.schedules.length > 0 && html`<p class="help muted" style="font-size:13px;margin-bottom:0">
       🔮 ${T(
-        'Ce ticket utilise Claude : un petit appel payant par impression (le contenu est gardé en cache pour la journée).',
-        'This ticket uses Claude: a small paid call per print (the content is cached for the day).',
+        'Ce ticket utilise Claude : un petit appel par impression, facturé avec une clé API ou compté sur l’abonnement avec la CLI (le contenu est gardé en cache pour la journée).',
+        'This ticket uses Claude: a small call per print, billed with an API key or counted against the subscription with the CLI (the content is cached for the day).',
       )}</p>`}
   </${Sheet}>`;
 }
@@ -1549,10 +1596,7 @@ function Composer({ initial, onSaved }) {
   const print = async () => {
     setPrinting(true);
     try {
-      const r = await api('POST', '/api/print', { ticket, label: state.name || T('Ticket composé', 'Composed ticket') });
-      r.errors?.length
-        ? toast(T(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, `Printed, with ${r.errors.length} block(s) in error`), 'error', '⚠️')
-        : toast(T('Imprimé !', 'Printed!'), 'ok', '🧾');
+      printedToast(await api('POST', '/api/print', { ticket, label: state.name || T('Ticket composé', 'Composed ticket') }));
     } catch (e) { toast(e.message, 'error'); } finally { setPrinting(false); }
   };
 
@@ -1645,9 +1689,9 @@ function Message({ me, onSaved }) {
   const print = async () => {
     setPrinting(true);
     try {
-      await api('POST', '/api/print', { ticket, label: `${T('Petit mot', 'Little note')}${title.trim() ? ` · ${title.trim()}` : ''}` });
+      const r = await api('POST', '/api/print', { ticket, label: `${T('Petit mot', 'Little note')}${title.trim() ? ` · ${title.trim()}` : ''}` });
       setDone(true);
-      toast(T('Envoyé à l’imprimante !', 'Sent to the printer!'), 'ok', '💌');
+      printedToast(r, T('Envoyé à l’imprimante !', 'Sent to the printer!'), '💌');
       setTimeout(() => setDone(false), 2400);
     } catch (e) { toast(e.message, 'error'); } finally { setPrinting(false); }
   };
@@ -1705,8 +1749,8 @@ function Shopping({ users }) {
     setBusy(true);
     try {
       const ticket = { cut: true, spacing: 1, blocks: [{ type: 'date' }, { type: 'shopping', clear }] };
-      await api('POST', '/api/print', { ticket, label: T('Liste de courses', 'Shopping list') });
-      toast(T('Liste imprimée, bonnes courses !', 'List printed, happy shopping!'), 'ok', '🛒');
+      printedToast(await api('POST', '/api/print', { ticket, label: T('Liste de courses', 'Shopping list') }),
+        T('Liste imprimée, bonnes courses !', 'List printed, happy shopping!'), '🛒');
       load();
     } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
   };
@@ -1760,7 +1804,18 @@ function HistoryPreview({ entry, onClose }) {
 function History({ users, me }) {
   const [entries, setEntries] = useState(null);
   const [shown, setShown] = useState(null);
-  useEffect(() => { api('GET', '/api/history').then(setEntries).catch((e) => { toast(e.message, 'error'); setEntries([]); }); }, []);
+  // Relu toutes les 10 s, au retour sur l'onglet et quand l'état de l'imprimante change : un ticket
+  // en attente passe à « imprimé » sans qu'on ait à recharger la page.
+  useEffect(() => {
+    const load = (first) => api('GET', '/api/history').then(setEntries)
+      .catch((e) => { if (first) { toast(e.message, 'error'); setEntries([]); } });
+    load(true);
+    const timer = setInterval(() => { if (!document.hidden) load(); }, 10000);
+    const onShow = () => { if (!document.hidden) load(); };
+    document.addEventListener('visibilitychange', onShow);
+    const off = bus.on('printer-changed', () => load());
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onShow); off(); };
+  }, []);
   const byName = Object.fromEntries((users || []).map((u) => [u.name, u]));
   const dayLabel = (d) => {
     const today = new Date(); const y = new Date(Date.now() - 864e5);
@@ -1783,11 +1838,12 @@ function History({ users, me }) {
         <div class="history-time">${new Date(e.at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })}</div>
         ${byName[e.by] ? html`<${Avatar} user=${byName[e.by]} size="small" />` : html`<span class="chip" style="height:22px;padding:0 6px"><${Icon} name="clock" /></span>`}
         <div class="grow"><strong>${e.label}</strong>
-          <div class="muted" style="font-size:13px">${e.by === 'planification' ? T('Impression planifiée', 'Scheduled print') : T(`par ${e.by}`, `by ${e.by}`)}</div>
+          <div class="muted" style="font-size:13px">${e.by === 'planification' ? T('Impression planifiée', 'Scheduled print') : T(`par ${e.by}`, `by ${e.by}`)}${e.printed_at
+            ? T(` · sorti à ${new Date(e.printed_at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })}, en retard`, ` · came out at ${new Date(e.printed_at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })}, late`) : ''}</div>
           ${e.errors?.length > 0 && html`<ul class="history-errors">${e.errors.map((err) => html`<li>${err}</li>`)}</ul>`}</div>
-        <span class="chip ${e.ok ? (e.errors?.length ? 'warn' : 'ok') : 'danger'}">${e.ok
+        ${e.queued ? html`<span class="chip warn">${T('En attente', 'Waiting')}</span>` : html`<span class="chip ${e.ok ? (e.errors?.length ? 'warn' : 'ok') : 'danger'}">${e.ok
           ? (e.errors?.length ? T('Partiel', 'Partial') : T('Imprimé', 'Printed'))
-          : T('Échec', 'Failed')}</span>
+          : T('Échec', 'Failed')}</span>`}
         ${me?.admin && e.preview && html`<button class="iconbtn" aria-label=${T('Voir le ticket', 'See the ticket')} title=${T('Voir le ticket', 'See the ticket')}
           onClick=${() => setShown(e)}><${Icon} name="eye" /></button>`}
       </div>`)}
@@ -1889,6 +1945,8 @@ function App() {
   const [users, setUsers] = useState([]);
   const [version, setVersion] = useState(null);
   const [update, setUpdate] = useState(null); // version plus récente publiée sur GitHub
+  // L'imprimante est-elle là ? Et combien de tickets attendent son retour ? (vérifié toutes les 30 s)
+  const [printer, setPrinter] = useState({ ready: true, queued: 0 });
   const [presets, setPresets] = useState(null);
   const [composer, setComposer] = useState(() => store.get('printr.draft', null) || emptyComposer());
   const [scrolled, setScrolled] = useState(false);
@@ -1906,7 +1964,18 @@ function App() {
     if (!me) return;
     loadPresets();
     loadUsers();
-    api('GET', '/api/status').then((s) => { setVersion(s.version); setUpdate(s.update || null); }).catch(() => {});
+    const status = () => api('GET', '/api/status').then((s) => {
+      setVersion(s.version); setUpdate(s.update || null);
+      setPrinter((before) => {
+        const now = { ready: s.printer_ready !== false, queued: s.queued || 0 };
+        if (before.ready !== now.ready || before.queued !== now.queued) bus.emit('printer-changed');
+        return now;
+      });
+    }).catch(() => {});
+    status();
+    const timer = setInterval(status, 30000);
+    const off = bus.on('printer', () => setTimeout(status, 600));
+    return () => { clearInterval(timer); off(); };
   }, [me]);
   useEffect(() => {
     const onScroll = () => setScrolled(scrollY > 4);
@@ -1938,6 +2007,7 @@ function App() {
         onClick=${n.hash === '#/compose' ? (e) => { if (route.hash !== '#/compose') { e.preventDefault(); openComposer(store.get('printr.draft', null) || emptyComposer()); } } : undefined}>
         <${Icon} name=${n.icon} />${n.label}</a>`)}
       <div class="spacer"></div>
+      <div class="printer-state ${printer.ready ? 'ok' : 'off'}">${printer.ready ? T('Imprimante prête', 'Printer ready') : T('Imprimante déconnectée', 'Printer disconnected')}</div>
       ${version && html`<div class="version">printr ${version}${me.admin && update && html` · <a href=${update.url} target="_blank" rel="noopener">${T(`${update.version} disponible`, `${update.version} available`)}</a>`}</div>`}
       <div class="account-row">
         <button type="button" class="navlink account" onClick=${() => setMenu(true)}><${Avatar} user=${me} />
@@ -1952,6 +2022,9 @@ function App() {
         ${route.hash === '#/compose' && composer.id && html`<button class="btn ghost small" onClick=${() => openComposer(emptyComposer())}><${Icon} name="plus" size=${16} /> ${T('Nouveau', 'New')}</button>`}
         <button class="me" aria-label=${T('Mon compte', 'My account')} title=${T('Mon compte', 'My account')} onClick=${() => setMenu(true)}><${Avatar} user=${me} /><span>${T('Mon compte', 'My account')}</span></button>
       </header>
+      ${!printer.ready && html`<div class="printer-banner" role="status"><span class="emoji">🔌</span>
+        <span>${T('Imprimante déconnectée : les tickets attendront son retour.', 'Printer disconnected: tickets will wait for it to come back.')}
+        ${printer.queued > 0 && html` <strong>${T(`${printer.queued} en attente`, `${printer.queued} waiting`)}</strong>`}</span></div>`}
       ${page}
     </main>
     <nav class="tabbar" aria-label=${T('Navigation', 'Navigation')}>

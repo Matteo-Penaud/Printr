@@ -9,6 +9,45 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
 
 ## [Unreleased]
 
+## [1.8.0] “Ives” - 2026-10-18
+
+### Added
+- **Printer missing? Tickets wait.** The server checks every 10 seconds that the printer is there (USB device
+  present, network printer accepting connections). When it is not, tickets — already laid out — go into a
+  queue that survives restarts, and print on their own when the printer comes back, schedules included.
+  After 12 hours (`PRINTR_QUEUE_HOURS`), a waiting ticket is dropped and the history says why.
+- The app shows the printer state (sidebar), a banner with the number of waiting tickets when it is missing,
+  a “printer missing, the ticket will come out when it is back” message, and “waiting” / “came out at 9:12,
+  late” in the history.
+- **Printer stuck? No double ticket.** When the printer stops taking data (cover open, out of paper) for more
+  than 30 seconds, the app says so (“cover, paper?”) instead of hanging. The ticket comes out once the printer
+  is ready, only once, and the history then shows it as printed. Tickets sent in the meantime wait their turn
+  and come out right after it, never mixed with it.
+- The history refreshes on its own (every 10 seconds, when you come back to the tab, and when the printer
+  state changes): a waiting ticket turns to “printed” without reloading the app.
+- **Tonight's sky** block: visible planets with their direction and height, visible International Space Station
+  passes until dawn, moon phase and shooting star showers, for your city. Computed locally (JPL orbital
+  elements for the planets, SGP4 for the ISS, whose orbit comes from CelesTrak once a day).
+- **Recipe** block: paste the address of a recipe, Printr reads its schema.org data (found on most cooking
+  sites) and prints the title, servings and times, ingredients to tick and numbered steps, without the ads.
+- **Claude recipe** block: name a dish, Claude (Haiku by default) writes the recipe at print time, with the
+  same layout; cached per dish and number of servings.
+- **Claude without an API key.** When `ANTHROPIC_API_KEY` is not set and the Claude Code CLI is installed,
+  Claude blocks go through `claude -p` and its own login (a Claude subscription). `PRINTR_CLAUDE_BACKEND`
+  forces `api` or `cli`, `PRINTR_CLAUDE_CLI` gives the program's path; the startup banner and `/api/status`
+  (`claude_backend`) say which way is used.
+
+### Changed
+- The systemd service may now use up to 768 MB of memory (400 MB before), for the Claude CLI.
+- `--preview` on the command line no longer calls Claude, like the app's preview: Claude blocks show a
+  placeholder. `--claude` allows the call when you want the real text.
+- `scripts/illustrations.sh`: remakes every illustration of the site and README in both languages (block
+  examples, app screenshots, showcase tickets, link preview), then builds the site; `--sans-claude` makes no
+  Claude call.
+
+### Fixed
+- The app recognizes French block names used in JSON tickets (`mots_meles`, `enigme`…) instead of showing them raw.
+
 ## [1.7.0] “Hoe” - 2026-10-15
 
 ### Added
@@ -133,7 +172,8 @@ First release.
 - One-command installation on a Raspberry Pi, no sudo needed afterwards.
 - Windows development with a dev container and a printing relay.
 
-[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/XNinety9/Printr/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/XNinety9/Printr/compare/v1.6.1...v1.7.0
 [1.6.1]: https://github.com/XNinety9/Printr/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/XNinety9/Printr/compare/v1.5.0...v1.6.0
