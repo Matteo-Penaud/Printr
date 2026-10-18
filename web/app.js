@@ -655,6 +655,17 @@ function blockSummary(data) {
   return def.summary ? def.summary(data) : def.desc;
 }
 
+// Modèles de tickets prêts à l'emploi, proposés par le composeur vide. Un bloc retiré du catalogue
+// (par l'administrateur, ou faute de Claude) est simplement laissé de côté.
+const TEMPLATES = [
+  { emoji: '🌅', name: T('Brief du matin', 'Morning brief'), blocks: [['title', { text: T('Bonjour !', 'Good morning!') }], ['date'], ['weather'], ['saint'], ['word_of_the_day'], ['quote']] },
+  { emoji: '🧩', name: T('Pause jeux', 'Game break'), blocks: [['title', { text: T('Pause jeux', 'Game break') }], ['riddle'], ['sudoku'], ['word_search'], ['workout']] },
+  { emoji: '🧒', name: T('Pour les enfants', 'For the kids'), blocks: [['title', { text: T('Pour toi !', 'For you!') }], ['maze'], ['mental_math'], ['coloring'], ['riddle']] },
+  { emoji: '☀️', name: T('Week-end', 'Weekend'), blocks: [['title', { text: T('Bon week-end !', 'Happy weekend!') }], ['date'], ['weather', { days: 2 }], ['sky'], ['crossword'], ['on_this_day']] },
+];
+const templateBlocks = (tpl) => tpl.blocks.filter(([type]) => offered(BLOCK[type]))
+  .map(([type, data]) => { const b = newBlock(type); return { ...b, open: false, data: { ...b.data, ...data } }; });
+
 const emptyComposer = () => ({ id: null, name: '', icon: '🧾', shared: false, schedules: [], cut: true, spacing: 1, blocks: [] });
 
 function composerFromPreset(preset, copy = false) {
@@ -1686,9 +1697,15 @@ function Composer({ initial, onSaved }) {
         </div>`}
         <div class="blocklist ${sort.dragging ? 'sorting' : ''}" ref=${sort.list}>
           ${state.blocks.length === 0 && html`<div class="empty" style="padding:30px 18px"><div class="big-emoji">✨</div>
-            <h3>${T('Compose ton ticket', 'Compose your ticket')}</h3><p class="muted" style="margin:0 0 14px">${T('Quelques idées pour commencer :', 'A few ideas to start:')}</p>
-            <div class="row wrap" style="justify-content:center">${['date', 'weather', 'horoscope', 'riddle', 'workout', 'news'].map((t) =>
-              html`<button class="btn secondary small" onClick=${() => add(t)}>${BLOCK[t].emoji} ${BLOCK[t].label}</button>`)}</div></div>`}
+            <h3>${T('Compose ton ticket', 'Compose your ticket')}</h3><p class="muted" style="margin:0 0 14px">${T(
+              'Pars d’un modèle, à modifier ensuite, ou ajoute un premier bloc.', 'Start from a template and change it afterwards, or add a first block.')}</p>
+            <div class="templates">${TEMPLATES.map((tpl) => {
+              const blocks = templateBlocks(tpl);
+              return html`<button type="button" class="template" key=${tpl.name}
+                onClick=${() => setState((st) => ({ ...st, name: st.name || tpl.name, icon: tpl.emoji, blocks: templateBlocks(tpl) }))}>
+                <span class="big-emoji" aria-hidden="true">${tpl.emoji}</span><strong>${tpl.name}</strong>
+                <span class="muted">${blocks.map((b) => BLOCK[b.data.type].label).join(' · ')}</span></button>`;
+            })}</div></div>`}
           ${state.blocks.map((item, i) => html`${i > 0 && html`<div class="inserter" key=${`+${item.uid}`}>
               <button aria-label=${T('Insérer un bloc ici', 'Insert a block here')} title=${T('Insérer un bloc ici', 'Insert a block here')} onClick=${() => setCatalog({ at: i })}><${Icon} name="plus" size=${14} /></button></div>`}
             <${BlockCard} key=${item.uid} item=${item} index=${i} count=${state.blocks.length} error=${errors[i]} dragging=${sort.dragging === item.uid}

@@ -19,6 +19,8 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
   their clues come from the cache.
 - Catalog **favorites and recently added blocks follow your account**: you find them on every phone and
   computer. Those kept by the browser until now are moved into the account the first time.
+- **Ticket templates**: a new ticket starts from a morning brief, a game break, a kids' ticket or a weekend
+  ticket, to change afterwards — or from a first block, as before. Blocks hidden from the catalog are left out.
 
 ### Changed
 - Block catalog: games are split into three groups — grids and numbers, words and letters, challenges and
