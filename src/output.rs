@@ -6,6 +6,8 @@ use std::io::Write;
 use std::net::{TcpStream, ToSocketAddrs};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::sync::Mutex;
+use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::time::Duration;
 
 use anyhow::{Context, Result};
@@ -71,18 +73,32 @@ impl Target {
 /// Au-delà, une écriture est considérée comme bloquée (imprimante allumée mais en défaut).
 const WRITE_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// Fin d'un envoi : le fil d'écriture y dépose son résultat.
+pub type Done = Receiver<std::io::Result<()>>;
+
 /// L'imprimante a accepté la connexion mais ne prend plus les données (capot ouvert, plus de
 /// papier) : l'envoi reste en suspens et aboutira quand elle sera prête. Le ticket ne doit donc pas
-/// être renvoyé : il sortirait deux fois.
+/// être renvoyé : il sortirait deux fois. `take` donne de quoi savoir quand il est enfin sorti.
 #[derive(Debug)]
-pub struct Stalled;
+pub struct Stalled(Mutex<Option<Done>>);
+
+impl Stalled {
+    pub fn message() -> &'static str {
+        t(
+            "l'imprimante ne prend plus rien (capot, papier ?) : le ticket sortira quand elle sera prête",
+            "the printer is not taking anything (cover, paper?): the ticket will come out when it is ready",
+        )
+    }
+
+    /// La fin de l'envoi, une seule fois.
+    pub fn take(&self) -> Option<Done> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner()).take()
+    }
+}
 
 impl std::fmt::Display for Stalled {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(t(
-            "l'imprimante ne prend plus rien (capot, papier ?) : le ticket sortira quand elle sera prête",
-            "the printer is not taking anything (cover, paper?): the ticket will come out when it is ready",
-        ))
+        f.write_str(Self::message())
     }
 }
 
@@ -103,6 +119,10 @@ fn connect(addr: &str, timeout: Duration) -> Result<TcpStream> {
 /// Écrit sur le périphérique USB dans un fil à part : si l'imprimante bloque l'écriture (plus de
 /// papier, capot ouvert), on abandonne au bout de `WRITE_TIMEOUT` au lieu de rester coincé.
 fn write_device(path: &Path, bytes: &[u8]) -> Result<()> {
+    write_device_within(path, bytes, WRITE_TIMEOUT)
+}
+
+fn write_device_within(path: &Path, bytes: &[u8], timeout: Duration) -> Result<()> {
     let mut file = OpenOptions::new().write(true).open(path).with_context(|| {
         tr!(
             "impossible d'ouvrir {} (imprimante branchée ? droits udev ?)",
@@ -115,9 +135,12 @@ fn write_device(path: &Path, bytes: &[u8]) -> Result<()> {
     std::thread::spawn(move || {
         let _ = done.send(file.write_all(&bytes).and_then(|()| file.flush()));
     });
-    match wait.recv_timeout(WRITE_TIMEOUT) {
+    match wait.recv_timeout(timeout) {
         Ok(result) => result.with_context(|| tr!("écriture sur {} impossible", "cannot write to {}", path.display())),
-        Err(_) => Err(Stalled.into()),
+        Err(RecvTimeoutError::Timeout) => Err(Stalled(Mutex::new(Some(wait))).into()),
+        Err(RecvTimeoutError::Disconnected) => {
+            anyhow::bail!("{}", tr!("écriture sur {} interrompue", "writing to {} interrupted", path.display()))
+        }
     }
 }
 
@@ -177,6 +200,36 @@ mod tests {
         Target::Dump(path.clone()).write(&bytes).unwrap();
         assert_eq!(std::fs::read(&path).unwrap(), bytes);
         let _ = std::fs::remove_file(path);
+    }
+
+    /// Capot ouvert simulé par un tube nommé qu'on ne lit pas : l'envoi passe en suspens, puis
+    /// aboutit, en entier et une seule fois, quand on se remet à lire.
+    #[cfg(unix)]
+    #[test]
+    fn stalled_write_finishes_when_the_printer_takes_data_again() {
+        use std::io::Read;
+        let fifo = std::env::temp_dir().join(format!("printr-test-{}.fifo", std::process::id()));
+        let _ = std::fs::remove_file(&fifo);
+        assert!(std::process::Command::new("mkfifo").arg(&fifo).status().unwrap().success());
+        let (resume, resumed) = std::sync::mpsc::channel::<()>();
+        let reader = {
+            let fifo = fifo.clone();
+            std::thread::spawn(move || {
+                let mut file = std::fs::File::open(fifo).unwrap();
+                resumed.recv().unwrap();
+                let mut all = Vec::new();
+                file.read_to_end(&mut all).unwrap();
+                all.len()
+            })
+        };
+        // Bien plus que la mémoire tampon d'un tube (64 Kio) : l'écriture bloque.
+        let bytes = vec![b'x'; 512 * 1024];
+        let err = write_device_within(&fifo, &bytes, Duration::from_millis(300)).unwrap_err();
+        let done = err.downcast_ref::<Stalled>().expect("en suspens").take().expect("fin de l'envoi");
+        resume.send(()).unwrap();
+        assert!(done.recv_timeout(Duration::from_secs(10)).unwrap().is_ok());
+        assert_eq!(reader.join().unwrap(), bytes.len());
+        let _ = std::fs::remove_file(fifo);
     }
 
     #[test]
