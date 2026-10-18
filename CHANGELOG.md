@@ -17,6 +17,8 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
 - When Claude is not available (no API key, no Claude CLI), the blocks that cannot work without it — Claude
   horoscope, word of the day, Claude recipe — leave the catalog on their own. Crosswords and arrow words stay:
   their clues come from the cache.
+- Catalog **favorites and recently added blocks follow your account**: you find them on every phone and
+  computer. Those kept by the browser until now are moved into the account the first time.
 
 ### Changed
 - Block catalog: games are split into three groups — grids and numbers, words and letters, challenges and

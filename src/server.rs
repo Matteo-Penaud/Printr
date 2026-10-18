@@ -573,6 +573,26 @@ struct HiddenBlocks {
     blocks: Vec<String>,
 }
 
+/// Favoris et récents d'un compte ; un champ absent reste tel quel.
+#[derive(Deserialize)]
+struct MyCatalog {
+    favorites: Option<Vec<String>>,
+    recent: Option<Vec<String>>,
+}
+
+const MAX_FAVORITES: usize = 100;
+const MAX_RECENT: usize = 8;
+
+/// Liste de blocs envoyée par l'appli : noms vérifiés, doublons retirés (le premier gardé), au plus
+/// `max`. `None` si un nom n'en est pas un.
+fn block_list(blocks: Vec<String>, max: usize) -> Option<Vec<String>> {
+    if blocks.len() > 200 || !blocks.iter().all(|b| is_block_type(b)) {
+        return None;
+    }
+    let mut seen = std::collections::HashSet::new();
+    Some(blocks.into_iter().filter(|b| seen.insert(b.clone())).take(max).collect())
+}
+
 /// Un nom de type de bloc plausible : lettres minuscules et soulignés, rien d'autre à stocker.
 fn is_block_type(name: &str) -> bool {
     (1..=40).contains(&name.len()) && name.bytes().all(|c| c.is_ascii_lowercase() || c == b'_')
@@ -869,6 +889,42 @@ fn handle(app: &App, request: &mut Request) -> Reply {
             match store.save() {
                 Ok(()) => Reply::ok(json!({ "ok": true }))
                     .note(tr!("compte {name} supprimé par {by}", "account {name} deleted by {by}")),
+                Err(e) => Reply::error(500, format!("{e:#}")),
+            }
+        }
+        (Method::Get, ["api", "me", "catalog"]) => {
+            let Caller::User(me) = &caller else {
+                return Reply::error(403, t("réservé aux membres de la famille", "reserved for family members"));
+            };
+            let store = app.lock_store();
+            let user = store.user(&me.id);
+            Reply::ok(json!({
+                "favorites": user.map(|u| u.favorites.clone()).unwrap_or_default(),
+                "recent": user.map(|u| u.recent.clone()).unwrap_or_default(),
+            }))
+        }
+        (Method::Put, ["api", "me", "catalog"]) => {
+            let Caller::User(me) = &caller else {
+                return Reply::error(403, t("réservé aux membres de la famille", "reserved for family members"));
+            };
+            let input: MyCatalog = try_reply!(json_body(request));
+            let check = |list: Option<Vec<String>>, max| list.map(|b| block_list(b, max).ok_or(())).transpose();
+            let (Ok(favorites), Ok(recent)) = (check(input.favorites, MAX_FAVORITES), check(input.recent, MAX_RECENT))
+            else {
+                return Reply::error(400, t("liste de blocs invalide", "invalid block list"));
+            };
+            let mut store = app.lock_store();
+            let Some(user) = store.user_mut(&me.id) else {
+                return Reply::error(404, t("compte inconnu", "unknown account"));
+            };
+            if let Some(favorites) = favorites {
+                user.favorites = favorites;
+            }
+            if let Some(recent) = recent {
+                user.recent = recent;
+            }
+            match store.save() {
+                Ok(()) => Reply::ok(json!({ "ok": true })),
                 Err(e) => Reply::error(500, format!("{e:#}")),
             }
         }
@@ -1322,6 +1378,14 @@ mod tests {
         assert!(is_block_type("sudoku") && is_block_type("word_of_the_day"));
         assert!(!is_block_type("") && !is_block_type("Sudoku") && !is_block_type("../x") && !is_block_type("a b"));
         assert!(!is_block_type(&"a".repeat(41)));
+    }
+
+    #[test]
+    fn block_lists_are_cleaned() {
+        let list = |names: &[&str]| names.iter().map(|n| (*n).to_owned()).collect::<Vec<_>>();
+        assert_eq!(block_list(list(&["sudoku", "maze", "sudoku", "news"]), 2), Some(list(&["sudoku", "maze"])));
+        assert_eq!(block_list(list(&["sudoku", "Bad name"]), 8), None);
+        assert_eq!(block_list(Vec::new(), 8), Some(Vec::new()));
     }
 
     #[test]

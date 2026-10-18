@@ -1297,8 +1297,24 @@ const offered = (b) => !CATALOG.hidden.includes(b.type) && (CATALOG.claude || !N
 // Sans accents ni majuscules : « meteo » trouve « Météo ».
 const fold = (text) => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-const FAVORITES = 'printr.favorites';
-const RECENT = 'printr.recent';
+// Favoris et récents du compte, gardés par le serveur ; ici, la dernière version lue (le catalogue
+// s'ouvre aussitôt, puis se met à jour). Avant la 1.9, ils étaient dans le navigateur : ces clés-là
+// sont reprises une fois dans le compte, puis effacées.
+const MY_CATALOG = { favorites: [], recent: [] };
+const OLD_FAVORITES = 'printr.favorites';
+const OLD_RECENT = 'printr.recent';
+
+async function loadMyCatalog() {
+  const mine = await api('GET', '/api/me/catalog');
+  const old = { favorites: store.get(OLD_FAVORITES, []), recent: store.get(OLD_RECENT, []) };
+  if (!mine.favorites.length && !mine.recent.length && (old.favorites.length || old.recent.length)) {
+    await api('PUT', '/api/me/catalog', old);
+    Object.assign(mine, old);
+  }
+  store.del(OLD_FAVORITES);
+  store.del(OLD_RECENT);
+  return Object.assign(MY_CATALOG, { favorites: mine.favorites, recent: mine.recent });
+}
 
 // Exemple d'un bloc, en grand, avant de l'ajouter.
 function ExampleSheet({ block, onPick, onClose }) {
@@ -1330,9 +1346,12 @@ function CatalogItem({ block, favorite, onPick, onFavorite, onExample }) {
 function Catalog({ onPick, onClose }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState(null);
-  const [favorites, setFavorites] = useState(() => store.get(FAVORITES, []));
+  const [favorites, setFavorites] = useState(MY_CATALOG.favorites);
+  const [recent, setRecent] = useState(MY_CATALOG.recent);
   const [example, setExample] = useState(null);
-  const recent = useMemo(() => store.get(RECENT, []), []);
+  useEffect(() => {
+    loadMyCatalog().then((mine) => { setFavorites(mine.favorites); setRecent(mine.recent); }).catch(() => {});
+  }, []);
   const q = fold(query.trim());
   const only = FILTERS.find((f) => f.id === filter);
   const filters = FILTERS.filter((f) => f.id !== 'claude' || CATALOG.claude);
@@ -1341,15 +1360,22 @@ function Catalog({ onPick, onClose }) {
   const groups = [...new Set(matches.map((b) => b.group))].sort((a, b) => GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b));
   const browsing = !q && !only;
 
-  // Le bloc ajouté passe en tête des récents (sur cet appareil).
+  // Le bloc ajouté passe en tête des récents du compte.
   const pick = (type) => {
-    store.set(RECENT, [type, ...recent.filter((t) => t !== type)].slice(0, 8));
+    MY_CATALOG.recent = [type, ...recent.filter((t) => t !== type)].slice(0, 8);
+    api('PUT', '/api/me/catalog', { recent: MY_CATALOG.recent }).catch(() => {});
     onPick(type);
   };
   const toggleFavorite = (type) => {
+    const before = favorites;
     const next = favorites.includes(type) ? favorites.filter((t) => t !== type) : [...favorites, type];
     setFavorites(next);
-    store.set(FAVORITES, next);
+    MY_CATALOG.favorites = next;
+    api('PUT', '/api/me/catalog', { favorites: next }).catch((e) => {
+      setFavorites(before);
+      MY_CATALOG.favorites = before;
+      toast(e.message, 'error');
+    });
   };
   const item = (b) => html`<${CatalogItem} key=${b.type} block=${b} favorite=${favorites.includes(b.type)}
     onPick=${pick} onFavorite=${toggleFavorite} onExample=${setExample} />`;
@@ -2043,7 +2069,7 @@ function App() {
 
   useEffect(() => {
     api('GET', '/api/me').then(({ user }) => setMe(user)).catch(() => setMe(null));
-    return bus.on('unauthorized', () => setMe(null));
+    return bus.on('unauthorized', () => { Object.assign(MY_CATALOG, { favorites: [], recent: [] }); setMe(null); });
   }, []);
   useEffect(() => {
     if (!me) return;
@@ -2074,7 +2100,11 @@ function App() {
   if (me === null) return html`<${Login} onLogin=${setMe} /><${Toasts} />`;
 
   const openComposer = (state) => { setComposer(state); location.hash = '#/compose'; };
-  const logout = async () => { await api('POST', '/api/logout').catch(() => {}); setMenu(false); setMe(null); };
+  const logout = async () => {
+    await api('POST', '/api/logout').catch(() => {});
+    Object.assign(MY_CATALOG, { favorites: [], recent: [] });
+    setMenu(false); setMe(null);
+  };
   const route = ROUTES.find((n) => n.hash === hash) || NAV[0];
   const title = route.hash === '#/compose'
     ? (composer.id ? T('Modifier le ticket', 'Edit ticket') : T('Nouveau ticket', 'New ticket'))
