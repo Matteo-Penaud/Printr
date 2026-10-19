@@ -143,6 +143,7 @@ const ICONS = {
   send: '<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
+  scissors: '<circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.6 8.5 21 16.5M8.6 15.5 21 7.5"/>',
 };
 
 const Icon = ({ name, size = 20 }) => html`<svg class="icon" width=${size} height=${size} viewBox="0 0 24 24" fill="none"
@@ -231,6 +232,7 @@ const BLOCKS = [
     fields: [{ key: 'lines', label: T('Lignes vides', 'Empty lines'), kind: 'number', min: 1, max: 10 }],
     summary: (b) => T(`${b.lines} ligne${b.lines > 1 ? 's' : ''}`, `${b.lines} line${b.lines > 1 ? 's' : ''}`),
   },
+  { type: 'cut', label: T('Coupe', 'Cut'), emoji: '✂️', group: G.layout, desc: T('Coupe le papier ici : la suite sort sur un autre ticket', 'Cuts the paper here: the rest comes out on another ticket'), defaults: {}, fields: [] },
   {
     type: 'image', label: T('Image', 'Image'), emoji: '🖼️', group: G.layout, desc: T('Une photo, imprimée en noir et blanc', 'A photo, printed in black and white'),
     defaults: { dither: true },
@@ -1031,6 +1033,7 @@ function Paper({ preview, loading }) {
   return html`<div class="paper-wrap"><div class="paper ${loading ? 'loading' : ''}">
     ${preview.ops.length === 0 && html`<div class="paper-empty">${T('Ton ticket est vide.', 'Your ticket is empty.')}</div>`}
     ${preview.ops.map((op, i) => {
+      if (op.t === 'cut') return html`<div class="cut" key=${i} role="separator" aria-label=${T('Coupe', 'Cut')}><${Icon} name="scissors" /></div>`;
       if (op.t === 'feed') return html`<div class="feed" key=${i} style=${{ height: `${op.n * 1.32}em` }}></div>`;
       if (op.t === 'image') return html`<img class="img" key=${i} src=${op.src} alt="" style=${{ aspectRatio: `${op.width} / ${op.height}` }} />`;
       const cls = ['ln', op.bold && 'b', op.underline && 'u', op.reverse && 'r', op.small && 'small', op.flip && 'flip',

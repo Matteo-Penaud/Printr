@@ -9,6 +9,11 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
 
 ## [Unreleased]
 
+### Added
+- **Cut** block (`{"type": "cut"}`, alias `coupe`): cuts the paper in the middle of a ticket, so one print can
+  come out as several pieces (a coupon to hand over, a list to share). The ticket's `spacing` sets the margin
+  above the cut, the next piece starts at the top, and a ticket that ends with it is not cut twice. Shown as scissors in the terminal and app previews.
+
 ## [1.8.0] “Ives” - 2026-10-18
 
 ### Added
