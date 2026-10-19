@@ -397,6 +397,72 @@ Chaque nœud ajoute `msg.printr` (`printed`, `queued`, `stalled`, `ok` ou `error
 attend l'imprimante, ce n'est pas une erreur. Le paquet fournit un flow d'exemple (**Menu → Importer →
 Exemples**).
 
+## MQTT
+
+Les domotiques (Node-RED, Jeedom, Home Assistant…) peuvent imprimer en publiant sur un broker MQTT, et y
+lire l'état de l'imprimante. Renseigner le broker dans `/etc/printr.env`, puis redémarrer le service :
+
+```sh
+PRINTR_MQTT_URL=mqtt://utilisateur:motdepasse@192.168.1.10:1883   # mqtts:// pour TLS
+PRINTR_MQTT_PREFIX=printr                                         # facultatif, printr par défaut
+```
+
+| Sujet | Sens | Message |
+| --- | --- | --- |
+| `printr/print` | vers Printr | un ticket JSON, ou un texte |
+| `printr/print/ticket` | vers Printr | le nom d'un ticket enregistré (tickets partagés seulement) |
+| `printr/todo` | vers Printr | `{"title"?, "items"}`, ou une chose par ligne |
+| `printr/shopping` | vers Printr | des articles pour la liste de courses, un par ligne |
+| `printr/result` | de Printr | l'issue de chaque message : `printed`, `queued`, `stalled`, `added` ou `error` |
+| `printr/status` | de Printr, retenu | `printer_ready`, `stalled`, `queued`, `last_ticket`, `version` |
+| `printr/availability` | de Printr, retenu | `online`, ou `offline` quand Printr disparaît |
+
+```sh
+mosquitto_pub -h 192.168.1.10 -t printr/print -m "On a sonné à la porte"
+mosquitto_pub -h 192.168.1.10 -t printr/print/ticket -m "Brief du matin"
+```
+
+Les règles de l'API HTTP s'appliquent : 60 blocs au plus, le quota de l'heure (les impressions
+apparaissent « par MQTT » dans l'historique), et la file d'attente quand l'imprimante est absente. MQTT
+n'a pas de jeton : **tout client autorisé sur le broker peut imprimer**, c'est donc sur le broker qu'on
+restreint l'accès (comptes, ACL). Les messages envoyés pendant que Printr est déconnecté ne sont pas
+gardés : un brief du matin ne sort pas le soir.
+
+### Certificats TLS
+
+`mqtt://` (sans TLS) fonctionne avec n'importe quel broker de ton réseau. `mqtts://` vérifie le
+certificat du broker : qu'il est signé par une autorité de confiance, et que son nom correspond à
+l'adresse. Printr fait confiance par défaut aux autorités publiques (Let's Encrypt, par exemple). Pour
+ton propre certificat, donne-le à Printr avec `PRINTR_MQTT_CA` : la vérification reste complète, Printr
+accepte seulement ce certificat en plus des publics.
+
+- **Sans `PRINTR_MQTT_CA`**, un certificat auto-signé ou privé est refusé : le journal affiche
+  `MQTT … injoignable` avec `UnknownIssuer`, et Printr continue de réessayer en arrière-plan.
+- **Certificat auto-signé du broker** : crée-le avec `CA:FALSE`, sinon il est refusé même avec
+  `PRINTR_MQTT_CA` (`CaUsedAsEndEntity`). Le nom doit correspondre à l'adresse de `PRINTR_MQTT_URL` :
+
+  ```sh
+  openssl req -x509 -newkey rsa:2048 -nodes -keyout mqtt-key.pem -out mqtt-cert.pem -days 3650 \
+    -subj "/CN=192.168.1.200" -addext "subjectAltName=IP:192.168.1.200" -addext "basicConstraints=critical,CA:FALSE"
+  ```
+
+  Donne `mqtt-cert.pem` et `mqtt-key.pem` au broker, et `mqtt-cert.pem` à Printr comme `PRINTR_MQTT_CA`.
+  Sur un broker Mosquitto, l'écouteur TLS s'écrit :
+
+  ```text
+  listener 8883
+  certfile /etc/mosquitto/certs/mqtt-cert.pem
+  keyfile /etc/mosquitto/certs/mqtt-key.pem
+  ```
+
+  Puis utilise `PRINTR_MQTT_URL=mqtts://192.168.1.200:8883` (l'adresse doit être celle du certificat).
+- **Autorité privée** : signe le certificat du broker avec ton autorité, et donne à Printr le certificat
+  de l'autorité comme `PRINTR_MQTT_CA`.
+- **Ne désactive jamais la vérification** : le chiffrement ne protégerait alors plus rien.
+
+Printr lit le fichier au démarrage : redémarre le service après un changement. Le fichier doit être
+lisible par l'utilisateur `printr`.
+
 ## Sécurité
 
 L'appli peut être ouverte sur Internet derrière un reverse proxy HTTPS (Caddy, nginx…). Elle

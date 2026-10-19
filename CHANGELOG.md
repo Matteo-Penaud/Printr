@@ -24,6 +24,11 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
 - **Node-RED**: the [`node-red-contrib-printr`](https://www.npmjs.com/package/node-red-contrib-printr)
   package prints tickets, to-do lists and saved tickets, adds to the shopping list and reads the printer's
   state from Node-RED flows, with only the Pi's address and token to set. See the README.
+- **MQTT** (`PRINTR_MQTT_URL`, `mqtts://` for TLS): home automation systems print by publishing a ticket, a
+  text, the name of a saved ticket, a to-do list or shopping items to `printr/…` topics, and get the outcome
+  on `printr/result`. Printr publishes its state on `printr/status` and its presence on
+  `printr/availability` (`offline` as last will). The HTTP rules apply: block limit, hourly quota, queue.
+  `mqtts://` checks the broker certificate; `PRINTR_MQTT_CA` trusts a self-signed or private one.
 
 ### Changed
 - Block catalog: games are split into three groups — grids and numbers, words and letters, challenges and
