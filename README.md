@@ -376,6 +376,29 @@ In a new shortcut:
 To automate it: Shortcuts > Automation > Time of Day, then "Run Immediately". The phone must be able
 to reach the Pi (same Wi-Fi, or a VPN such as Tailscale).
 
+### Node-RED
+
+The [`node-red-contrib-printr`](https://www.npmjs.com/package/node-red-contrib-printr) package
+([source](https://github.com/XNinety9/node-red-contrib-printr)) adds Printr nodes to Node-RED. You only
+give the address of the Pi and the token, never a route:
+
+| Node | Does |
+| --- | --- |
+| **printr print** | prints a JSON ticket, or a text |
+| **printr to-do** | prints a checklist with the date |
+| **printr shopping** | adds items to the shopping list |
+| **printr ticket** | prints a saved ticket, by its name (shared tickets only) |
+| **printr status** | reads the state of the printer: ready or not, tickets waiting |
+
+1. Install it from the Node-RED palette (**Manage palette → Install**), or with
+   `npm install node-red-contrib-printr` in the Node-RED user directory, then restart Node-RED.
+2. Set a token on the Pi: `PRINTR_TOKEN=…` in `/etc/printr.env` (16 characters or more, for example
+   `openssl rand -hex 24`), then `sudo systemctl restart printr`.
+3. In a **printr** node, create the server configuration: URL `http://<pi-ip>:8080`, and the token.
+
+Each node adds `msg.printr` (`printed`, `queued`, `stalled`, `ok` or `error`): a queued ticket waits for
+the printer, it is not an error. The package comes with an example flow (**Menu → Import → Examples**).
+
 ## Security
 
 The app can be opened to the Internet behind an HTTPS reverse proxy (Caddy, nginx…). It protects

@@ -372,6 +372,31 @@ Dans un nouveau raccourci :
 Pour l'automatiser : Raccourcis > Automatisation > Heure de la journée, puis « Exécuter
 immédiatement ». Le téléphone doit pouvoir joindre le Pi (même Wi-Fi, ou un VPN type Tailscale).
 
+### Node-RED
+
+Le paquet [`node-red-contrib-printr`](https://www.npmjs.com/package/node-red-contrib-printr)
+([sources](https://github.com/XNinety9/node-red-contrib-printr)) ajoute des nœuds Printr à Node-RED. On
+ne donne que l'adresse du Pi et le jeton, jamais une route :
+
+| Nœud | Rôle |
+| --- | --- |
+| **printr print** | imprime un ticket JSON, ou un texte |
+| **printr to-do** | imprime une liste à cocher avec la date |
+| **printr shopping** | ajoute des articles à la liste de courses |
+| **printr ticket** | imprime un ticket enregistré, par son nom (tickets partagés seulement) |
+| **printr status** | lit l'état de l'imprimante : prête ou non, tickets en attente |
+
+1. L'installer depuis la palette de Node-RED (**Gérer la palette → Installer**), ou avec
+   `npm install node-red-contrib-printr` dans le dossier utilisateur de Node-RED, puis redémarrer
+   Node-RED.
+2. Définir un jeton sur le Pi : `PRINTR_TOKEN=…` dans `/etc/printr.env` (16 caractères ou plus, par
+   exemple `openssl rand -hex 24`), puis `sudo systemctl restart printr`.
+3. Dans un nœud **printr**, créer la configuration du serveur : URL `http://<ip-du-pi>:8080`, et le jeton.
+
+Chaque nœud ajoute `msg.printr` (`printed`, `queued`, `stalled`, `ok` ou `error`) : un ticket en attente
+attend l'imprimante, ce n'est pas une erreur. Le paquet fournit un flow d'exemple (**Menu → Importer →
+Exemples**).
+
 ## Sécurité
 
 L'appli peut être ouverte sur Internet derrière un reverse proxy HTTPS (Caddy, nginx…). Elle

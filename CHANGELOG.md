@@ -21,6 +21,9 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
   computer. Those kept by the browser until now are moved into the account the first time.
 - **Ticket templates**: a new ticket starts from a morning brief, a game break, a kids' ticket or a weekend
   ticket, to change afterwards — or from a first block, as before. Blocks hidden from the catalog are left out.
+- **Node-RED**: the [`node-red-contrib-printr`](https://www.npmjs.com/package/node-red-contrib-printr)
+  package prints tickets, to-do lists and saved tickets, adds to the shopping list and reads the printer's
+  state from Node-RED flows, with only the Pi's address and token to set. See the README.
 
 ### Changed
 - Block catalog: games are split into three groups — grids and numbers, words and letters, challenges and
