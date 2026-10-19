@@ -49,7 +49,7 @@ use serde::Deserialize;
 
 use crate::cache::Cache;
 use crate::claude::Claude;
-use crate::doc::{Align, Doc, Style};
+use crate::doc::{Align, Doc, Op, Style};
 use crate::{i18n, raster};
 
 fn four() -> u8 {
@@ -133,6 +133,9 @@ pub enum Block {
         #[serde(default = "one")]
         lines: u8,
     },
+    /// Coupe le papier : la suite du ticket sort sur un nouveau morceau.
+    #[serde(alias = "coupe")]
+    Cut {},
     Image {
         #[serde(default)]
         path: Option<String>,
@@ -596,6 +599,7 @@ impl Block {
             Block::Separator { .. } => i18n::t("séparateur", "separator"),
             Block::Date {} => "date",
             Block::Feed { .. } => i18n::t("espace", "space"),
+            Block::Cut {} => i18n::t("coupe", "cut"),
             Block::Image { .. } => "image",
             Block::Qr { .. } => "QR code",
             Block::Weather { .. } => i18n::t("météo", "weather"),
@@ -720,6 +724,9 @@ impl Block {
             }
             Block::Feed { lines } => {
                 doc.feed(*lines);
+            }
+            Block::Cut {} => {
+                doc.cut();
             }
             Block::Image { path, url, upload, dither } => {
                 let img = match (path, url, upload) {
@@ -932,10 +939,14 @@ impl Ticket {
         if let Some(at) = glitch_at {
             parts.insert(at, glitch::build(None));
         }
-        for (i, part) in parts.into_iter().enumerate() {
-            if i > 0 {
+        // Une coupe se place après l'espacement habituel, qui fait la marge sous le morceau
+        // coupé ; le morceau suivant commence en haut, sans espacement.
+        let mut after_cut = true;
+        for part in parts {
+            if !after_cut {
                 ticket.feed(self.spacing);
             }
+            after_cut = matches!(part.ops.as_slice(), [Op::Cut]);
             ticket.append(part);
         }
         (ticket, reports)
@@ -987,6 +998,33 @@ mod tests {
         .unwrap();
         assert!(matches!(t.blocks[0], Block::Sun { ref location } if location == "Lyon"));
         assert!(matches!(t.blocks[1], Block::Riddle { kind: Some(riddle::Kind::Charade), .. }));
+    }
+
+    #[test]
+    fn cut_block_comes_after_spacing_and_starts_next_piece_at_top() {
+        let t: Ticket = serde_json::from_str(
+            r#"{"spacing": 2, "blocks": [
+                {"type": "text", "text": "avant"},
+                {"type": "coupe"},
+                {"type": "text", "text": "après"}
+            ]}"#,
+        )
+        .unwrap();
+        let (doc, _) = t.build(&Ctx::new(false).for_preview(), &mut Silent);
+        let kinds: Vec<&str> = doc
+            .ops
+            .iter()
+            .map(|op| match op {
+                Op::Line { .. } => "ligne",
+                Op::Cut => "coupe",
+                Op::Feed(_) => "espace",
+                _ => "autre",
+            })
+            .collect();
+        assert_eq!(kinds, ["ligne", "espace", "coupe", "ligne"]);
+        let preview = doc.preview(t.cut);
+        assert_eq!(preview.matches('✂').count(), 2);
+        assert_eq!(preview.matches('╭').count(), 2);
     }
 
     #[test]

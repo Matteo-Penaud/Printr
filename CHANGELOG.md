@@ -29,6 +29,10 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
   on `printr/result`. Printr publishes its state on `printr/status` and its presence on
   `printr/availability` (`offline` as last will). The HTTP rules apply: block limit, hourly quota, queue.
   `mqtts://` checks the broker certificate; `PRINTR_MQTT_CA` trusts a self-signed or private one.
+- **Cut** block (`{"type": "cut"}`, alias `coupe`): cuts the paper in the middle of a ticket, so one print can
+  come out as several pieces (a coupon to hand over, a list to share). The ticket's `spacing` sets the margin
+  above the cut, the next piece starts at the top, and a ticket that ends with it is not cut twice. Shown as
+  scissors in the terminal and app previews.
 
 ### Changed
 - Block catalog: games are split into three groups — grids and numbers, words and letters, challenges and

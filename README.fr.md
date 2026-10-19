@@ -132,6 +132,7 @@ Un paramètre inconnu est une erreur, pour repérer les fautes de frappe.
 | `separator` | `style` (`-`) | Un caractère répété : `-`, `=`, `═`, `─`, `·`… |
 | `date` | — | « Mercredi 7 octobre 2026 » |
 | `feed` | `lines` (1) | Espace vertical |
+| `cut` (ou `coupe`) | — | Coupe le papier à cet endroit, après l'espacement habituel (`spacing`) : la suite sort sur un autre ticket. Le `cut` du ticket ajoute toujours la coupe finale |
 | `image` | `path` ou `url`, `dither` (true) | Réduite à 512 px |
 | `qr` | `data`, `size` (6), `caption` | |
 | `weather` | `location`, `days` (1, max 7) | [Open-Meteo](https://open-meteo.com), sans clé. `location` : ville ou `"lat,lon"` |

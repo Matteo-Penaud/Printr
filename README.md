@@ -134,6 +134,7 @@ an error, so typos get caught.
 | `separator` | `style` (`-`) | One character repeated: `-`, `=`, `═`, `─`, `·`… |
 | `date` | — | e.g. "Wednesday, October 7, 2026" |
 | `feed` | `lines` (1) | Vertical space |
+| `cut` (or `coupe`) | — | Cuts the paper here, after the usual `spacing`: the rest comes out as another ticket. The ticket's `cut` still adds the final cut |
 | `image` | `path` or `url`, `dither` (true) | Scaled down to 512 px |
 | `qr` | `data`, `size` (6), `caption` | |
 | `weather` | `location`, `days` (1, max 7) | [Open-Meteo](https://open-meteo.com), no key. `location`: a city or `"lat,lon"` |
