@@ -136,6 +136,12 @@ pub struct User {
     /// administrateur, le plus ancien compte (voir `Store::is_admin`).
     #[serde(default)]
     pub admin: bool,
+    /// Blocs favoris du catalogue, dans l'ordre où ils ont été choisis.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub favorites: Vec<String>,
+    /// Derniers blocs ajoutés à un ticket, du plus récent au plus ancien.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recent: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -230,6 +236,10 @@ pub struct Data {
     /// octets ESC/POS sont dans `queue/`.
     #[serde(default)]
     pub queue: Vec<QueuedJob>,
+    /// Blocs retirés du catalogue par l'administrateur (ceux dont la famille ne se sert pas). Les
+    /// tickets qui les utilisent déjà continuent de fonctionner.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hidden_blocks: Vec<String>,
 }
 
 /// Un ticket prêt, qui attend l'imprimante.
@@ -330,6 +340,10 @@ impl Store {
         self.data.users.iter().find(|u| u.id == id)
     }
 
+    pub fn user_mut(&mut self, id: &str) -> Option<&mut User> {
+        self.data.users.iter_mut().find(|u| u.id == id)
+    }
+
     fn find_by_name(&self, name: &str) -> Option<&User> {
         self.data.users.iter().find(|u| u.name.eq_ignore_ascii_case(name.trim()))
     }
@@ -347,7 +361,15 @@ impl Store {
         let password_hash = hash(password)?;
         let id = new_id(8);
         let admin = self.data.users.is_empty();
-        self.data.users.push(User { id: id.clone(), name: name.to_owned(), color, password_hash, admin });
+        self.data.users.push(User {
+            id: id.clone(),
+            name: name.to_owned(),
+            color,
+            password_hash,
+            admin,
+            favorites: Vec::new(),
+            recent: Vec::new(),
+        });
         Ok(id)
     }
 

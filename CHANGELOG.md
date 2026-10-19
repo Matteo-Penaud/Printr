@@ -5,9 +5,43 @@ each one is a `vX.Y.Z` tag on GitHub, which the server checks to tell the admin 
 
 Each minor version is named after a pioneer of printing, in alphabetical order (patch releases keep the
 name): Aldus Manutius, Giambattista Bodoni, William Caslon, the Didot family, Robert Estienne,
-Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
+Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas Jenson…
 
 ## [Unreleased]
+
+## [1.9.0] “Jenson” - 2026-10-19
+
+### Added
+- Block catalog: **filters** at the top — for kids, offline and free, together, Claude. Search knows them too
+  (“kids”, “free”, “together”…).
+- The administrator can **hide blocks** from the whole family's catalog (My account → Offered blocks): the
+  ones nobody uses. Tickets that already use them keep working.
+- When Claude is not available (no API key, no Claude CLI), the blocks that cannot work without it — Claude
+  horoscope, word of the day, Claude recipe — leave the catalog on their own. Crosswords and arrow words stay:
+  their clues come from the cache.
+- Catalog **favorites and recently added blocks follow your account**: you find them on every phone and
+  computer. Those kept by the browser until now are moved into the account the first time.
+- **Ticket templates**: a new ticket starts from a morning brief, a game break, a kids' ticket or a weekend
+  ticket, to change afterwards — or from a first block, as before. Blocks hidden from the catalog are left out.
+- **Node-RED**: the [`node-red-contrib-printr`](https://www.npmjs.com/package/node-red-contrib-printr)
+  package prints tickets, to-do lists and saved tickets, adds to the shopping list and reads the printer's
+  state from Node-RED flows, with only the Pi's address and token to set. See the README.
+- **MQTT** (`PRINTR_MQTT_URL`, `mqtts://` for TLS): home automation systems print by publishing a ticket, a
+  text, the name of a saved ticket, a to-do list or shopping items to `printr/…` topics, and get the outcome
+  on `printr/result`. Printr publishes its state on `printr/status` and its presence on
+  `printr/availability` (`offline` as last will). The HTTP rules apply: block limit, hourly quota, queue.
+  `mqtts://` checks the broker certificate; `PRINTR_MQTT_CA` trusts a self-signed or private one.
+- **Cut** block (`{"type": "cut"}`, alias `coupe`): cuts the paper in the middle of a ticket, so one print can
+  come out as several pieces (a coupon to hand over, a list to share). The ticket's `spacing` sets the margin
+  above the cut, the next piece starts at the top, and a ticket that ends with it is not cut twice. Shown as
+  scissors in the terminal and app previews.
+
+### Changed
+- Block catalog: games are split into three groups — grids and numbers, words and letters, challenges and
+  creativity.
+
+### Fixed
+- Block catalog: blocks no longer show above the search field while scrolling.
 
 ## [1.8.0] “Ives” - 2026-10-18
 
@@ -172,7 +206,8 @@ First release.
 - One-command installation on a Raspberry Pi, no sudo needed afterwards.
 - Windows development with a dev container and a printing relay.
 
-[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/XNinety9/Printr/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/XNinety9/Printr/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/XNinety9/Printr/compare/v1.6.1...v1.7.0
 [1.6.1]: https://github.com/XNinety9/Printr/compare/v1.6.0...v1.6.1

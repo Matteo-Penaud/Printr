@@ -84,10 +84,30 @@ pub struct Printed {
     pub stalled: bool,
 }
 
+impl Printed {
+    /// L'issue en un mot, pour les domotiques : printed, queued, stalled ou failed.
+    pub fn state(&self) -> &'static str {
+        if self.failure.is_some() {
+            "failed"
+        } else if self.stalled {
+            "stalled"
+        } else if self.queued.is_some() {
+            "queued"
+        } else {
+            "printed"
+        }
+    }
+}
+
 impl App {
     /// Refuse une impression de plus si `by` a déjà atteint son quota de l'heure. Les
     /// planifications ne comptent pas : elles sont réglées par les membres eux-mêmes.
     fn quota_exceeded(&self, by: &str) -> Option<Reply> {
+        self.quota_message(by).map(|e| Reply::error(429, e))
+    }
+
+    /// La raison du refus si `by` a atteint son quota de l'heure (HTTP, MQTT).
+    pub fn quota_message(&self, by: &str) -> Option<String> {
         if self.max_per_hour == 0 || by == "planification" {
             return None;
         }
@@ -98,14 +118,49 @@ impl App {
             return None;
         }
         let wait = (recent[0].at + chrono::Duration::hours(1) - Utc::now()).num_minutes().max(1);
-        Some(Reply::error(
-            429,
-            tr!(
-                "{} impressions dans l'heure, c'est le maximum : réessaie dans {wait} min",
-                "limit is {} prints per hour: try again in {wait} min",
-                self.max_per_hour
-            ),
+        Some(tr!(
+            "{} impressions dans l'heure, c'est le maximum : réessaie dans {wait} min",
+            "limit is {} prints per hour: try again in {wait} min",
+            self.max_per_hour
         ))
+    }
+
+    /// Ajoute des articles à la liste de courses (80 caractères au plus chacun).
+    pub fn add_shopping(&self, items: &[&str], by: &str) -> Result<()> {
+        let mut store = self.lock_store();
+        for text in items {
+            let text: String = text.chars().take(80).collect();
+            store.data.shopping.push(store::ShoppingItem {
+                id: store::new_id(6),
+                text,
+                by: by.to_owned(),
+                added: Utc::now(),
+            });
+        }
+        store.save()
+    }
+
+    /// Un ticket enregistré et partagé, par son identifiant ou son nom (sans tenir compte de la casse) :
+    /// ceux qu'un script ou une domotique peut imprimer.
+    pub fn shared_preset(&self, wanted: &str) -> Option<Preset> {
+        let store = self.lock_store();
+        let shared = || store.data.presets.iter().filter(|p| p.shared);
+        let wanted_lower = wanted.to_lowercase();
+        shared().find(|p| p.id == wanted).or_else(|| shared().find(|p| p.name.to_lowercase() == wanted_lower)).cloned()
+    }
+
+    /// L'état publié pour les domotiques (MQTT) : imprimante, file d'attente, dernier ticket.
+    pub fn state(&self) -> Value {
+        let stalled = self.pending.lock().unwrap_or_else(|e| e.into_inner()).is_some();
+        let store = self.lock_store();
+        let last = store.data.history.last().map(|e| json!({ "label": e.label, "by": e.by, "at": e.at, "ok": e.ok }));
+        json!({
+            "printer_ready": self.printer_ready.load(std::sync::atomic::Ordering::Relaxed),
+            "stalled": stalled,
+            "queued": store.data.queue.len(),
+            "last_ticket": last,
+            "version": env!("CARGO_PKG_VERSION"),
+        })
     }
 
     /// Verrouille les données, après les avoir relues si le fichier a changé sur le disque
@@ -420,18 +475,22 @@ fn json_body<T: for<'de> Deserialize<'de>>(request: &mut Request) -> Result<T, R
 /// calcul, de quoi épuiser le Pi sans limite.
 const MAX_BLOCKS: usize = 60;
 
+/// Refuse un ticket trop long, d'où qu'il vienne (HTTP, MQTT).
+pub fn ticket_too_long(ticket: &Ticket) -> Option<String> {
+    (ticket.blocks.len() > MAX_BLOCKS).then(|| {
+        tr!(
+            "ticket trop long ({} blocs, {MAX_BLOCKS} au plus)",
+            "ticket too long ({} blocks, {MAX_BLOCKS} max)",
+            ticket.blocks.len()
+        )
+    })
+}
+
 fn check_ticket(ticket: Ticket) -> Result<Ticket, Reply> {
-    if ticket.blocks.len() > MAX_BLOCKS {
-        return Err(Reply::error(
-            400,
-            tr!(
-                "ticket trop long ({} blocs, {MAX_BLOCKS} au plus)",
-                "ticket too long ({} blocks, {MAX_BLOCKS} max)",
-                ticket.blocks.len()
-            ),
-        ));
+    match ticket_too_long(&ticket) {
+        Some(e) => Err(Reply::error(400, e)),
+        None => Ok(ticket),
     }
-    Ok(ticket)
 }
 
 fn parse_ticket(value: &Value) -> Result<Ticket, Reply> {
@@ -567,6 +626,37 @@ struct NewPassword {
     password: String,
 }
 
+/// Blocs à retirer du catalogue (types : « sudoku », « weather »…).
+#[derive(Deserialize)]
+struct HiddenBlocks {
+    blocks: Vec<String>,
+}
+
+/// Favoris et récents d'un compte ; un champ absent reste tel quel.
+#[derive(Deserialize)]
+struct MyCatalog {
+    favorites: Option<Vec<String>>,
+    recent: Option<Vec<String>>,
+}
+
+const MAX_FAVORITES: usize = 100;
+const MAX_RECENT: usize = 8;
+
+/// Liste de blocs envoyée par l'appli : noms vérifiés, doublons retirés (le premier gardé), au plus
+/// `max`. `None` si un nom n'en est pas un.
+fn block_list(blocks: Vec<String>, max: usize) -> Option<Vec<String>> {
+    if blocks.len() > 200 || !blocks.iter().all(|b| is_block_type(b)) {
+        return None;
+    }
+    let mut seen = std::collections::HashSet::new();
+    Some(blocks.into_iter().filter(|b| seen.insert(b.clone())).take(max).collect())
+}
+
+/// Un nom de type de bloc plausible : lettres minuscules et soulignés, rien d'autre à stocker.
+fn is_block_type(name: &str) -> bool {
+    (1..=40).contains(&name.len()) && name.bytes().all(|c| c.is_ascii_lowercase() || c == b'_')
+}
+
 /// Cookie de session ; `Secure` quand la page est servie en HTTPS (derrière le reverse proxy).
 fn session_cookie(token: &str, https: bool) -> String {
     let secure = if https { "; Secure" } else { "" };
@@ -616,9 +706,14 @@ fn shopping_json(store: &Store) -> Value {
     json!(store.data.shopping)
 }
 
+/// Les articles d'un texte : un par ligne, sans les lignes vides.
+pub fn shopping_items(text: &str) -> Vec<&str> {
+    text.lines().map(str::trim).filter(|l| !l.is_empty()).collect()
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct TodoRequest {
+pub struct TodoRequest {
     #[serde(default)]
     title: Option<String>,
     #[serde(default)]
@@ -629,7 +724,7 @@ struct TodoRequest {
 }
 
 impl TodoRequest {
-    fn into_ticket(self) -> Result<Ticket> {
+    pub fn into_ticket(self) -> Result<Ticket> {
         let mut items = self.items;
         if let Some(text) = self.text {
             items.extend(text.lines().map(str::trim).filter(|l| !l.is_empty()).map(str::to_owned));
@@ -861,6 +956,42 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                 Err(e) => Reply::error(500, format!("{e:#}")),
             }
         }
+        (Method::Get, ["api", "me", "catalog"]) => {
+            let Caller::User(me) = &caller else {
+                return Reply::error(403, t("réservé aux membres de la famille", "reserved for family members"));
+            };
+            let store = app.lock_store();
+            let user = store.user(&me.id);
+            Reply::ok(json!({
+                "favorites": user.map(|u| u.favorites.clone()).unwrap_or_default(),
+                "recent": user.map(|u| u.recent.clone()).unwrap_or_default(),
+            }))
+        }
+        (Method::Put, ["api", "me", "catalog"]) => {
+            let Caller::User(me) = &caller else {
+                return Reply::error(403, t("réservé aux membres de la famille", "reserved for family members"));
+            };
+            let input: MyCatalog = try_reply!(json_body(request));
+            let check = |list: Option<Vec<String>>, max| list.map(|b| block_list(b, max).ok_or(())).transpose();
+            let (Ok(favorites), Ok(recent)) = (check(input.favorites, MAX_FAVORITES), check(input.recent, MAX_RECENT))
+            else {
+                return Reply::error(400, t("liste de blocs invalide", "invalid block list"));
+            };
+            let mut store = app.lock_store();
+            let Some(user) = store.user_mut(&me.id) else {
+                return Reply::error(404, t("compte inconnu", "unknown account"));
+            };
+            if let Some(favorites) = favorites {
+                user.favorites = favorites;
+            }
+            if let Some(recent) = recent {
+                user.recent = recent;
+            }
+            match store.save() {
+                Ok(()) => Reply::ok(json!({ "ok": true })),
+                Err(e) => Reply::error(500, format!("{e:#}")),
+            }
+        }
         (Method::Put, ["api", "me", "password"]) => {
             let Caller::User(me) = &caller else {
                 return Reply::error(403, t("réservé aux membres de la famille", "reserved for family members"));
@@ -888,15 +1019,48 @@ fn handle(app: &App, request: &mut Request) -> Reply {
         },
         (Method::Get, ["api", "status"]) => {
             let claude = crate::claude::Claude::from_env();
+            let (queued, hidden_blocks) = {
+                let store = app.lock_store();
+                (store.data.queue.len(), store.data.hidden_blocks.clone())
+            };
             Reply::ok(json!({
                 "printer": app.destination,
                 "printer_ready": app.printer_ready.load(std::sync::atomic::Ordering::Relaxed),
-                "queued": app.lock_store().data.queue.len(),
+                "queued": queued,
+                "hidden_blocks": hidden_blocks,
                 "claude": claude.as_ref().map(|c| c.model().to_owned()),
                 "claude_backend": claude.as_ref().map(|c| c.backend()),
                 "version": env!("CARGO_PKG_VERSION"),
                 "update": *app.latest.lock().unwrap_or_else(|e| e.into_inner()),
             }))
+        }
+        (Method::Put, ["api", "settings", "hidden-blocks"]) => {
+            let input: HiddenBlocks = try_reply!(json_body(request));
+            let mut store = app.lock_store();
+            if !user_id.as_deref().is_some_and(|me| store.is_admin(me)) {
+                return Reply::error(
+                    403,
+                    t(
+                        "seul l'administrateur peut régler le catalogue",
+                        "only the administrator can set up the catalog",
+                    ),
+                );
+            }
+            let mut blocks = input.blocks;
+            if blocks.len() > 200 || blocks.iter().any(|b| !is_block_type(b)) {
+                return Reply::error(400, t("liste de blocs invalide", "invalid block list"));
+            }
+            blocks.sort();
+            blocks.dedup();
+            let count = blocks.len();
+            store.data.hidden_blocks = blocks;
+            match store.save() {
+                Ok(()) => Reply::ok(json!({ "ok": true })).note(tr!(
+                    "catalogue : {count} bloc(s) masqué(s) par {by}",
+                    "catalog: {count} block(s) hidden by {by}"
+                )),
+                Err(e) => Reply::error(500, format!("{e:#}")),
+            }
         }
         (Method::Post, ["api", "preview"]) => {
             let input: PrintRequest = try_reply!(json_body(request));
@@ -1052,22 +1216,16 @@ fn handle(app: &App, request: &mut Request) -> Reply {
         }
         (Method::Post, ["api", "shopping"]) => {
             let input: ShoppingInput = try_reply!(json_body(request));
-            let items: Vec<&str> = input.text.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
+            let items = shopping_items(&input.text);
             if items.is_empty() {
                 return Reply::error(400, t("rien à ajouter", "nothing to add"));
             }
-            let mut store = app.lock_store();
-            for text in &items {
-                let text: String = text.chars().take(80).collect();
-                store.data.shopping.push(store::ShoppingItem {
-                    id: store::new_id(6),
-                    text,
-                    by: by.clone(),
-                    added: Utc::now(),
-                });
-            }
-            match store.save() {
-                Ok(()) => Reply::ok(shopping_json(&store)).note(tr!("courses : {}", "shopping: {}", items.join(", "))),
+            match app.add_shopping(&items, &by) {
+                Ok(()) => Reply::ok(shopping_json(&app.lock_store())).note(tr!(
+                    "courses : {}",
+                    "shopping: {}",
+                    items.join(", ")
+                )),
                 Err(e) => Reply::error(500, format!("{e:#}")),
             }
         }
@@ -1211,6 +1369,7 @@ pub fn serve(listen: &str, token: Option<String>, target: Target) -> Result<()> 
     );
 
     crate::scheduler::spawn(Arc::clone(&app));
+    crate::mqtt::spawn(Arc::clone(&app));
     // L'imprimante est-elle là ? Toutes les 10 secondes ; c'est aussi ce qui vide la file d'attente.
     {
         let app = Arc::clone(&app);
@@ -1271,6 +1430,21 @@ mod tests {
         assert!(same_secret("abc", "abc"));
         assert!(!same_secret("abc", "abd"));
         assert!(!same_secret("abc", "abcd"));
+    }
+
+    #[test]
+    fn hidden_block_names_are_checked() {
+        assert!(is_block_type("sudoku") && is_block_type("word_of_the_day"));
+        assert!(!is_block_type("") && !is_block_type("Sudoku") && !is_block_type("../x") && !is_block_type("a b"));
+        assert!(!is_block_type(&"a".repeat(41)));
+    }
+
+    #[test]
+    fn block_lists_are_cleaned() {
+        let list = |names: &[&str]| names.iter().map(|n| (*n).to_owned()).collect::<Vec<_>>();
+        assert_eq!(block_list(list(&["sudoku", "maze", "sudoku", "news"]), 2), Some(list(&["sudoku", "maze"])));
+        assert_eq!(block_list(list(&["sudoku", "Bad name"]), 8), None);
+        assert_eq!(block_list(Vec::new(), 8), Some(Vec::new()));
     }
 
     #[test]

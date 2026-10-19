@@ -153,7 +153,8 @@ pub fn render(doc: &Doc, cut: bool) -> Result<Vec<u8>> {
     let mut printer = Printer::new(driver, Protocol::default(), Some(options));
     printer.init()?.page_code(PageCode::PC858)?;
     doc.render(&mut printer)?;
-    if cut {
+    // Un ticket qui finit par un bloc coupe est déjà coupé.
+    if cut && !doc.ends_with_cut() {
         printer.feeds(3)?.print_cut()?;
     } else {
         printer.print()?;
@@ -200,6 +201,17 @@ mod tests {
         Target::Dump(path.clone()).write(&bytes).unwrap();
         assert_eq!(std::fs::read(&path).unwrap(), bytes);
         let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn cut_op_cuts_mid_ticket_without_doubling_the_final_cut() {
+        let cuts = |doc: &Doc, cut| render(doc, cut).unwrap().windows(2).filter(|w| *w == [0x1d, 0x56]).count();
+        let mut doc = Doc::new();
+        doc.text("Un", Style::default()).cut().text("Deux", Style::default());
+        assert_eq!(cuts(&doc, true), 2);
+        assert_eq!(cuts(&doc, false), 1);
+        doc.cut();
+        assert_eq!(cuts(&doc, true), 2, "la coupe finale est déjà là");
     }
 
     /// Capot ouvert simulé par un tube nommé qu'on ne lit pas : l'envoi passe en suspens, puis

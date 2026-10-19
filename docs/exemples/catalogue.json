@@ -54,6 +54,16 @@
     }
    },
    {
+    "id": "coupe",
+    "emoji": "✂️",
+    "fr": "Coupe",
+    "en": "Cut",
+    "description": {
+     "fr": "Coupe le papier au milieu du ticket : un mot à garder, un bon à offrir.",
+     "en": "Cuts the paper mid-ticket: a note to keep, a coupon to hand over."
+    }
+   },
+   {
     "id": "image",
     "emoji": "🖼️",
     "fr": "Image",

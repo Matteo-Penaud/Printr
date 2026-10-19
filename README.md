@@ -24,7 +24,7 @@
 <p align="center"><a href="README.fr.md">🇫🇷 Version française</a></p>
 
 Printr turns an **Epson TM-T88V** receipt printer into a family gadget. You compose a ticket from
-**46 blocks** (weather, horoscope, sudoku, word search, riddles, news, photos…), print it from your
+**47 blocks** (weather, horoscope, sudoku, word search, riddles, news, photos…), print it from your
 phone, **schedule** it for 7:30 on weekdays, or send a **little note with a photo** to the people
 who stayed home. A single Rust binary, running on a Raspberry Pi, that speaks ESC/POS directly to
 the printer.
@@ -37,7 +37,7 @@ the printer.
   <img src="docs/tickets/en/petit-mot.png" alt="Little note with a photo" width="240">
 </p>
 
-- **46 blocks**: weather, tonight's sky (planets, ISS passes), calendar, horoscope (serious, whimsical,
+- **47 blocks**: weather, tonight's sky (planets, ISS passes), calendar, horoscope (serious, whimsical,
   snarky or downright insulting), word of the day, recipes, crosswords and arrow words, sudoku, nonogram,
   word search, Categories, coloring, riddles
   with their answer printed upside down, workout challenge, shopping list, bin collection days,
@@ -134,6 +134,7 @@ an error, so typos get caught.
 | `separator` | `style` (`-`) | One character repeated: `-`, `=`, `═`, `─`, `·`… |
 | `date` | — | e.g. "Wednesday, October 7, 2026" |
 | `feed` | `lines` (1) | Vertical space |
+| `cut` (or `coupe`) | — | Cuts the paper here, after the usual `spacing`: the rest comes out as another ticket. The ticket's `cut` still adds the final cut |
 | `image` | `path` or `url`, `dither` (true) | Scaled down to 512 px |
 | `qr` | `data`, `size` (6), `caption` | |
 | `weather` | `location`, `days` (1, max 7) | [Open-Meteo](https://open-meteo.com), no key. `location`: a city or `"lat,lon"` |
@@ -375,6 +376,94 @@ In a new shortcut:
 
 To automate it: Shortcuts > Automation > Time of Day, then "Run Immediately". The phone must be able
 to reach the Pi (same Wi-Fi, or a VPN such as Tailscale).
+
+### Node-RED
+
+The [`node-red-contrib-printr`](https://www.npmjs.com/package/node-red-contrib-printr) package
+([source](https://github.com/XNinety9/node-red-contrib-printr)) adds Printr nodes to Node-RED. You only
+give the address of the Pi and the token, never a route:
+
+| Node | Does |
+| --- | --- |
+| **printr print** | prints a JSON ticket, or a text |
+| **printr to-do** | prints a checklist with the date |
+| **printr shopping** | adds items to the shopping list |
+| **printr ticket** | prints a saved ticket, by its name (shared tickets only) |
+| **printr status** | reads the state of the printer: ready or not, tickets waiting |
+
+1. Install it from the Node-RED palette (**Manage palette → Install**), or with
+   `npm install node-red-contrib-printr` in the Node-RED user directory, then restart Node-RED.
+2. Set a token on the Pi: `PRINTR_TOKEN=…` in `/etc/printr.env` (16 characters or more, for example
+   `openssl rand -hex 24`), then `sudo systemctl restart printr`.
+3. In a **printr** node, create the server configuration: URL `http://<pi-ip>:8080`, and the token.
+
+Each node adds `msg.printr` (`printed`, `queued`, `stalled`, `ok` or `error`): a queued ticket waits for
+the printer, it is not an error. The package comes with an example flow (**Menu → Import → Examples**).
+
+## MQTT
+
+Home automation systems (Node-RED, Jeedom, Home Assistant…) can print by publishing to an MQTT broker,
+and read the state of the printer there. Set the broker in `/etc/printr.env`, then restart the service:
+
+```sh
+PRINTR_MQTT_URL=mqtt://user:password@192.168.1.10:1883   # mqtts:// for TLS
+PRINTR_MQTT_PREFIX=printr                                # optional, printr by default
+```
+
+| Topic | Direction | Message |
+| --- | --- | --- |
+| `printr/print` | to Printr | a JSON ticket, or a text |
+| `printr/print/ticket` | to Printr | the name of a saved ticket (shared tickets only) |
+| `printr/todo` | to Printr | `{"title"?, "items"}`, or one item per line |
+| `printr/shopping` | to Printr | items for the shopping list, one per line |
+| `printr/result` | from Printr | the outcome of each message: `printed`, `queued`, `stalled`, `added` or `error` |
+| `printr/status` | from Printr, retained | `printer_ready`, `stalled`, `queued`, `last_ticket`, `version` |
+| `printr/availability` | from Printr, retained | `online`, or `offline` when Printr goes away |
+
+```sh
+mosquitto_pub -h 192.168.1.10 -t printr/print -m "Someone rang the doorbell"
+mosquitto_pub -h 192.168.1.10 -t printr/print/ticket -m "Morning brief"
+```
+
+The same rules as the HTTP API apply: at most 60 blocks, the hourly quota (prints show up as “MQTT” in
+the history), and the queue when the printer is away. MQTT has no token: **anyone allowed on the broker
+can print**, so restrict access on the broker (accounts, ACL). Messages sent while Printr is
+disconnected are not kept: a morning brief does not come out in the evening.
+
+### TLS certificates
+
+`mqtt://` (no TLS) works with any broker on your network. `mqtts://` checks the broker's certificate:
+that it is signed by a trusted authority, and that its name matches the address. Printr trusts the
+public authorities (Let's Encrypt, for example) by default. For your own certificate, give Printr the
+certificate with `PRINTR_MQTT_CA`: the check stays complete, Printr only accepts that certificate in
+addition to the public ones.
+
+- **Without `PRINTR_MQTT_CA`**, a self-signed or private certificate is refused: the log shows
+  `MQTT … unreachable` with `UnknownIssuer`, and Printr keeps retrying in the background.
+- **Self-signed broker certificate**: create it with `CA:FALSE`, otherwise it is refused even with
+  `PRINTR_MQTT_CA` (`CaUsedAsEndEntity`). The name must match the address used in `PRINTR_MQTT_URL`:
+
+  ```sh
+  openssl req -x509 -newkey rsa:2048 -nodes -keyout mqtt-key.pem -out mqtt-cert.pem -days 3650 \
+    -subj "/CN=192.168.1.200" -addext "subjectAltName=IP:192.168.1.200" -addext "basicConstraints=critical,CA:FALSE"
+  ```
+
+  Give `mqtt-cert.pem` and `mqtt-key.pem` to the broker, and `mqtt-cert.pem` to Printr as `PRINTR_MQTT_CA`.
+  On a Mosquitto broker, the TLS listener is:
+
+  ```text
+  listener 8883
+  certfile /etc/mosquitto/certs/mqtt-cert.pem
+  keyfile /etc/mosquitto/certs/mqtt-key.pem
+  ```
+
+  Then use `PRINTR_MQTT_URL=mqtts://192.168.1.200:8883` (the address must be the one in the certificate).
+- **Private authority**: sign the broker certificate with your authority, and give Printr the
+  authority's certificate as `PRINTR_MQTT_CA`.
+- **Never turn the check off**: the encryption would then protect nothing.
+
+Printr reads the file at startup, so restart the service after changing it. The file must be readable by
+the `printr` user.
 
 ## Security
 
