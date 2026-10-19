@@ -24,7 +24,7 @@
 <p align="center"><a href="README.fr.md">🇫🇷 Version française</a></p>
 
 Printr turns an **Epson TM-T88V** receipt printer into a family gadget. You compose a ticket from
-**46 blocks** (weather, horoscope, sudoku, word search, riddles, news, photos…), print it from your
+**47 blocks** (weather, horoscope, sudoku, word search, riddles, news, photos…), print it from your
 phone, **schedule** it for 7:30 on weekdays, or send a **little note with a photo** to the people
 who stayed home. A single Rust binary, running on a Raspberry Pi, that speaks ESC/POS directly to
 the printer.
@@ -37,7 +37,7 @@ the printer.
   <img src="docs/tickets/en/petit-mot.png" alt="Little note with a photo" width="240">
 </p>
 
-- **46 blocks**: weather, tonight's sky (planets, ISS passes), calendar, horoscope (serious, whimsical,
+- **47 blocks**: weather, tonight's sky (planets, ISS passes), calendar, horoscope (serious, whimsical,
   snarky or downright insulting), word of the day, recipes, crosswords and arrow words, sudoku, nonogram,
   word search, Categories, coloring, riddles
   with their answer printed upside down, workout challenge, shopping list, bin collection days,

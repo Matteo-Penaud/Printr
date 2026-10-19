@@ -6,7 +6,7 @@
 <title>Printr — des petits tickets qui font du bien</title>
 <meta name="description" content="Printr transforme une imprimante à tickets Epson TM-T88V en gadget familial : météo, horoscope, sudoku, mots mêlés, énigmes, actualités, petits mots avec photo… composés et planifiés depuis le téléphone.">
 <meta property="og:title" content="Printr — little receipts that make your day">
-<meta property="og:description" content="A thermal receipt printer, 46 blocks, a family web app and a scheduler. In Rust, on a Raspberry Pi.">
+<meta property="og:description" content="A thermal receipt printer, 47 blocks, a family web app and a scheduler. In Rust, on a Raspberry Pi.">
 <meta property="og:image" content="https://xninety9.github.io/Printr/preview.png">
 <meta property="og:type" content="website">
 <link rel="icon" href="mark.png" type="image/png">
@@ -232,7 +232,7 @@
     <h2 class="en">One receipt printer, lots of ideas.</h2>
     <div class="grid">
       <div class="card"><div class="emoji">🧩</div>
-        <h3 class="fr">46 blocs à assembler</h3><h3 class="en">46 blocks to mix</h3>
+        <h3 class="fr">47 blocs à assembler</h3><h3 class="en">47 blocks to mix</h3>
         <p class="fr">Météo, ciel du soir, horoscope, agenda, liste de courses, recettes, sudoku, mots croisés et fléchés, logimage, mots mêlés, voie ferrée, coloriage, énigmes, bons à offrir, actualités, photos, QR codes…</p>
         <p class="en">Weather, tonight's sky, horoscope, calendar, shopping list, recipes, sudoku, crosswords and arrow words, nonograms, word searches, train tracks, coloring pages, riddles, gift coupons, news, photos, QR codes…</p></div>
       <div class="card"><div class="emoji">📱</div>
@@ -253,8 +253,8 @@
         <p class="en">Almost everything is local and free: RSS, riddles, sudoku, word searches, tonight's sky, calendar. Claude only writes what needs a pen: horoscope, word of the day, puzzle clues, recipes on demand, always cached.</p></div>
       <div class="card"><div class="emoji">🦀</div>
         <h3 class="fr">Un seul binaire Rust</h3><h3 class="en">A single Rust binary</h3>
-        <p class="fr">ESC/POS natif pour l'Epson TM-T88V, sur un Raspberry Pi. CLI soignée, serveur, planificateur et interface web dans le même exécutable, en français ou en anglais.</p>
-        <p class="en">Native ESC/POS for the Epson TM-T88V, on a Raspberry Pi. Polished CLI, server, scheduler and web app in one executable, in English or French.</p></div>
+        <p class="fr">ESC/POS natif pour l'Epson TM-T88V, sur un Raspberry Pi. CLI soignée, serveur, planificateur et interface web dans le même exécutable, en français ou en anglais. API HTTP, MQTT et nœuds Node-RED pour la domotique.</p>
+        <p class="en">Native ESC/POS for the Epson TM-T88V, on a Raspberry Pi. Polished CLI, server, scheduler and web app in one executable, in English or French. HTTP API, MQTT and Node-RED nodes for home automation.</p></div>
     </div>
   </div>
 </section>
@@ -320,7 +320,7 @@
       <div class="group"><h3><span class="fr">Mise en page</span><span class="en">Layout</span></h3><div class="chips">
         <a class="chip" href="blocs.html#titre">🔠 <span class="fr">Titre</span><span class="en">Title</span></a><a class="chip" href="blocs.html#texte">📝 <span class="fr">Texte</span><span class="en">Text</span></a>
         <a class="chip" href="blocs.html#date">📅 Date</a><a class="chip" href="blocs.html#separateur">➖ <span class="fr">Séparateur</span><span class="en">Separator</span></a>
-        <a class="chip" href="blocs.html#espace">↕️ <span class="fr">Espace</span><span class="en">Spacing</span></a><a class="chip" href="blocs.html#image">🖼️ Image</a>
+        <a class="chip" href="blocs.html#espace">↕️ <span class="fr">Espace</span><span class="en">Spacing</span></a><a class="chip" href="blocs.html#coupe">✂️ <span class="fr">Coupe</span><span class="en">Cut</span></a><a class="chip" href="blocs.html#image">🖼️ Image</a>
         <a class="chip" href="blocs.html#qr">🔳 QR code</a><a class="chip" href="blocs.html#pictogramme">💖 <span class="fr">Pictogramme</span><span class="en">Pictogram</span></a></div></div>
       <div class="group"><h3><span class="fr">Au quotidien</span><span class="en">Daily</span></h3><div class="chips">
         <a class="chip" href="blocs.html#meteo">🌤️ <span class="fr">Météo</span><span class="en">Weather</span></a><a class="chip" href="blocs.html#horoscope">🌟 Horoscope</a><a class="chip ai" href="blocs.html#horoscope_claude">🔮 <span class="fr">Horoscope Claude</span><span class="en">Claude horoscope</span></a>

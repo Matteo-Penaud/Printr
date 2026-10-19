@@ -1248,7 +1248,7 @@ function Home({ me, presets, reload, openComposer }) {
 
 // Ticket d'exemple de chaque bloc (celui du site, intégré au binaire), montré au clic sur l'œil.
 const EXAMPLE = {
-  title: 'titre', text: 'texte', date: 'date', separator: 'separateur', feed: 'espace', image: 'image', qr: 'qr',
+  title: 'titre', text: 'texte', date: 'date', separator: 'separateur', feed: 'espace', cut: 'coupe', image: 'image', qr: 'qr',
   picto: 'pictogramme', weather: 'meteo', barnum: 'horoscope', horoscope: 'horoscope_claude', word_of_the_day: 'mot_du_jour',
   saint: 'saint', quote: 'citation', moon: 'lune', sun: 'soleil', sky: 'ciel', air_quality: 'air', holidays: 'jours_feries',
   countdown: 'compte_a_rebours', riddle: 'enigme', workout: 'defi_sportif', sudoku: 'sudoku', maze: 'labyrinthe',
@@ -1262,8 +1262,8 @@ const exampleUrl = (type) => EXAMPLE[type] && `/exemples/${EN ? 'en/' : ''}${EXA
 // Mots-clés de recherche, dans les deux langues, en plus du nom et de la description.
 const KEYWORDS = {
   title: 'titre title gros big', text: 'texte text paragraphe paragraph message', date: 'date jour day calendrier',
-  separator: 'separateur separator ligne line trait', feed: 'espace space blanc vide blank', image: 'image photo picture',
-  qr: 'qr code lien link url', picto: 'pictogramme pictogram coeur heart etoile star dessin drawing',
+  separator: 'separateur separator ligne line trait', feed: 'espace space blanc vide blank', cut: 'coupe cut couper ciseaux scissors morceau piece',
+  image: 'image photo picture', qr: 'qr code lien link url', picto: 'pictogramme pictogram coeur heart etoile star dessin drawing',
   weather: 'meteo weather pluie rain temps soleil sun temperature', barnum: 'horoscope astrologie astrology signe sign zodiaque ciel sky',
   horoscope: 'horoscope astrologie astrology signe sign zodiaque claude ia ai', word_of_the_day: 'mot word definition vocabulaire vocabulary claude',
   saint: 'saint fete name day prenom', quote: 'citation quote phrase', moon: 'lune moon phase', sun: 'soleil sun lever coucher sunrise sunset',

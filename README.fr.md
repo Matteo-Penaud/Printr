@@ -24,7 +24,7 @@
 <p align="center"><a href="README.md">🇬🇧 English version</a></p>
 
 Printr transforme une imprimante à tickets **Epson TM-T88V** en gadget familial. On compose un
-ticket à partir de **46 blocs** (météo, horoscope, sudoku, mots mêlés, énigmes, actualités,
+ticket à partir de **47 blocs** (météo, horoscope, sudoku, mots mêlés, énigmes, actualités,
 photos…), on l'imprime depuis son téléphone, on le **planifie** pour 7 h 30 en semaine, ou on
 envoie un **petit mot avec une photo** à ceux qui sont restés à la maison. Un seul binaire Rust,
 sur un Raspberry Pi, qui parle ESC/POS directement à l'imprimante.
@@ -37,7 +37,7 @@ sur un Raspberry Pi, qui parle ESC/POS directement à l'imprimante.
   <img src="docs/tickets/petit-mot.png" alt="Petit mot avec une photo" width="240">
 </p>
 
-- **46 blocs** : météo, ciel du soir (planètes, passages de l'ISS), agenda, horoscope (sérieux,
+- **47 blocs** : météo, ciel du soir (planètes, passages de l'ISS), agenda, horoscope (sérieux,
   farfelu, vachard ou franchement insultant), mot du jour, recettes, mots croisés et fléchés, sudoku,
   logimage, mots mêlés, petit bac, coloriage, énigmes à
   réponse imprimée à l'envers, défi sportif, liste de courses, poubelles, Wi-Fi invités, bons à

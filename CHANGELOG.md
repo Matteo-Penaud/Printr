@@ -5,9 +5,11 @@ each one is a `vX.Y.Z` tag on GitHub, which the server checks to tell the admin 
 
 Each minor version is named after a pioneer of printing, in alphabetical order (patch releases keep the
 name): Aldus Manutius, Giambattista Bodoni, William Caslon, the Didot family, Robert Estienne,
-Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe…
+Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas Jenson…
 
 ## [Unreleased]
+
+## [1.9.0] “Jenson” - 2026-10-19
 
 ### Added
 - Block catalog: **filters** at the top — for kids, offline and free, together, Claude. Search knows them too
@@ -204,7 +206,8 @@ First release.
 - One-command installation on a Raspberry Pi, no sudo needed afterwards.
 - Windows development with a dev container and a printing relay.
 
-[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/XNinety9/Printr/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/XNinety9/Printr/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/XNinety9/Printr/compare/v1.6.1...v1.7.0
 [1.6.1]: https://github.com/XNinety9/Printr/compare/v1.6.0...v1.6.1
