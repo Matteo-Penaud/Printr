@@ -235,7 +235,7 @@ Avec `PRINTR_WEB_DIR=web`, recharge simplement la page pour voir ton bloc dans l
 - sa fiche dans `docs/exemples/catalogue.json` (groupe, emoji, nom et description en français et
   en anglais) : `docs/build.py` en tire la page des blocs du site, et refuse de construire si
   l'exemple ou son PNG manque ;
-- une ligne dans le tableau des blocs du `README.md` (paramètres et valeurs par défaut) ;
+- une ligne dans le tableau des blocs du guide, `docs/guide.fr.md` (et `docs/guide.md`) (paramètres et valeurs par défaut) ;
 - une pastille dans le catalogue de `docs/index.html`, en français et en anglais, qui pointe
   vers sa fiche : `<a class="chip" href="blocs.html#mon_bloc">`.
 
@@ -289,12 +289,12 @@ d'exemple (voir `barnum.rs`).
 - **Avant chaque version**, `scripts/illustrations.sh` refait toutes les illustrations dans les deux
   langues (exemples des blocs, captures de l'appli, tickets vitrines, image de partage), puis
   construit le site ; `--sans-claude` évite tout appel à Claude (les blocs Claude gardent leur image).
-- Les captures du site et du README se régénèrent avec `docs/demo/photo-session.sh`, toujours
+- Les captures du site et de la doc se régénèrent avec `docs/demo/photo-session.sh`, toujours
   sur des données fictives. N'y mets jamais de vraies données personnelles.
 - Les déclinaisons du logo se régénèrent avec
   `uv run --with pillow python docs/brand/make-assets.py`.
 - Le site se construit avec `docs/build.py` : la page d'accueil (`docs/index.html`) et la
-  documentation, rendue depuis `README.md` et `CONTRIBUTING.md`. Une modification de ces
+  documentation, rendue depuis `docs/guide.fr.md` et `CONTRIBUTING.fr.md`. Une modification de ces
   fichiers met donc aussi le site à jour. Aperçu local :
   `uvx --with markdown --with pymdown-extensions python docs/build.py && python3 -m http.server -d _site`.
 
