@@ -144,8 +144,11 @@ pub enum Block {
         /// Photo envoyée depuis l'interface web (identifiant).
         #[serde(default)]
         upload: Option<String>,
+        /// `false` : simple seuil noir/blanc, quel que soit `dither_algorithm`.
         #[serde(default = "yes")]
         dither: bool,
+        #[serde(default)]
+        dither_algorithm: raster::Dither,
     },
     Qr {
         data: String,
@@ -728,7 +731,8 @@ impl Block {
             Block::Cut {} => {
                 doc.cut();
             }
-            Block::Image { path, url, upload, dither } => {
+            Block::Image { path, url, upload, dither, dither_algorithm } => {
+                let dither = if *dither { *dither_algorithm } else { raster::Dither::None };
                 let img = match (path, url, upload) {
                     (None, None, Some(id)) => {
                         anyhow::ensure!(
@@ -737,11 +741,11 @@ impl Block {
                         );
                         let dir = crate::store::uploads_dir()
                             .context(i18n::t("répertoire de données introuvable", "data directory not found"))?;
-                        raster::load(&dir.join(format!("{id}.png")), *dither)?
+                        raster::load(&dir.join(format!("{id}.png")), dither)?
                     }
                     (Some(path), None, None) => {
                         ctx.check_local_file(path)?;
-                        raster::load(path.as_ref(), *dither)?
+                        raster::load(path.as_ref(), dither)?
                     }
                     (None, Some(url), None) => {
                         let bytes = ctx
@@ -753,7 +757,7 @@ impl Block {
                             .with_config()
                             .limit(20 * 1024 * 1024)
                             .read_to_vec()?;
-                        raster::prepare(&raster::decode(&bytes)?, *dither)
+                        raster::prepare(&raster::decode(&bytes)?, dither)
                     }
                     _ => anyhow::bail!(i18n::t(
                         "indiquer `path`, `url` ou `upload` (un seul)",

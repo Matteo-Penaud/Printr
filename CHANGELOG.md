@@ -9,6 +9,12 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
 
 ## [Unreleased]
 
+### Added
+- Image block: choose the **dithering algorithm** — Floyd–Steinberg (default, smooth gradients for photos),
+  Atkinson (more contrast, cleaner flat areas) or Bayer (a regular pattern without grain). In the web app,
+  under the Dithering switch; in JSON, `dither_algorithm`; on the command line, `printr image --dither`.
+  Existing tickets keep Floyd–Steinberg (#12).
+
 ## [1.9.0] “Jenson” - 2026-10-19
 
 ### Added

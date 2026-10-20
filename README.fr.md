@@ -95,6 +95,7 @@ printr text "Salut !"               # texte libre, puis coupe
 echo "depuis stdin" | printr text   # lit l'entrée standard
 printr text --no-cut "sans coupe"
 printr image photo.jpg             # image réduite à 512 px, tramée (Floyd–Steinberg)
+printr image --dither atkinson photo.jpg  # autres tramages : atkinson (plus contrasté), bayer (trame régulière)
 printr image --no-dither logo.png   # simple seuil noir/blanc, pour logos et dessins au trait
 ```
 
@@ -133,7 +134,7 @@ Un paramètre inconnu est une erreur, pour repérer les fautes de frappe.
 | `date` | — | « Mercredi 7 octobre 2026 » |
 | `feed` | `lines` (1) | Espace vertical |
 | `cut` (ou `coupe`) | — | Coupe le papier à cet endroit, après l'espacement habituel (`spacing`) : la suite sort sur un autre ticket. Le `cut` du ticket ajoute toujours la coupe finale |
-| `image` | `path` ou `url`, `dither` (true) | Réduite à 512 px |
+| `image` | `path` ou `url`, `dither` (true), `dither_algorithm` (`floyd-steinberg`, `atkinson`, `bayer`) | Réduite à 512 px |
 | `qr` | `data`, `size` (6), `caption` | |
 | `weather` | `location`, `days` (1, max 7) | [Open-Meteo](https://open-meteo.com), sans clé. `location` : ville ou `"lat,lon"` |
 | `barnum` | `sign` ou `birth_date` (`AAAA-MM-JJ`), `sky` (false), `variant` | Horoscope hors ligne et gratuit, calculé sur le vrai ciel par [Barnum](https://github.com/XNinety9/Barnum) : jauges par domaine, conseil, et en option la position des planètes |
