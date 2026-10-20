@@ -121,6 +121,7 @@ an error, so typos get caught.
 | `chess` (or `echecs`) | `solution` (true) | Lichess daily puzzle: the board from the side to play, the last move framed, the answer in algebraic notation, upside down |
 | `coloring` (or `coloriage`) | `seed` | Mandala to color, different for each number |
 | `coupon` (or `bon`) | `text`, `from`, `to`, `valid_until`, `count` (1) | "Good for…" gift coupon with a border strip, serial number and cut line; random idea if `text` is absent |
+| `story` (or `histoire`) | `children` (`"Leo, Camille"`), `theme` (optional), `length` (`short`/`long`) | Bedtime story made up by Claude, the kids as heroes; a new one every day, never the same title twice |
 | `shopping` (or `courses`) | `title`, `clear` (false) | The app's shared shopping list; with `clear`, the server empties it once printed |
 | `agenda` | `calendars` (ICS links or `webcal://`, or files), `days` (1, max 7), `title` | Today's appointments, recurring events and time zones included |
 | `bins` (or `poubelles`) | `collections` (`name`, `days`, `every`, `from`), `when` (`veille`/`jour`), `always` | "Tonight, put the yellow bin out"; nothing is printed on evenings without collection, unless `always` is set |
@@ -192,7 +193,7 @@ Claude could not define is not asked for again: its length is printed instead.
 
 ### Claude: API key or subscription
 
-Claude blocks (`horoscope`, `word_of_the_day`, `recipe_claude`, `recipe_from_ingredients`, puzzle clues) go one of two ways:
+Claude blocks (`horoscope`, `word_of_the_day`, `recipe_claude`, `recipe_from_ingredients`, `story`, puzzle clues) go one of two ways:
 
 | | Claude API | Claude Code CLI |
 |---|---|---|

@@ -32,6 +32,7 @@ mod riddle;
 mod saint;
 mod shopping;
 mod sky;
+mod story;
 mod sudoku;
 mod sun;
 mod train_tracks;
@@ -408,6 +409,18 @@ pub enum Block {
         #[serde(default)]
         always: bool,
     },
+    /// Histoire du soir, inventée par Claude, avec les enfants pour héros.
+    #[serde(alias = "histoire")]
+    Story {
+        /// Les prénoms : « Léo, Camille ».
+        #[serde(alias = "enfants")]
+        children: String,
+        /// Un thème facultatif : « les dragons », « l'espace »…
+        #[serde(default, alias = "theme")]
+        theme: String,
+        #[serde(default, alias = "longueur")]
+        length: story::Length,
+    },
     /// Anniversaires : celui du jour en grand, puis le compte à rebours des suivants.
     #[serde(alias = "anniversaires")]
     Birthdays {
@@ -637,6 +650,7 @@ impl Block {
             Block::Chores { .. } => i18n::t("tâches ménagères", "chores"),
             Block::Chess { .. } => i18n::t("échecs", "chess"),
             Block::Birthdays { .. } => i18n::t("anniversaires", "birthdays"),
+            Block::Story { .. } => i18n::t("histoire du soir", "bedtime story"),
             Block::Agenda { .. } => i18n::t("agenda", "calendar"),
             Block::MonthlyReport { .. } => i18n::t("bilan du mois", "monthly report"),
             Block::Coloring { .. } => i18n::t("coloriage", "coloring page"),
@@ -732,6 +746,7 @@ impl Block {
             Block::Recipe { url, .. } => Some(url.split("://").nth(1).unwrap_or(url).chars().take(32).collect()),
             Block::RecipeClaude { dish, servings, .. } => Some(format!("{dish}, {servings}")),
             Block::Chores { people, period, .. } => Some(format!("{}, {}", people.join(", "), period.label())),
+            Block::Story { children, .. } => Some(children.clone()),
             Block::RecipeFromIngredients { ingredients, .. } => {
                 Some(ingredients.replace('\n', ", ").chars().take(32).collect())
             }
@@ -907,6 +922,7 @@ impl Block {
             Block::Chores { tasks, people, period } => doc = chores::build(tasks, people, *period, ctx.today)?,
             Block::Chess { solution } => doc = chess::build(ctx, *solution)?,
             Block::Birthdays { list, upcoming } => doc = birthdays::build(list, *upcoming, ctx.today)?,
+            Block::Story { children, theme, length } => doc = story::build(ctx, children, theme, *length)?,
             Block::Agenda { calendars, days, title } => doc = agenda::build(ctx, calendars, *days, title.as_deref())?,
             Block::MonthlyReport { month } => doc = monthly::build(month.as_deref(), ctx.today)?,
             Block::Coloring { seed } => doc = coloring::build(*seed),

@@ -404,6 +404,17 @@
      "fr": "« Bon pour un petit-déjeuner au lit », à découper.",
      "en": "“Good for one breakfast in bed”, to cut out."
     }
+   },
+   {
+    "id": "histoire",
+    "emoji": "🌙",
+    "fr": "Histoire du soir",
+    "en": "Bedtime story",
+    "description": {
+     "fr": "Claude invente un conte doux où les enfants sont les héros, sur le thème de leur choix ; une nouvelle histoire chaque soir.",
+     "en": "Claude makes up a gentle tale where the kids are the heroes, on the theme they like; a new story every night."
+    },
+    "claude": true
    }
   ]
  },

@@ -119,6 +119,7 @@ Un paramètre inconnu est une erreur, pour repérer les fautes de frappe.
 | `chess` (ou `echecs`) | `solution` (true) | Problème du jour de Lichess : l'échiquier du côté qui joue, le dernier coup encadré, la solution en notation algébrique, à l'envers |
 | `coloring` (ou `coloriage`) | `seed` | Mandala à colorier, différent à chaque numéro |
 | `coupon` (ou `bon`) | `text`, `from`, `to`, `valid_until`, `count` (1) | « Bon pour… » avec frise, numéro de série et ligne de découpe ; idée au hasard si `text` est absent |
+| `story` (ou `histoire`) | `children` (ou `enfants`, `"Léo, Camille"`), `theme` (facultatif), `length` (`short`/`long`, ou `courte`/`longue`) | Histoire du soir inventée par Claude, avec les enfants pour héros ; une nouvelle chaque jour, jamais deux fois le même titre |
 | `shopping` (ou `courses`) | `title`, `clear` (false) | La liste de courses partagée de l'appli ; avec `clear`, le serveur la vide une fois imprimée |
 | `agenda` | `calendars` (liens ICS ou `webcal://`, ou fichiers), `days` (1, max 7), `title` | Rendez-vous du jour, répétitions et fuseaux horaires compris |
 | `bins` (ou `poubelles`) | `collections` (`name`, `days`, `every`, `from`), `when` (`veille`/`jour`), `always` | « Ce soir, on sort le bac jaune » ; rien n'est imprimé les soirs sans ramassage, sauf avec `always` |
@@ -189,7 +190,7 @@ et un mot que Claude n'a pas su définir n'est pas redemandé : sa longueur est 
 
 ### Claude : clé API ou abonnement
 
-Les blocs Claude (`horoscope`, `word_of_the_day`, `recipe_claude`, `recipe_from_ingredients`, définitions des grilles)
+Les blocs Claude (`horoscope`, `word_of_the_day`, `recipe_claude`, `recipe_from_ingredients`, `story`, définitions des grilles)
 passent par l'un de ces deux chemins :
 
 | | API Claude | CLI Claude Code |

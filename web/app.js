@@ -547,6 +547,16 @@ const BLOCKS = [
     summary: (b) => b.text || T('Idée au hasard', 'Random idea'),
   },
   {
+    type: 'story', label: T('Histoire du soir', 'Bedtime story'), emoji: '🌙', group: G.gift, desc: T('Un conte où les enfants sont les héros', 'A tale where the kids are the heroes'), ai: true,
+    defaults: { children: '', theme: '', length: 'short' },
+    fields: [
+      { key: 'children', label: T('Les héros', 'The heroes'), kind: 'text', placeholder: T('Léo, Camille', 'Leo, Camille') },
+      { key: 'theme', label: T('Un thème ? (facultatif)', 'A theme? (optional)'), kind: 'text', placeholder: T('Les dragons, l’espace, la mer…', 'Dragons, space, the sea…') },
+      { key: 'length', label: T('Longueur', 'Length'), kind: 'segmented', options: [['short', T('Courte', 'Short')], ['long', T('Longue', 'Long')]] },
+    ],
+    summary: (b) => b.children || T('Aucun héros', 'No heroes'),
+  },
+  {
     type: 'news', label: T('Actualités', 'News'), emoji: '📰', group: G.info, desc: T('Revue de presse depuis tes flux RSS', 'Press review from your RSS feeds'),
     defaults: EN
       ? { title: 'World', feeds: ['https://feeds.bbci.co.uk/news/world/rss.xml', 'https://hackaday.com/blog/feed/'], count: 3, qr: 2, themes: [], exclude: [] }
@@ -689,7 +699,7 @@ const ALIASES = {
   anagramme: 'anagram', logimage: 'nonogram', picross: 'nonogram', message_code: 'cipher', courses: 'shopping',
   bon: 'coupon', poubelles: 'bins', bilan: 'monthly_report', mots_fleches: 'arrow_word', fleches: 'arrow_word',
   mots_croises: 'crossword', croises: 'crossword', recette: 'recipe', recette_claude: 'recipe_claude', recette_ingredients: 'recipe_from_ingredients', ciel: 'sky',
-  coloriage: 'coloring', taches: 'chores', echecs: 'chess', anniversaires: 'birthdays',
+  coloriage: 'coloring', taches: 'chores', echecs: 'chess', anniversaires: 'birthdays', histoire: 'story',
 };
 for (const [alias, type] of Object.entries(ALIASES)) BLOCK[alias] = BLOCK[type];
 // Ancien nom accepté par le serveur.
@@ -1317,6 +1327,7 @@ function Home({ me, presets, reload, openComposer }) {
 
 // Ticket d'exemple de chaque bloc (celui du site, intégré au binaire), montré au clic sur l'œil.
 const EXAMPLE = {
+  story: 'histoire',
   birthdays: 'anniversaires',
   chess: 'echecs',
   title: 'titre', text: 'texte', date: 'date', separator: 'separateur', feed: 'espace', cut: 'coupe', image: 'image', qr: 'qr',
@@ -1332,6 +1343,7 @@ const exampleUrl = (type) => EXAMPLE[type] && `/exemples/${EN ? 'en/' : ''}${EXA
 
 // Mots-clés de recherche, dans les deux langues, en plus du nom et de la description.
 const KEYWORDS = {
+  story: 'histoire story conte tale soir bedtime dodo sleep enfants kids children claude ia ai',
   birthdays: 'anniversaires birthdays age fete party famille family compte a rebours countdown',
   chess: 'echecs chess probleme puzzle lichess mat checkmate echiquier board strategie',
   chores: 'taches menageres chores menage housework corvees rotation famille family planning',
@@ -1359,7 +1371,7 @@ const KEYWORDS = {
 };
 
 // Étiquettes des blocs, pour les filtres du catalogue et la recherche (« Claude » vient de `ai`).
-const KIDS = ['picto', 'riddle', 'workout', 'word_search', 'maze', 'nonogram', 'petit_bac', 'mental_math', 'anagram', 'cipher', 'coloring'];
+const KIDS = ['story', 'picto', 'riddle', 'workout', 'word_search', 'maze', 'nonogram', 'petit_bac', 'mental_math', 'anagram', 'cipher', 'coloring'];
 const TOGETHER = ['riddle', 'workout', 'petit_bac', 'anagram'];
 // Ni réseau ni Claude : tout est calculé sur place, gratuitement.
 const OFFLINE = [
@@ -1380,7 +1392,7 @@ const GROUP_ORDER = Object.values(G);
 // Claude disponible ou non.
 const CATALOG = { hidden: [], claude: true };
 // Sans Claude, ces blocs n'impriment rien d'utile ; les grilles, elles, gardent leurs définitions en cache.
-const NEEDS_CLAUDE = ['horoscope', 'word_of_the_day', 'recipe_claude', 'recipe_from_ingredients'];
+const NEEDS_CLAUDE = ['story', 'horoscope', 'word_of_the_day', 'recipe_claude', 'recipe_from_ingredients'];
 const offered = (b) => !CATALOG.hidden.includes(b.type) && (CATALOG.claude || !NEEDS_CLAUDE.includes(b.type));
 
 // Sans accents ni majuscules : « meteo » trouve « Météo ».

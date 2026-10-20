@@ -40,6 +40,8 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
   (SIL Open Font License).
 - **Birthdays** (`birthdays`): "Happy birthday Leo!" with the age on the day, then a countdown to the
   next ones; one person per line, the year optional.
+- **Bedtime story** (`story`): Claude makes up a gentle tale where the children are the heroes, on an
+  optional theme, short or long; a new story every day, never the same title twice.
 
 ### Changed
 - **Weather with pictograms**: sun, clouds, fog, drizzle, rain, snow and storm, drawn on the Pi (no image
