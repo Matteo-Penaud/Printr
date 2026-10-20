@@ -464,6 +464,19 @@ pub enum Block {
         #[serde(default = "yes")]
         steps: bool,
     },
+    /// Qu'est-ce qu'on mange ? Les ingrédients qu'on a, Claude propose une recette qui s'en sert.
+    #[serde(alias = "recette_ingredients", alias = "quest_ce_quon_mange")]
+    RecipeFromIngredients {
+        /// Un par ligne, ou séparés par des virgules.
+        ingredients: String,
+        #[serde(default = "four")]
+        servings: u8,
+        /// Une envie facultative : « rapide », « végétarien », « pour un pique-nique »…
+        #[serde(default, alias = "envie")]
+        wish: String,
+        #[serde(default = "yes")]
+        steps: bool,
+    },
     /// Le ciel ce soir : planètes visibles, passages de l'ISS, lune, étoiles filantes.
     #[serde(alias = "ciel")]
     Sky {
@@ -597,6 +610,7 @@ impl Block {
             Block::Recipe { .. } => i18n::t("recette", "recipe"),
             Block::Sky { .. } => i18n::t("ciel ce soir", "tonight's sky"),
             Block::RecipeClaude { .. } => i18n::t("recette par Claude", "Claude recipe"),
+            Block::RecipeFromIngredients { .. } => i18n::t("qu'est-ce qu'on mange ?", "what's for dinner?"),
             Block::Title { .. } => i18n::t("titre", "title"),
             Block::Text { .. } => i18n::t("texte", "text"),
             Block::Glitch { .. } => "glitch",
@@ -682,6 +696,9 @@ impl Block {
             )),
             Block::Recipe { url, .. } => Some(url.split("://").nth(1).unwrap_or(url).chars().take(32).collect()),
             Block::RecipeClaude { dish, servings, .. } => Some(format!("{dish}, {servings}")),
+            Block::RecipeFromIngredients { ingredients, .. } => {
+                Some(ingredients.replace('\n', ", ").chars().take(32).collect())
+            }
             Block::Countdown { label, .. } => Some(label.clone()),
             Block::Crypto { coins, .. } => Some(coins.join(", ")),
             Block::Sun { location } | Block::Sky { location } => Some(location.clone()),
@@ -862,6 +879,9 @@ impl Block {
             Block::Sky { location } => doc = sky::build(ctx, location)?,
             Block::RecipeClaude { dish, servings, steps } => {
                 doc = recipe::build_with_claude(ctx, dish, *servings, *steps)?
+            }
+            Block::RecipeFromIngredients { ingredients, servings, wish, steps } => {
+                doc = recipe::build_from_ingredients(ctx, ingredients, *servings, wish, *steps)?
             }
             Block::Crossword { size, level, seed, solution } => {
                 let options = crossword::Options { size: *size, level: *level, seed: *seed, solution: *solution };

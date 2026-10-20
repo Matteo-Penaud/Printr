@@ -31,6 +31,9 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
   `PRINTR_MQTT_DISCOVERY` sets the discovery prefix (`homeassistant` by default) or turns it `off`.
   New MQTT topic `printr/paper/roll`.
 
+- **What's for dinner?** (`recipe_from_ingredients`): list the ingredients at hand, Claude writes a
+  recipe that uses them, with pantry basics only, and an optional wish ("quick", "vegetarian"…).
+
 ### Changed
 - **Weather with pictograms**: sun, clouds, fog, drizzle, rain, snow and storm, drawn on the Pi (no image
   to download). A large one for today, and the next days in columns: day, pictogram, high, low and

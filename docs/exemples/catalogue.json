@@ -501,6 +501,17 @@
      "en": "Name a dish and Claude writes the recipe: ingredients to tick and steps."
     },
     "claude": true
+   },
+   {
+    "id": "recette_ingredients",
+    "emoji": "🥕",
+    "fr": "Qu'est-ce qu'on mange ?",
+    "en": "What's for dinner?",
+    "description": {
+     "fr": "Les ingrédients qu'on a sous la main, et Claude propose une recette qui s'en sert.",
+     "en": "The ingredients at hand, and Claude comes up with a recipe that uses them."
+    },
+    "claude": true
    }
   ]
  }

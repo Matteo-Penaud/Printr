@@ -92,6 +92,7 @@ an error, so typos get caught.
 | `todo` | `items`, `title` ("To do") | Checkboxes |
 | `recipe` (or `recette`) | `url`, `steps` (true), `qr` (true) | Recipe read from its website (schema.org data, found on most cooking sites): ingredients to tick and numbered steps, without the ads; `"steps": false` prints only the ingredients |
 | `recipe_claude` (or `recette_claude`) | `dish` (or `plat`), `servings` (4), `steps` (true) | Recipe for a dish written by Claude at print time, same layout; cached per dish |
+| `recipe_from_ingredients` (or `recette_ingredients`) | `ingredients` (one per line or comma-separated), `servings` (4), `wish` (optional: "quick", "vegetarian"…), `steps` (true) | What's for dinner? Claude writes a recipe with the ingredients at hand, plus pantry basics only |
 | `sudoku` | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | The number printed is the seed: same `seed` + `"solution": true` prints the solution |
 | `word_search` (or `mots_meles`, `mots_caches`, `mots_en_grille`) | `difficulty` (`facile`/`moyen`/`difficile`), `theme`, `words`, `seed`, `solution` | Word search in French. `theme`: `animaux`, `fruits_legumes`, `cuisine`, `nature`, `sport`, `metiers`, `maison`, `voyage`, `musique`, `ecole`, `developpement`, `devops`, `reseaux`, `ia` (picked from the number if absent); or your own words in `words`. Easy: 10×10, 8 words, → ↓; medium: 12×12, 12 words, plus diagonals; hard: 14×14, 16 words, in every direction. Same number + `"solution": true` prints the solution |
 | `train_tracks` (or `voie_ferree`, `rails`) | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | Connect A (left edge) to B (bottom edge) with a single track, based on the number of track cells in each row and column and a few pieces already placed. Grids of 6×6, 8×8 and 10×10, each with a unique solution. Same `seed` + `"solution": true` prints the solution |
@@ -188,7 +189,7 @@ Claude could not define is not asked for again: its length is printed instead.
 
 ### Claude: API key or subscription
 
-Claude blocks (`horoscope`, `word_of_the_day`, `recipe_claude`, puzzle clues) go one of two ways:
+Claude blocks (`horoscope`, `word_of_the_day`, `recipe_claude`, `recipe_from_ingredients`, puzzle clues) go one of two ways:
 
 | | Claude API | Claude Code CLI |
 |---|---|---|

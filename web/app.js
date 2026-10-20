@@ -588,6 +588,17 @@ const BLOCKS = [
     summary: (b) => (b.dish ? T(`${b.dish} · ${b.servings} pers.`, `${b.dish} · serves ${b.servings}`) : T('Aucun plat', 'No dish')),
   },
   {
+    type: 'recipe_from_ingredients', label: T('Qu’est-ce qu’on mange ?', 'What’s for dinner?'), emoji: '🥕', group: G.org, desc: T('Les ingrédients qu’on a, Claude trouve la recette', 'What’s in the fridge, Claude finds the recipe'), ai: true,
+    defaults: { ingredients: '', servings: 4, wish: '', steps: true },
+    fields: [
+      { key: 'ingredients', label: T('Ingrédients sous la main', 'Ingredients at hand'), kind: 'textarea', placeholder: T('Courgettes, feta, riz…', 'Zucchini, feta, rice…'), help: T('Un par ligne ou séparés par des virgules. Les basiques du placard (sel, huile, beurre, œufs…) sont déjà comptés.', 'One per line or separated by commas. Pantry basics (salt, oil, butter, eggs…) are already counted.') },
+      { key: 'servings', label: T('Pour combien de personnes', 'Servings'), kind: 'number', min: 1, max: 20 },
+      { key: 'wish', label: T('Une envie ? (facultatif)', 'Any wish? (optional)'), kind: 'text', placeholder: T('Rapide, végétarien, pour un pique-nique…', 'Quick, vegetarian, for a picnic…') },
+      { key: 'steps', label: T('Imprimer les étapes', 'Print the steps'), kind: 'toggle', help: T('Sinon, seulement les ingrédients.', 'Otherwise, only the ingredients.') },
+    ],
+    summary: (b) => (b.ingredients || '').split(/[\n,;]/).map((x) => x.trim()).filter(Boolean).slice(0, 4).join(', ') || T('Aucun ingrédient', 'No ingredients'),
+  },
+  {
     type: 'shopping', label: T('Liste de courses', 'Shopping list'), emoji: '🛒', group: G.org, desc: T('La liste partagée de l’appli', "The app's shared list"),
     defaults: { title: T('Liste de courses', 'Shopping list'), clear: true },
     fields: [
@@ -649,7 +660,7 @@ const ALIASES = {
   rails: 'train_tracks', defi_sportif: 'workout', enigme: 'riddle', calcul_mental: 'mental_math', mot_mystere: 'anagram',
   anagramme: 'anagram', logimage: 'nonogram', picross: 'nonogram', message_code: 'cipher', courses: 'shopping',
   bon: 'coupon', poubelles: 'bins', bilan: 'monthly_report', mots_fleches: 'arrow_word', fleches: 'arrow_word',
-  mots_croises: 'crossword', croises: 'crossword', recette: 'recipe', recette_claude: 'recipe_claude', ciel: 'sky',
+  mots_croises: 'crossword', croises: 'crossword', recette: 'recipe', recette_claude: 'recipe_claude', recette_ingredients: 'recipe_from_ingredients', ciel: 'sky',
   coloriage: 'coloring',
 };
 for (const [alias, type] of Object.entries(ALIASES)) BLOCK[alias] = BLOCK[type];
@@ -1285,7 +1296,7 @@ const EXAMPLE = {
   word_search: 'mots_meles', train_tracks: 'voie_ferree', arrow_word: 'mots_fleches', crossword: 'mots_croises', nonogram: 'logimage',
   petit_bac: 'petit_bac', mental_math: 'calcul_mental', anagram: 'mot_mystere', cipher: 'message_code',
   coloring: 'coloriage', coupon: 'bon', news: 'actualites', on_this_day: 'ephemeride', crypto: 'crypto', todo: 'a_faire',
-  shopping: 'courses', recipe: 'recette', recipe_claude: 'recette_claude', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
+  shopping: 'courses', recipe: 'recette', recipe_claude: 'recette_claude', recipe_from_ingredients: 'recette_ingredients', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
 };
 const exampleUrl = (type) => EXAMPLE[type] && `/exemples/${EN ? 'en/' : ''}${EXAMPLE[type]}.png`;
 
@@ -1309,7 +1320,8 @@ const KEYWORDS = {
   coloring: 'coloriage coloring mandala dessin', coupon: 'bon cadeau coupon gift offrir',
   news: 'actualites news rss presse journal', on_this_day: 'ephemeride histoire history wikipedia', crypto: 'crypto bitcoin ethereum',
   todo: 'faire todo liste list taches tasks',
-  recipe: 'recette recipe cuisine cooking ingredients plat dish site', recipe_claude: 'recette recipe cuisine cooking ingredients plat dish claude ia ai', shopping: 'courses shopping liste list', agenda: 'agenda calendar calendrier evenements ics',
+  recipe: 'recette recipe cuisine cooking ingredients plat dish site', recipe_claude: 'recette recipe cuisine cooking ingredients plat dish claude ia ai',
+  recipe_from_ingredients: 'recette recipe cuisine cooking ingredients frigo fridge restes leftovers manger dinner diner repas meal claude ia ai', shopping: 'courses shopping liste list', agenda: 'agenda calendar calendrier evenements ics',
   bins: 'poubelles bins trash dechets recyclage', wifi: 'wifi invites guests reseau network', monthly_report: 'bilan mois monthly report statistiques stats',
 };
 
@@ -1335,7 +1347,7 @@ const GROUP_ORDER = Object.values(G);
 // Claude disponible ou non.
 const CATALOG = { hidden: [], claude: true };
 // Sans Claude, ces blocs n'impriment rien d'utile ; les grilles, elles, gardent leurs définitions en cache.
-const NEEDS_CLAUDE = ['horoscope', 'word_of_the_day', 'recipe_claude'];
+const NEEDS_CLAUDE = ['horoscope', 'word_of_the_day', 'recipe_claude', 'recipe_from_ingredients'];
 const offered = (b) => !CATALOG.hidden.includes(b.type) && (CATALOG.claude || !NEEDS_CLAUDE.includes(b.type));
 
 // Sans accents ni majuscules : « meteo » trouve « Météo ».

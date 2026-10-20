@@ -90,6 +90,7 @@ Un paramètre inconnu est une erreur, pour repérer les fautes de frappe.
 | `todo` | `items`, `title` (« À faire ») | Cases à cocher |
 | `recipe` (ou `recette`) | `url`, `steps` (true), `qr` (true) | Recette lue sur son site (données schema.org, présentes sur la plupart des sites de cuisine) : ingrédients à cocher et étapes numérotées, sans la publicité ; `"steps": false` n'imprime que les ingrédients |
 | `recipe_claude` (ou `recette_claude`) | `dish` (ou `plat`), `servings` (4), `steps` (true) | Recette d'un plat rédigée par Claude à l'impression, même présentation ; gardée en cache par plat |
+| `recipe_from_ingredients` (ou `recette_ingredients`) | `ingredients` (un par ligne ou séparés par des virgules), `servings` (4), `wish` (ou `envie`, facultatif : « rapide », « végétarien »…), `steps` (true) | Qu'est-ce qu'on mange ? Claude rédige une recette avec les ingrédients qu'on a, plus seulement les basiques du placard |
 | `sudoku` | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | Le n° imprimé est la graine : même `seed` + `"solution": true` imprime la solution |
 | `word_search` (ou `mots_meles`, `mots_caches`, `mots_en_grille`) | `difficulty` (`facile`/`moyen`/`difficile`), `theme`, `words`, `seed`, `solution` | Mots mêlés en français. `theme` : `animaux`, `fruits_legumes`, `cuisine`, `nature`, `sport`, `metiers`, `maison`, `voyage`, `musique`, `ecole`, `developpement`, `devops`, `reseaux`, `ia` (tiré du n° si absent) ; ou ses propres mots dans `words`. Facile : 10×10, 8 mots, → ↓ ; moyen : 12×12, 12 mots, + diagonales ; difficile : 14×14, 16 mots, dans tous les sens. Même n° + `"solution": true` imprime la solution |
 | `train_tracks` (ou `voie_ferree`, `rails`) | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | Relier A (bord gauche) à B (bord bas) par une seule voie, d'après le nombre de cases de voie de chaque ligne et colonne et quelques pièces posées. Grilles de 6×6, 8×8 et 10×10, à solution unique. Même `seed` + `"solution": true` imprime la solution |
@@ -185,7 +186,7 @@ et un mot que Claude n'a pas su définir n'est pas redemandé : sa longueur est 
 
 ### Claude : clé API ou abonnement
 
-Les blocs Claude (`horoscope`, `word_of_the_day`, `recipe_claude`, définitions des grilles)
+Les blocs Claude (`horoscope`, `word_of_the_day`, `recipe_claude`, `recipe_from_ingredients`, définitions des grilles)
 passent par l'un de ces deux chemins :
 
 | | API Claude | CLI Claude Code |
