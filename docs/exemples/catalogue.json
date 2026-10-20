@@ -360,6 +360,16 @@
     }
    },
    {
+    "id": "echecs",
+    "emoji": "♟️",
+    "fr": "Échecs",
+    "en": "Chess",
+    "description": {
+     "fr": "Le problème du jour de Lichess : l'échiquier dessiné du côté qui joue, la solution imprimée à l'envers.",
+     "en": "Lichess daily puzzle: the board drawn from the side to play, the answer printed upside down."
+    }
+   },
+   {
     "id": "coloriage",
     "emoji": "🎨",
     "fr": "Coloriage",

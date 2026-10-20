@@ -35,6 +35,9 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
   recipe that uses them, with pantry basics only, and an optional wish ("quick", "vegetarian"…).
 - **Chores** (`chores`): who does what, chores rotating between people every week (or day), worked
   out from the date.
+- **Chess** (`chess`): the Lichess daily puzzle, the board drawn from the side to play with the
+  last move framed, and the answer in algebraic notation, upside down. Pieces from Noto Sans Symbols 2
+  (SIL Open Font License).
 
 ### Changed
 - **Weather with pictograms**: sun, clouds, fog, drizzle, rain, snow and storm, drawn on the Pi (no image

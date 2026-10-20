@@ -115,6 +115,7 @@ Un paramètre inconnu est une erreur, pour repérer les fautes de frappe.
 | `anagram` (ou `mot_mystere`) | `theme` (comme `word_search`), `count` (3), `seed` | Lettres mélangées, thème et longueur en indice, réponses à l'envers |
 | `nonogram` (ou `logimage`) | `number` (1 à 10), `solution` | Logimage de 10×10 ; chaque dessin a une solution unique, trouvable par déduction (vérifié par les tests) |
 | `cipher` (ou `message_code`) | `message`, `cipher` (`cesar`/`morse`/`nombres`), `shift`, `answer` (true) | Message codé et sa grille de déchiffrement ; message au hasard si absent |
+| `chess` (ou `echecs`) | `solution` (true) | Problème du jour de Lichess : l'échiquier du côté qui joue, le dernier coup encadré, la solution en notation algébrique, à l'envers |
 | `coloring` (ou `coloriage`) | `seed` | Mandala à colorier, différent à chaque numéro |
 | `coupon` (ou `bon`) | `text`, `from`, `to`, `valid_until`, `count` (1) | « Bon pour… » avec frise, numéro de série et ligne de découpe ; idée au hasard si `text` est absent |
 | `shopping` (ou `courses`) | `title`, `clear` (false) | La liste de courses partagée de l'appli ; avec `clear`, le serveur la vide une fois imprimée |

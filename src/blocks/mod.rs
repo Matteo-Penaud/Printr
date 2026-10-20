@@ -6,6 +6,7 @@ mod anagram;
 mod arrow_word;
 pub mod barnum;
 mod bins;
+mod chess;
 mod chores;
 mod cipher;
 mod coloring;
@@ -403,6 +404,12 @@ pub enum Block {
         #[serde(default)]
         always: bool,
     },
+    /// Problème d'échecs du jour (Lichess) : l'échiquier, et la solution à l'envers.
+    #[serde(alias = "echecs")]
+    Chess {
+        #[serde(default = "yes")]
+        solution: bool,
+    },
     /// Tâches ménagères tournantes : chaque jour ou chaque semaine, elles passent à la personne suivante.
     #[serde(alias = "taches")]
     Chores {
@@ -614,6 +621,7 @@ impl Block {
             Block::Wifi { .. } => "Wi-Fi",
             Block::Bins { .. } => i18n::t("poubelles", "trash day"),
             Block::Chores { .. } => i18n::t("tâches ménagères", "chores"),
+            Block::Chess { .. } => i18n::t("échecs", "chess"),
             Block::Agenda { .. } => i18n::t("agenda", "calendar"),
             Block::MonthlyReport { .. } => i18n::t("bilan du mois", "monthly report"),
             Block::Coloring { .. } => i18n::t("coloriage", "coloring page"),
@@ -882,6 +890,7 @@ impl Block {
             }
             Block::Bins { collections, when, always } => doc = bins::build(collections, *when, *always, ctx.today)?,
             Block::Chores { tasks, people, period } => doc = chores::build(tasks, people, *period, ctx.today)?,
+            Block::Chess { solution } => doc = chess::build(ctx, *solution)?,
             Block::Agenda { calendars, days, title } => doc = agenda::build(ctx, calendars, *days, title.as_deref())?,
             Block::MonthlyReport { month } => doc = monthly::build(month.as_deref(), ctx.today)?,
             Block::Coloring { seed } => doc = coloring::build(*seed),

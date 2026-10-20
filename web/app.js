@@ -512,6 +512,14 @@ const BLOCKS = [
     summary: (b) => ({ cesar: T('César', 'Caesar'), morse: 'Morse', nombres: T('Nombres', 'Numbers') })[b.cipher] || '',
   },
   {
+    type: 'chess', label: T('Échecs', 'Chess'), emoji: '♟️', group: G.challenges, desc: T('Le problème du jour de Lichess, solution à l’envers', 'Lichess daily puzzle, answer upside down'),
+    defaults: { solution: true },
+    fields: [
+      { key: 'solution', label: T('Imprimer la solution (à l’envers)', 'Print the answer (upside down)'), kind: 'toggle' },
+    ],
+    summary: () => T('Problème du jour', 'Daily puzzle'),
+  },
+  {
     type: 'coloring', label: T('Coloriage', 'Coloring'), emoji: '🎨', group: G.challenges, desc: T('Un mandala à colorier, toujours différent', 'A mandala to color, always different'),
     defaults: {},
     fields: [{ key: 'seed', label: T('Numéro du mandala', 'Mandala number'), kind: 'number', optional: true, help: T('Laisse vide pour un nouveau mandala.', 'Leave empty for a new mandala.') }],
@@ -671,7 +679,7 @@ const ALIASES = {
   anagramme: 'anagram', logimage: 'nonogram', picross: 'nonogram', message_code: 'cipher', courses: 'shopping',
   bon: 'coupon', poubelles: 'bins', bilan: 'monthly_report', mots_fleches: 'arrow_word', fleches: 'arrow_word',
   mots_croises: 'crossword', croises: 'crossword', recette: 'recipe', recette_claude: 'recipe_claude', recette_ingredients: 'recipe_from_ingredients', ciel: 'sky',
-  coloriage: 'coloring', taches: 'chores',
+  coloriage: 'coloring', taches: 'chores', echecs: 'chess',
 };
 for (const [alias, type] of Object.entries(ALIASES)) BLOCK[alias] = BLOCK[type];
 // Ancien nom accepté par le serveur.
@@ -1299,6 +1307,7 @@ function Home({ me, presets, reload, openComposer }) {
 
 // Ticket d'exemple de chaque bloc (celui du site, intégré au binaire), montré au clic sur l'œil.
 const EXAMPLE = {
+  chess: 'echecs',
   title: 'titre', text: 'texte', date: 'date', separator: 'separateur', feed: 'espace', cut: 'coupe', image: 'image', qr: 'qr',
   picto: 'pictogramme', weather: 'meteo', barnum: 'horoscope', horoscope: 'horoscope_claude', word_of_the_day: 'mot_du_jour',
   saint: 'saint', quote: 'citation', moon: 'lune', sun: 'soleil', sky: 'ciel', air_quality: 'air', holidays: 'jours_feries',
@@ -1312,6 +1321,7 @@ const exampleUrl = (type) => EXAMPLE[type] && `/exemples/${EN ? 'en/' : ''}${EXA
 
 // Mots-clés de recherche, dans les deux langues, en plus du nom et de la description.
 const KEYWORDS = {
+  chess: 'echecs chess probleme puzzle lichess mat checkmate echiquier board strategie',
   chores: 'taches menageres chores menage housework corvees rotation famille family planning',
   title: 'titre title gros big', text: 'texte text paragraphe paragraph message', date: 'date jour day calendrier',
   separator: 'separateur separator ligne line trait', feed: 'espace space blanc vide blank', cut: 'coupe cut couper ciseaux scissors morceau piece',
