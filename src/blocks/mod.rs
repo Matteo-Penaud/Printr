@@ -15,8 +15,10 @@ mod coupon;
 mod crossword;
 mod crypto;
 mod glitch;
+mod hashi;
 mod holidays;
 mod horoscope;
+mod kakuro;
 mod maze;
 mod mental_math;
 mod monthly;
@@ -35,6 +37,7 @@ mod sky;
 mod story;
 mod sudoku;
 mod sun;
+mod takuzu;
 mod train_tracks;
 mod weather;
 mod weather_icon;
@@ -182,6 +185,35 @@ pub enum Block {
         items: Vec<String>,
     },
     Sudoku {
+        #[serde(default)]
+        difficulty: sudoku::Difficulty,
+        #[serde(default)]
+        seed: Option<u64>,
+        #[serde(default)]
+        solution: bool,
+    },
+    /// Kakuro : des sommes à composer avec des chiffres de 1 à 9, à solution unique.
+    Kakuro {
+        #[serde(default)]
+        difficulty: sudoku::Difficulty,
+        #[serde(default)]
+        seed: Option<u64>,
+        #[serde(default)]
+        solution: bool,
+    },
+    /// Hashi : relier les îles par des ponts, à solution unique.
+    #[serde(alias = "ponts")]
+    Hashi {
+        #[serde(default)]
+        difficulty: sudoku::Difficulty,
+        #[serde(default)]
+        seed: Option<u64>,
+        #[serde(default)]
+        solution: bool,
+    },
+    /// Takuzu (binairo) : des 0 et des 1, à solution unique.
+    #[serde(alias = "binairo")]
+    Takuzu {
         #[serde(default)]
         difficulty: sudoku::Difficulty,
         #[serde(default)]
@@ -674,6 +706,9 @@ impl Block {
             Block::Saint {} => i18n::t("saint du jour", "name day"),
             Block::Todo { .. } => i18n::t("à faire", "to-do"),
             Block::Sudoku { .. } => "sudoku",
+            Block::Takuzu { .. } => "takuzu",
+            Block::Kakuro { .. } => "kakuro",
+            Block::Hashi { .. } => "hashi",
             Block::WordSearch { .. } => i18n::t("mots mêlés", "word search"),
             Block::TrainTracks { .. } => i18n::t("voie ferrée", "train tracks"),
             Block::Maze { .. } => i18n::t("labyrinthe", "maze"),
@@ -700,7 +735,11 @@ impl Block {
             Block::Title { text, .. } => Some(text.chars().take(24).collect()),
             Block::Weather { location, .. } | Block::AirQuality { location } => Some(location.clone()),
             Block::Horoscope { sign, tone } => Some(format!("{sign} ({})", tone.label())),
-            Block::Sudoku { difficulty, solution, .. } | Block::TrainTracks { difficulty, solution, .. } => {
+            Block::Sudoku { difficulty, solution, .. }
+            | Block::TrainTracks { difficulty, solution, .. }
+            | Block::Takuzu { difficulty, solution, .. }
+            | Block::Kakuro { difficulty, solution, .. }
+            | Block::Hashi { difficulty, solution, .. } => {
                 Some(format!("{}{}", difficulty.label(), if *solution { ", solution" } else { "" }))
             }
             Block::WordSearch { difficulty, theme, words, solution, .. } => {
@@ -851,6 +890,9 @@ impl Block {
                 }
             }
             Block::Sudoku { difficulty, seed, solution } => doc = sudoku::build(*difficulty, *seed, *solution),
+            Block::Takuzu { difficulty, seed, solution } => doc = takuzu::build(*difficulty, *seed, *solution),
+            Block::Kakuro { difficulty, seed, solution } => doc = kakuro::build(*difficulty, *seed, *solution),
+            Block::Hashi { difficulty, seed, solution } => doc = hashi::build(*difficulty, *seed, *solution),
             Block::WordSearch { difficulty, theme, words, seed, solution } => {
                 doc = word_search::build(*difficulty, *theme, words, *seed, *solution);
             }

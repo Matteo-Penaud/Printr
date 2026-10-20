@@ -115,6 +115,9 @@ Un paramètre inconnu est une erreur, pour repérer les fautes de frappe.
 | `mental_math` (ou `calcul_mental`) | `difficulty` (`debutant`/`facile`/`moyen`/`difficile`), `operations` (`addition`, `subtraction`, `multiplication`, `division`, ou `+ - × ÷` ; toutes par défaut), `tables` (tables à réviser, ex. `[2, 5]`), `count` (10), `seed` | Fiche d'opérations, résultats imprimés à l'envers ; « débutant » : sommes jusqu'à 10, soustractions sans résultat négatif |
 | `anagram` (ou `mot_mystere`) | `theme` (comme `word_search`), `count` (3), `seed` | Lettres mélangées, thème et longueur en indice, réponses à l'envers |
 | `nonogram` (ou `logimage`) | `number` (1 à 10), `solution` | Logimage de 10×10 ; chaque dessin a une solution unique, trouvable par déduction (vérifié par les tests) |
+| `kakuro` | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | Kakuro de 6×6, 8×8 ou 9×9 cases, à solution unique (quelques chiffres donnés quand les sommes seules en permettent plusieurs) ; même système de numéro que le sudoku |
+| `takuzu` (ou `binairo`) | `difficulty`, `seed`, `solution` | Takuzu de 6×6, 8×8 ou 10×10 cases, à solution unique |
+| `hashi` (ou `ponts`) | `difficulty`, `seed`, `solution` | Hashi (ponts) sur une grille de 7×7, 9×9 ou 11×11, de 9 à 22 îles, à solution unique |
 | `cipher` (ou `message_code`) | `message`, `cipher` (`cesar`/`morse`/`nombres`), `shift`, `answer` (true) | Message codé et sa grille de déchiffrement ; message au hasard si absent |
 | `chess` (ou `echecs`) | `solution` (true) | Problème du jour de Lichess : l'échiquier du côté qui joue, le dernier coup encadré, la solution en notation algébrique, à l'envers |
 | `coloring` (ou `coloriage`) | `seed` | Mandala à colorier, différent à chaque numéro |

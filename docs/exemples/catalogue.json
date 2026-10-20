@@ -330,6 +330,36 @@
     }
    },
    {
+    "id": "kakuro",
+    "emoji": "➕",
+    "fr": "Kakuro",
+    "en": "Kakuro",
+    "description": {
+     "fr": "Des mots croisés de chiffres : chaque tranche fait la somme indiquée, avec des chiffres de 1 à 9 tous différents. Solution unique.",
+     "en": "A crossword of numbers: each run adds up to its clue, using digits 1 to 9, all different. Unique solution."
+    }
+   },
+   {
+    "id": "takuzu",
+    "emoji": "0️⃣",
+    "fr": "Takuzu",
+    "en": "Takuzu",
+    "description": {
+     "fr": "Des 0 et des 1 : jamais trois pareils à la suite, autant de chaque par ligne et par colonne. Solution unique.",
+     "en": "0s and 1s: never three alike in a row, as many of each per row and column. Unique solution."
+    }
+   },
+   {
+    "id": "hashi",
+    "emoji": "🌉",
+    "fr": "Hashi",
+    "en": "Hashi",
+    "description": {
+     "fr": "Relier toutes les îles par des ponts droits, sans croisement ; le chiffre dit combien de ponts partent de l'île. Solution unique.",
+     "en": "Connect all the islands with straight bridges, never crossing; the number says how many bridges leave the island. Unique solution."
+    }
+   },
+   {
     "id": "petit_bac",
     "emoji": "✏️",
     "fr": "Petit bac",

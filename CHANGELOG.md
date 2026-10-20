@@ -42,6 +42,8 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
   next ones; one person per line, the year optional.
 - **Bedtime story** (`story`): Claude makes up a gentle tale where the children are the heroes, on an
   optional theme, short or long; a new story every day, never the same title twice.
+- Three new puzzles, generated on the Pi with a unique solution and the same number system as the
+  sudoku: **Kakuro** (`kakuro`), **Takuzu** (`takuzu`, binairo) and **Hashi** (`hashi`, bridges).
 
 ### Changed
 - **Weather with pictograms**: sun, clouds, fog, drizzle, rain, snow and storm, drawn on the Pi (no image

@@ -117,6 +117,9 @@ an error, so typos get caught.
 | `mental_math` (or `calcul_mental`) | `difficulty` (`beginner`/`easy`/`medium`/`hard`, or `debutant`/`facile`/`moyen`/`difficile`), `operations` (`addition`, `subtraction`, `multiplication`, `division`, or `+ - × ÷`; all by default), `tables` (times tables to practice, e.g. `[2, 5]`), `count` (10), `seed` | Sheet of arithmetic problems, answers printed upside down; “beginner”: sums up to 10, no negative results |
 | `anagram` (or `mot_mystere`) | `theme` (as in `word_search`), `count` (3), `seed` | Scrambled letters, with the theme and length as hints; answers upside down |
 | `nonogram` (or `logimage`) | `number` (1 to 10), `solution` | 10×10 nonogram; each picture has a unique solution, findable by deduction (checked by the tests) |
+| `kakuro` | `difficulty` (`facile`/`moyen`/`difficile`), `seed`, `solution` | Kakuro of 6×6, 8×8 or 9×9 squares, unique solution (a few digits given when the sums alone allow several); same seed system as the sudoku |
+| `takuzu` (or `binairo`) | `difficulty`, `seed`, `solution` | Takuzu of 6×6, 8×8 or 10×10 squares, unique solution |
+| `hashi` (or `ponts`) | `difficulty`, `seed`, `solution` | Hashi (bridges) on a 7×7, 9×9 or 11×11 grid, 9 to 22 islands, unique solution |
 | `cipher` (or `message_code`) | `message`, `cipher` (`cesar`/`morse`/`nombres`), `shift`, `answer` (true) | Coded message and its decoding grid; random message if absent |
 | `chess` (or `echecs`) | `solution` (true) | Lichess daily puzzle: the board from the side to play, the last move framed, the answer in algebraic notation, upside down |
 | `coloring` (or `coloriage`) | `seed` | Mandala to color, different for each number |

@@ -469,6 +469,36 @@ const BLOCKS = [
     ],
   },
   {
+    type: 'kakuro', label: 'Kakuro', emoji: '➕', group: G.grids, desc: T('Des sommes à composer, chiffres de 1 à 9', 'Sums to build from digits 1 to 9'),
+    defaults: { difficulty: 'moyen' },
+    fields: [
+      { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
+      { key: 'seed', label: T('Numéro de grille', 'Grid number'), kind: 'number', optional: true, help: T('Laisse vide pour une nouvelle grille.', 'Leave empty for a new grid.') },
+      { key: 'solution', label: T('Imprimer la solution de cette grille', "Print this grid's solution"), kind: 'toggle' },
+    ],
+    summary: (b) => label(LEVELS, b.difficulty),
+  },
+  {
+    type: 'takuzu', label: 'Takuzu', emoji: '0️⃣', group: G.grids, desc: T('Des 0 et des 1, jamais trois pareils', '0s and 1s, never three alike'),
+    defaults: { difficulty: 'moyen' },
+    fields: [
+      { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
+      { key: 'seed', label: T('Numéro de grille', 'Grid number'), kind: 'number', optional: true, help: T('Laisse vide pour une nouvelle grille.', 'Leave empty for a new grid.') },
+      { key: 'solution', label: T('Imprimer la solution de cette grille', "Print this grid's solution"), kind: 'toggle' },
+    ],
+    summary: (b) => label(LEVELS, b.difficulty),
+  },
+  {
+    type: 'hashi', label: 'Hashi', emoji: '🌉', group: G.grids, desc: T('Relier les îles par des ponts', 'Connect the islands with bridges'),
+    defaults: { difficulty: 'moyen' },
+    fields: [
+      { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
+      { key: 'seed', label: T('Numéro de grille', 'Grid number'), kind: 'number', optional: true, help: T('Laisse vide pour une nouvelle grille.', 'Leave empty for a new grid.') },
+      { key: 'solution', label: T('Imprimer la solution de cette grille', "Print this grid's solution"), kind: 'toggle' },
+    ],
+    summary: (b) => label(LEVELS, b.difficulty),
+  },
+  {
     type: 'petit_bac', label: T('Petit bac', 'Categories'), emoji: '✏️', group: G.words, desc: T('Une lettre, des catégories, à jouer en famille', 'One letter, some categories, to play as a family'),
     defaults: { players: 1, count: 6, categories: [] },
     fields: [
@@ -699,7 +729,7 @@ const ALIASES = {
   anagramme: 'anagram', logimage: 'nonogram', picross: 'nonogram', message_code: 'cipher', courses: 'shopping',
   bon: 'coupon', poubelles: 'bins', bilan: 'monthly_report', mots_fleches: 'arrow_word', fleches: 'arrow_word',
   mots_croises: 'crossword', croises: 'crossword', recette: 'recipe', recette_claude: 'recipe_claude', recette_ingredients: 'recipe_from_ingredients', ciel: 'sky',
-  coloriage: 'coloring', taches: 'chores', echecs: 'chess', anniversaires: 'birthdays', histoire: 'story',
+  coloriage: 'coloring', taches: 'chores', echecs: 'chess', anniversaires: 'birthdays', histoire: 'story', binairo: 'takuzu', ponts: 'hashi',
 };
 for (const [alias, type] of Object.entries(ALIASES)) BLOCK[alias] = BLOCK[type];
 // Ancien nom accepté par le serveur.
@@ -1327,6 +1357,9 @@ function Home({ me, presets, reload, openComposer }) {
 
 // Ticket d'exemple de chaque bloc (celui du site, intégré au binaire), montré au clic sur l'œil.
 const EXAMPLE = {
+  hashi: 'hashi',
+  takuzu: 'takuzu',
+  kakuro: 'kakuro',
   story: 'histoire',
   birthdays: 'anniversaires',
   chess: 'echecs',
@@ -1343,6 +1376,9 @@ const exampleUrl = (type) => EXAMPLE[type] && `/exemples/${EN ? 'en/' : ''}${EXA
 
 // Mots-clés de recherche, dans les deux langues, en plus du nom et de la description.
 const KEYWORDS = {
+  hashi: 'hashi ponts bridges iles islands relier connect logique logic casse-tete puzzle',
+  takuzu: 'takuzu binairo binaire binary 0 1 zero un one grille grid logique logic casse-tete puzzle',
+  kakuro: 'kakuro sommes sums chiffres digits mots croises crossword nombres numbers casse-tete puzzle',
   story: 'histoire story conte tale soir bedtime dodo sleep enfants kids children claude ia ai',
   birthdays: 'anniversaires birthdays age fete party famille family compte a rebours countdown',
   chess: 'echecs chess probleme puzzle lichess mat checkmate echiquier board strategie',
@@ -1377,7 +1413,7 @@ const TOGETHER = ['riddle', 'workout', 'petit_bac', 'anagram'];
 const OFFLINE = [
   'title', 'text', 'date', 'separator', 'feed', 'image', 'qr', 'picto', 'barnum', 'saint', 'quote', 'moon', 'holidays', 'countdown',
   'riddle', 'workout', 'sudoku', 'word_search', 'train_tracks', 'maze', 'nonogram', 'petit_bac', 'mental_math', 'anagram', 'cipher',
-  'coloring', 'coupon', 'todo', 'shopping', 'bins', 'wifi', 'monthly_report', 'chores', 'birthdays',
+  'coloring', 'coupon', 'todo', 'shopping', 'bins', 'wifi', 'monthly_report', 'chores', 'birthdays', 'kakuro', 'takuzu', 'hashi',
 ];
 const FILTERS = [
   { id: 'kids', emoji: '🧒', label: T('Pour les enfants', 'For kids'), words: 'enfants enfant kids children', test: (b) => KIDS.includes(b.type) },
