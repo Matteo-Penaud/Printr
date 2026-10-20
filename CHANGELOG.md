@@ -15,6 +15,13 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
   under the Dithering switch; in JSON, `dither_algorithm`; on the command line, `printr image --dither`.
   Existing tickets keep Floyd–Steinberg (#12).
 
+### Security
+- MQTT: switched from `rumqttc` to its maintained fork `rumqttc-v4-next` (still MQTT 3.1.1), which uses
+  `rustls-webpki` 0.103. This fixes RUSTSEC-2026-0049, -0098, -0099 and -0104 (certificate revocation
+  lists and name constraints, only relevant with `mqtts://`) and drops the unmaintained `rustls-pemfile`
+  (RUSTSEC-2025-0134). The temporary exceptions in `deny.toml` are gone. Nothing changes in the
+  configuration (#10).
+
 ## [1.9.0] “Jenson” - 2026-10-19
 
 ### Added

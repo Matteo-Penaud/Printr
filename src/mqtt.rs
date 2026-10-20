@@ -20,7 +20,9 @@ use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
-use rumqttc::{Client, Event, LastWill, MqttOptions, Packet, QoS, TlsConfiguration, Transport};
+use rumqttc::{Client, Event, LastWill, MqttOptions, Packet, PublishOptions, QoS, TlsConfiguration, Transport};
+use rustls::pki_types::CertificateDer;
+use rustls::pki_types::pem::PemObject;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -190,7 +192,7 @@ fn tls_config() -> Result<rustls::ClientConfig> {
         let pem = std::fs::read(path.trim())
             .with_context(|| tr!("certificat MQTT illisible : {path}", "unreadable MQTT certificate: {path}"))?;
         let mut added = 0;
-        for cert in rustls_pemfile::certs(&mut pem.as_slice()) {
+        for cert in CertificateDer::pem_slice_iter(&pem) {
             roots.add(cert.context(t("certificat PEM invalide", "invalid PEM certificate"))?)?;
             added += 1;
         }
@@ -233,14 +235,14 @@ pub fn spawn(app: Arc<App>) {
 }
 
 fn options(broker: &Broker, prefix: &str) -> Result<MqttOptions> {
-    let mut options = MqttOptions::new(client_id(), &broker.host, broker.port);
+    let mut options = MqttOptions::new(client_id(), (broker.host.as_str(), broker.port));
     options
-        .set_keep_alive(Duration::from_secs(30))
+        .set_keep_alive(30)
         .set_clean_session(true)
         .set_max_packet_size(MAX_PAYLOAD + 1024, MAX_PAYLOAD + 1024)
         .set_last_will(LastWill::new(format!("{prefix}/availability"), "offline", QoS::AtLeastOnce, true));
     if let Some(user) = &broker.user {
-        options.set_credentials(user, broker.password.as_deref().unwrap_or(""));
+        options.set_credentials(user, broker.password.clone().unwrap_or_default());
     }
     if broker.tls {
         options.set_transport(Transport::tls_with_config(TlsConfiguration::Rustls(Arc::new(tls_config()?))));
@@ -249,8 +251,11 @@ fn options(broker: &Broker, prefix: &str) -> Result<MqttOptions> {
 }
 
 fn connect(app: Arc<App>, options: MqttOptions, prefix: String) {
-    let address = format!("{}:{}", options.broker_address().0, options.broker_address().1);
-    let (client, mut connection) = Client::new(options, 32);
+    let address = match options.broker().tcp_address() {
+        Some((host, port)) => format!("{host}:{port}"),
+        None => "?".to_owned(),
+    };
+    let (client, mut connection) = Client::builder(options).capacity(32).build();
 
     // Les commandes, une à une, hors du fil de la connexion.
     let (commands, received) = mpsc::channel::<(String, Vec<u8>)>();
@@ -270,7 +275,8 @@ fn connect(app: Arc<App>, options: MqttOptions, prefix: String) {
                 }
                 let mut result = result;
                 result["topic"] = json!(topic);
-                let _ = client.try_publish(format!("{prefix}/result"), QoS::AtLeastOnce, false, result.to_string());
+                let _ =
+                    client.try_publish(format!("{prefix}/result"), result.to_string(), PublishOptions::at_least_once());
             }
         });
     }
@@ -285,7 +291,8 @@ fn connect(app: Arc<App>, options: MqttOptions, prefix: String) {
                 let state = app.state();
                 if last.as_ref() != Some(&state) || sent.elapsed() >= STATUS_EVERY {
                     let topic = format!("{prefix}/status");
-                    if client.try_publish(topic, QoS::AtLeastOnce, true, state.to_string()).is_ok() {
+                    if client.try_publish(topic, state.to_string(), PublishOptions::at_least_once().retained()).is_ok()
+                    {
                         last = Some(state);
                         sent = Instant::now();
                     }
@@ -312,11 +319,19 @@ fn connect(app: Arc<App>, options: MqttOptions, prefix: String) {
                 for topic in ["print", "print/ticket", "todo", "shopping"] {
                     let _ = client.try_subscribe(format!("{prefix}/{topic}"), QoS::AtLeastOnce);
                 }
-                let _ = client.try_publish(format!("{prefix}/availability"), QoS::AtLeastOnce, true, "online");
-                let _ = client.try_publish(format!("{prefix}/status"), QoS::AtLeastOnce, true, app.state().to_string());
+                let _ = client.try_publish(
+                    format!("{prefix}/availability"),
+                    "online",
+                    PublishOptions::at_least_once().retained(),
+                );
+                let _ = client.try_publish(
+                    format!("{prefix}/status"),
+                    app.state().to_string(),
+                    PublishOptions::at_least_once().retained(),
+                );
             }
             Ok(Event::Incoming(Packet::Publish(message))) => {
-                let _ = commands.send((message.topic, message.payload.to_vec()));
+                let _ = commands.send((String::from_utf8_lossy(&message.topic).into_owned(), message.payload.to_vec()));
             }
             Ok(_) => {}
             Err(e) => {
