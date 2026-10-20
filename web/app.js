@@ -237,11 +237,19 @@ const BLOCKS = [
   { type: 'cut', label: T('Coupe', 'Cut'), emoji: '✂️', group: G.layout, desc: T('Coupe le papier ici : la suite sort sur un autre ticket', 'Cuts the paper here: the rest comes out on another ticket'), defaults: {}, fields: [] },
   {
     type: 'image', label: T('Image', 'Image'), emoji: '🖼️', group: G.layout, desc: T('Une photo, imprimée en noir et blanc', 'A photo, printed in black and white'),
-    defaults: { dither: true },
+    defaults: { dither: true, dither_algorithm: 'floyd-steinberg' },
     fields: [
       { key: 'upload', label: T('Photo', 'Photo'), kind: 'image' },
       { key: 'url', label: T("… ou adresse web d'une image", '… or the web address of an image'), kind: 'text', placeholder: 'https://…' },
       { key: 'dither', label: T('Tramage', 'Dithering'), kind: 'toggle', help: T('Idéal pour les photos. Désactive-le pour un logo ou un dessin.', 'Ideal for photos. Turn it off for a logo or a drawing.') },
+      {
+        key: 'dither_algorithm', label: T('Algorithme de tramage', 'Dithering algorithm'), kind: 'select', when: (d) => d.dither !== false,
+        options: [
+          ['floyd-steinberg', T('Floyd–Steinberg : dégradés doux (photos)', 'Floyd–Steinberg: smooth gradients (photos)')],
+          ['atkinson', T('Atkinson : plus contrasté, aplats nets', 'Atkinson: more contrast, cleaner flat areas')],
+          ['bayer', T('Bayer : trame régulière, sans grain', 'Bayer: regular pattern, no grain')],
+        ],
+      },
     ],
     normalize: (d) => { if (d.upload) delete d.url; return d; },
     summary: (b) => (b.upload ? T('Photo', 'Photo') : b.url ? T('Image du web', 'Web image') : T('Aucune image', 'No image')),

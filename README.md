@@ -97,6 +97,7 @@ printr text "Hi there!"             # free text, then a cut
 echo "from stdin" | printr text     # reads standard input
 printr text --no-cut "no cut"
 printr image photo.jpg              # image scaled down to 512 px, dithered (Floyd–Steinberg)
+printr image --dither atkinson photo.jpg  # other dithering: atkinson (more contrast), bayer (regular pattern)
 printr image --no-dither logo.png   # plain black-and-white threshold, for logos and line drawings
 ```
 
@@ -135,7 +136,7 @@ an error, so typos get caught.
 | `date` | — | e.g. "Wednesday, October 7, 2026" |
 | `feed` | `lines` (1) | Vertical space |
 | `cut` (or `coupe`) | — | Cuts the paper here, after the usual `spacing`: the rest comes out as another ticket. The ticket's `cut` still adds the final cut |
-| `image` | `path` or `url`, `dither` (true) | Scaled down to 512 px |
+| `image` | `path` or `url`, `dither` (true), `dither_algorithm` (`floyd-steinberg`, `atkinson`, `bayer`) | Scaled down to 512 px |
 | `qr` | `data`, `size` (6), `caption` | |
 | `weather` | `location`, `days` (1, max 7) | [Open-Meteo](https://open-meteo.com), no key. `location`: a city or `"lat,lon"` |
 | `barnum` | `sign` or `birth_date` (`YYYY-MM-DD`), `sky` (false), `variant` | Free offline horoscope, computed from the real sky by [Barnum](https://github.com/XNinety9/Barnum): gauges per area, advice, and optionally the position of the planets |
