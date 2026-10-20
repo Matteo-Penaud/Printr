@@ -44,10 +44,32 @@ const toast = (message, kind = 'ok', emoji) => bus.emit('toast', { message, kind
 
 // Réponse d'une impression : imprimé, imprimé avec des blocs en erreur, ou en attente de
 // l'imprimante (absente : le ticket sortira à son retour).
+// Ce que l'imprimante peut faire, selon `printer_status` : libellé court, bandeau, et message quand
+// un ticket attend à cause d'elle.
+const PRINTER_STATES = {
+  ready: { emoji: '✅', label: () => T('Imprimante prête', 'Printer ready') },
+  missing: {
+    emoji: '🔌', label: () => T('Imprimante déconnectée', 'Printer disconnected'),
+    banner: () => T('Imprimante déconnectée : les tickets attendront son retour.', 'Printer disconnected: tickets will wait for it to come back.'),
+    queued: () => T('Imprimante absente : le ticket sortira dès son retour.', 'Printer missing: the ticket will come out as soon as it is back.'),
+  },
+  cover_open: {
+    emoji: '📂', label: () => T('Capot ouvert', 'Cover open'),
+    banner: () => T('Le capot de l’imprimante est ouvert : les tickets attendront qu’il soit refermé.', 'The printer cover is open: tickets will wait until it is closed.'),
+    queued: () => T('Capot ouvert : le ticket sortira dès qu’il sera refermé.', 'Cover open: the ticket will come out as soon as it is closed.'),
+  },
+  paper_out: {
+    emoji: '🧻', label: () => T('Plus de papier', 'Out of paper'),
+    banner: () => T('L’imprimante n’a plus de papier : les tickets attendront un nouveau rouleau.', 'The printer is out of paper: tickets will wait for a new roll.'),
+    queued: () => T('Plus de papier : le ticket sortira dès qu’un rouleau sera remis.', 'Out of paper: the ticket will come out as soon as a roll is put back.'),
+  },
+};
+const printerState = (code) => PRINTER_STATES[code] || PRINTER_STATES.missing;
+
 function printedToast(r, message = T('Imprimé !', 'Printed!'), emoji = '🧾') {
   bus.emit('printer');
   if (r?.stalled) return toast(T('L’imprimante ne prend plus rien (capot, papier ?) : le ticket sortira quand elle sera prête.', 'The printer is not taking anything (cover, paper?): the ticket will come out when it is ready.'), 'warn', '⏳');
-  if (r?.queued) return toast(T('Imprimante absente : le ticket sortira dès son retour.', 'Printer missing: the ticket will come out as soon as it is back.'), 'warn', '⏳');
+  if (r?.queued) return toast(printerState(r.printer_status).queued(), 'warn', '⏳');
   if (r?.errors?.length) return toast(T(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, `Printed, with ${r.errors.length} block(s) in error`), 'error', '⚠️');
   return toast(message, 'ok', emoji);
 }
@@ -2085,7 +2107,7 @@ function App() {
   const [version, setVersion] = useState(null);
   const [update, setUpdate] = useState(null); // version plus récente publiée sur GitHub
   // L'imprimante est-elle là ? Et combien de tickets attendent son retour ? (vérifié toutes les 30 s)
-  const [printer, setPrinter] = useState({ ready: true, queued: 0 });
+  const [printer, setPrinter] = useState({ ready: true, status: 'ready', queued: 0 });
   const [presets, setPresets] = useState(null);
   const [composer, setComposer] = useState(() => store.get('printr.draft', null) || emptyComposer());
   const [scrolled, setScrolled] = useState(false);
@@ -2108,8 +2130,9 @@ function App() {
       CATALOG.hidden = s.hidden_blocks || [];
       CATALOG.claude = !!s.claude;
       setPrinter((before) => {
-        const now = { ready: s.printer_ready !== false, queued: s.queued || 0 };
-        if (before.ready !== now.ready || before.queued !== now.queued) bus.emit('printer-changed');
+        const status = s.printer_status || (s.printer_ready === false ? 'missing' : 'ready');
+        const now = { ready: status === 'ready', status, queued: s.queued || 0 };
+        if (before.status !== now.status || before.queued !== now.queued) bus.emit('printer-changed');
         return now;
       });
     }).catch(() => {});
@@ -2152,7 +2175,7 @@ function App() {
         onClick=${n.hash === '#/compose' ? (e) => { if (route.hash !== '#/compose') { e.preventDefault(); openComposer(store.get('printr.draft', null) || emptyComposer()); } } : undefined}>
         <${Icon} name=${n.icon} />${n.label}</a>`)}
       <div class="spacer"></div>
-      <div class="printer-state ${printer.ready ? 'ok' : 'off'}">${printer.ready ? T('Imprimante prête', 'Printer ready') : T('Imprimante déconnectée', 'Printer disconnected')}</div>
+      <div class="printer-state ${printer.ready ? 'ok' : 'off'}">${printerState(printer.status).label()}</div>
       ${version && html`<div class="version">printr ${version}${me.admin && update && html` · <a href=${update.url} target="_blank" rel="noopener">${T(`${update.version} disponible`, `${update.version} available`)}</a>`}</div>`}
       <div class="account-row">
         <button type="button" class="navlink account" onClick=${() => setMenu(true)}><${Avatar} user=${me} />
@@ -2167,8 +2190,8 @@ function App() {
         ${route.hash === '#/compose' && composer.id && html`<button class="btn ghost small" onClick=${() => openComposer(emptyComposer())}><${Icon} name="plus" size=${16} /> ${T('Nouveau', 'New')}</button>`}
         <button class="me" aria-label=${T('Mon compte', 'My account')} title=${T('Mon compte', 'My account')} onClick=${() => setMenu(true)}><${Avatar} user=${me} /><span>${T('Mon compte', 'My account')}</span></button>
       </header>
-      ${!printer.ready && html`<div class="printer-banner" role="status"><span class="emoji">🔌</span>
-        <span>${T('Imprimante déconnectée : les tickets attendront son retour.', 'Printer disconnected: tickets will wait for it to come back.')}
+      ${!printer.ready && html`<div class="printer-banner" role="status"><span class="emoji">${printerState(printer.status).emoji}</span>
+        <span>${printerState(printer.status).banner()}
         ${printer.queued > 0 && html` <strong>${T(`${printer.queued} en attente`, `${printer.queued} waiting`)}</strong>`}</span></div>`}
       ${page}
     </main>

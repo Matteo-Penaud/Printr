@@ -14,6 +14,12 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
   Atkinson (more contrast, cleaner flat areas) or Bayer (a regular pattern without grain). In the web app,
   under the Dithering switch; in JSON, `dither_algorithm`; on the command line, `printr image --dither`.
   Existing tickets keep Floyd–Steinberg (#12).
+- **Cover open and out of paper**, read from the printer itself (USB port status, a control request that
+  cannot block the link, unlike ESC/POS status queries). The web app says which one it is (banner,
+  sidebar, message after printing), tickets sent meanwhile wait in the queue right away instead of
+  stalling for 30 s, and come out once when the printer is ready again. Also published as
+  `printer_status` (`ready`, `cover_open`, `paper_out`, `missing`) in `/api/status`, on `printr/status`
+  and in MQTT results. Tested on the TM-T88V.
 
 ### Security
 - MQTT: switched from `rumqttc` to its maintained fork `rumqttc-v4-next` (still MQTT 3.1.1), which uses

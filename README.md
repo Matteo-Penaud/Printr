@@ -418,7 +418,7 @@ PRINTR_MQTT_PREFIX=printr                                # optional, printr by d
 | `printr/todo` | to Printr | `{"title"?, "items"}`, or one item per line |
 | `printr/shopping` | to Printr | items for the shopping list, one per line |
 | `printr/result` | from Printr | the outcome of each message: `printed`, `queued`, `stalled`, `added` or `error` |
-| `printr/status` | from Printr, retained | `printer_ready`, `stalled`, `queued`, `last_ticket`, `version` |
+| `printr/status` | from Printr, retained | `printer_ready`, `printer_status` (`ready`, `cover_open`, `paper_out`, `missing`), `stalled`, `queued`, `last_ticket`, `version` |
 | `printr/availability` | from Printr, retained | `online`, or `offline` when Printr goes away |
 
 ```sh

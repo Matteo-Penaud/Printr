@@ -172,6 +172,7 @@ fn outcome(printed: &Printed, label: &str) -> Value {
     json!({
         "ok": printed.failure.is_none(),
         "state": printed.state(),
+        "printer_status": printed.printer.code(),
         "label": label,
         "errors": printed.errors,
         "error": printed.failure,
