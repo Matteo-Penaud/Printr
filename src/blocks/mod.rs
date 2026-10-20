@@ -164,6 +164,9 @@ pub enum Block {
         location: String,
         #[serde(default = "one")]
         days: u8,
+        /// Comment s'habiller aujourd'hui, d'après les prévisions (sans IA).
+        #[serde(default, alias = "tenue")]
+        outfit: bool,
     },
     Horoscope {
         sign: String,
@@ -811,7 +814,7 @@ impl Block {
                     doc.text(caption, Style::default().small().center());
                 }
             }
-            Block::Weather { location, days } => doc = weather::build(&ctx.http, location, *days)?,
+            Block::Weather { location, days, outfit } => doc = weather::build(&ctx.http, location, *days, *outfit)?,
             Block::Horoscope { sign, tone } => doc = horoscope::build(ctx, sign, *tone)?,
             Block::Saint {} => doc = saint::build(ctx.today),
             Block::Todo { title, items } => {

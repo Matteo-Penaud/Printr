@@ -44,6 +44,8 @@ struct Daily {
     sunrise: Vec<String>,
     sunset: Vec<String>,
     uv_index_max: Vec<Option<f64>>,
+    #[serde(default)]
+    wind_speed_10m_max: Vec<Option<f64>>,
 }
 
 /// Libellé d'un code météo WMO, en français ou en anglais.
@@ -106,7 +108,7 @@ fn hour(iso: &str) -> &str {
     iso.split_once('T').map_or(iso, |(_, t)| t)
 }
 
-pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
+pub fn build(agent: &ureq::Agent, location: &str, days: u8, outfit: bool) -> Result<Doc> {
     let days = days.clamp(1, 7);
     let place = locate(agent, location)?;
     let f: Forecast = agent
@@ -117,7 +119,7 @@ pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
         .query(
             "daily",
             "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,\
-             sunrise,sunset,uv_index_max",
+             sunrise,sunset,uv_index_max,wind_speed_10m_max",
         )
         .query("timezone", "auto")
         .query("forecast_days", days.to_string())
@@ -153,6 +155,21 @@ pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
         Style::default().center(),
     );
     doc.text(&tr!("Soleil {} - {}", "Sun {} - {}", hour(&d.sunrise[0]), hour(&d.sunset[0])), Style::default().center());
+    if outfit {
+        let today = Today {
+            min: d.temperature_2m_min[0],
+            max: d.temperature_2m_max[0],
+            rain: d.precipitation_probability_max[0].unwrap_or(0.0),
+            wind: d.wind_speed_10m_max.first().copied().flatten().unwrap_or(c.wind_speed_10m),
+            uv: d.uv_index_max[0].unwrap_or(0.0),
+            sky: Sky::from_code(d.weather_code[0]),
+        };
+        doc.feed(1);
+        doc.text(i18n::t("Comment s'habiller", "What to wear"), Style::default().bold().underline());
+        for advice in what_to_wear(&today) {
+            doc.hanging("- ", &advice, Style::default());
+        }
+    }
 
     if d.time.len() > 1 {
         doc.feed(1);
@@ -168,6 +185,72 @@ pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
         doc.image(forecast(&days));
     }
     Ok(doc)
+}
+
+/// Le temps d'aujourd'hui, pour les conseils d'habillement.
+struct Today {
+    min: f64,
+    max: f64,
+    /// Risque de pluie, en %.
+    rain: f64,
+    /// Vent le plus fort de la journée, en km/h.
+    wind: f64,
+    uv: f64,
+    sky: Sky,
+}
+
+/// Comment s'habiller, d'après des seuils simples (pas d'IA) : couches selon le froid, parapluie ou
+/// imperméable, bottes, protection du soleil.
+fn what_to_wear(day: &Today) -> Vec<String> {
+    let mut out = Vec::new();
+    let layer = |t: f64| {
+        if t < 0.0 {
+            i18n::t("manteau chaud, bonnet, écharpe et gants", "warm coat, hat, scarf and gloves")
+        } else if t < 8.0 {
+            i18n::t("manteau et bonnet", "coat and hat")
+        } else if t < 14.0 {
+            i18n::t("une veste ou un bon pull", "a jacket or a warm sweater")
+        } else if t < 19.0 {
+            i18n::t("un pull léger ou un gilet", "a light sweater or a cardigan")
+        } else if t < 25.0 {
+            i18n::t("un t-shirt suffit", "a t-shirt is enough")
+        } else {
+            i18n::t("tenue légère, et de l'eau", "light clothes, and some water")
+        }
+    };
+    let (morning, afternoon) = (layer(day.min), layer(day.max));
+    if morning == afternoon {
+        out.push(i18n::capitalize(morning));
+    } else {
+        out.push(tr!(
+            "Le matin : {morning} ; l'après-midi : {afternoon}",
+            "Morning: {morning}; afternoon: {afternoon}"
+        ));
+    }
+    let wet = day.rain >= 50.0 || matches!(day.sky, Sky::Rain | Sky::Drizzle | Sky::Storm);
+    if day.sky == Sky::Snow {
+        out.push(i18n::t("Bottes : il neige", "Boots: it's snowing").to_owned());
+    } else if wet && day.wind >= 40.0 {
+        out.push(
+            i18n::t(
+                "Un imperméable plutôt qu'un parapluie : ça souffle",
+                "A raincoat rather than an umbrella: it's windy",
+            )
+            .to_owned(),
+        );
+    } else if wet {
+        out.push(i18n::t("Prends un parapluie", "Take an umbrella").to_owned());
+    } else if day.rain >= 30.0 {
+        out.push(i18n::t("Un parapluie dans le sac, au cas où", "An umbrella in the bag, just in case").to_owned());
+    } else if day.wind >= 50.0 {
+        out.push(i18n::t("Coupe-vent : ça souffle fort", "Windbreaker: it's very windy").to_owned());
+    }
+    if day.uv >= 6.0 {
+        out.push(i18n::t("Casquette, lunettes et crème solaire", "Cap, sunglasses and sunscreen").to_owned());
+    } else if day.uv >= 3.0 && day.sky == Sky::Clear {
+        out.push(i18n::t("Lunettes de soleil", "Sunglasses").to_owned());
+    }
+    out
 }
 
 /// Côté du pictogramme du jour, en points.
@@ -221,6 +304,19 @@ fn forecast(days: &[Day]) -> image::GrayImage {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn what_to_wear_follows_the_forecast() {
+        let day = |min, max, rain, wind, uv, sky| Today { min, max, rain, wind, uv, sky };
+        let fr = |d: &Today| crate::i18n::with_lang(crate::i18n::Lang::Fr, || what_to_wear(d));
+        assert_eq!(fr(&day(-3.0, -1.0, 0.0, 10.0, 1.0, Sky::Clear)), ["Manteau chaud, bonnet, écharpe et gants"]);
+        let rainy = fr(&day(6.0, 13.0, 80.0, 20.0, 1.0, Sky::Rain));
+        assert_eq!(rainy[0], "Le matin : manteau et bonnet ; l'après-midi : une veste ou un bon pull");
+        assert_eq!(rainy[1], "Prends un parapluie");
+        assert!(fr(&day(8.0, 12.0, 70.0, 55.0, 1.0, Sky::Rain))[1].starts_with("Un imperméable"));
+        let summer = fr(&day(20.0, 31.0, 0.0, 10.0, 8.0, Sky::Clear));
+        assert_eq!(summer.last().map(String::as_str), Some("Casquette, lunettes et crème solaire"));
+    }
 
     #[test]
     fn weather_codes_follow_language() {

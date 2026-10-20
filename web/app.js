@@ -298,10 +298,11 @@ const BLOCKS = [
   },
   {
     type: 'weather', label: T('Météo', 'Weather'), emoji: '🌤️', group: G.daily, desc: T('Le temps du jour et des suivants', "Today's weather and the days ahead"),
-    defaults: { location: 'Lyon', days: 1 },
+    defaults: { location: 'Lyon', days: 1, outfit: false },
     fields: [
       { key: 'location', label: T('Ville', 'City'), kind: 'text', placeholder: T('Lyon, ou « 45.76,4.83 »', 'Lyon, or "45.76,4.83"') },
       { key: 'days', label: T('Prévisions', 'Forecast'), kind: 'segmented', options: [[1, T("Aujourd'hui", 'Today')], [3, T('3 jours', '3 days')], [5, T('5 jours', '5 days')], [7, T('7 jours', '7 days')]] },
+      { key: 'outfit', label: T('Comment s’habiller', 'What to wear'), kind: 'toggle', help: T('« Manteau et bonnet, prends un parapluie » : d’après les prévisions du jour.', '“Coat and hat, take an umbrella”: from today’s forecast.') },
     ],
     summary: (b) => b.location,
   },

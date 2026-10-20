@@ -43,6 +43,8 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
 - **Weather with pictograms**: sun, clouds, fog, drizzle, rain, snow and storm, drawn on the Pi (no image
   to download). A large one for today, and the next days in columns: day, pictogram, high, low and
   chance of rain (#7).
+- Weather: **what to wear** option (`outfit`), worked out from today's forecast without AI: layers for
+  the morning and the afternoon, umbrella or raincoat when it's windy, boots in the snow, sun protection.
 
 ### Security
 - MQTT: switched from `rumqttc` to its maintained fork `rumqttc-v4-next` (still MQTT 3.1.1), which uses
