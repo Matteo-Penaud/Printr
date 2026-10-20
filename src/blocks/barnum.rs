@@ -295,8 +295,9 @@ mod tests {
         std::fs::write(&script, format!(
             "#!/bin/sh\nfor a in \"$@\"; do [ \"$a\" = --lang=en ] && {{ echo 'main.py: error: unrecognized arguments: --lang=en' >&2; exit 2; }}; done\ncat <<'JSON'\n{SAMPLE}\nJSON\n"
         )).unwrap();
-        std::fs::set_permissions(&script, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
-        let cmd = vec![script.to_string_lossy().into_owned()];
+        // Lancé par sh, pas exécuté directement : un autre test qui lance un processus au même moment
+        // hériterait du fichier encore ouvert en écriture, et l'exécution échouerait (ETXTBSY).
+        let cmd = vec!["sh".to_owned(), script.to_string_lossy().into_owned()];
         let date = NaiveDate::from_ymd_opt(2026, 10, 8).unwrap();
         let err = run(&cmd, &Who::Sign("lion".into()), date, None, true).err().unwrap();
         assert!(err.is::<OldBarnum>());
