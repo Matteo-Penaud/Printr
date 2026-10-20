@@ -20,6 +20,11 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
   stalling for 30 s, and come out once when the printer is ready again. Also published as
   `printer_status` (`ready`, `cover_open`, `paper_out`, `missing`) in `/api/status`, on `printr/status`
   and in MQTT results. Tested on the TM-T88V.
+- **Paper gauge**: Printr counts the paper used since the roll was put in (70 m by default) and warns
+  with a banner when less than 10% is left. The gauge is under *My account*, with a **New roll** button
+  (`POST /api/paper/roll`); it also resets by itself when the printer goes from “out of paper” to
+  “ready”, and a whole roll used up sets the real roll length. Published as `paper` in `/api/status` and
+  on `printr/status`.
 
 ### Security
 - MQTT: switched from `rumqttc` to its maintained fork `rumqttc-v4-next` (still MQTT 3.1.1), which uses

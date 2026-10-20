@@ -71,6 +71,8 @@ struct Pending {
     at: Option<DateTime<Utc>>,
     label: String,
     since: DateTime<Utc>,
+    /// Longueur du ticket, comptée sur le rouleau quand il sort.
+    paper_mm: u32,
 }
 
 /// Résultat d'une impression, renvoyé à l'interface.
@@ -151,6 +153,12 @@ impl App {
         shared().find(|p| p.id == wanted).or_else(|| shared().find(|p| p.name.to_lowercase() == wanted_lower)).cloned()
     }
 
+    /// Longueur d'un ticket en attente, d'après son entrée d'historique.
+    fn queued_paper_mm(&self, job: &str) -> u32 {
+        let store = self.lock_store();
+        store.data.history.iter().find(|e| e.queued.as_deref() == Some(job)).and_then(|e| e.paper_mm).unwrap_or(0)
+    }
+
     pub fn printer_status(&self) -> Status {
         *self.printer_status.lock().unwrap_or_else(|e| e.into_inner())
     }
@@ -164,6 +172,17 @@ impl App {
                 _ => eprintln!("{}", tr!("imprimante : {}", "printer: {}", status.message())),
             }
         }
+        // Plus de papier, puis prête : on a remis un rouleau, neuf a priori.
+        if was == Status::PaperOut && status == Status::Ready {
+            let mut store = self.lock_store();
+            store.data.paper.ran_out();
+            store.data.paper.new_roll(None);
+            let roll_m = store.data.paper.roll_mm / 1000;
+            if let Err(e) = store.save() {
+                eprintln!("{}", tr!("rouleau non enregistré : {e:#}", "roll not saved: {e:#}"));
+            }
+            eprintln!("{}", tr!("nouveau rouleau ({roll_m} m)", "new roll ({roll_m} m)"));
+        }
     }
 
     /// L'état publié pour les domotiques (MQTT) : imprimante, file d'attente, dernier ticket.
@@ -176,6 +195,7 @@ impl App {
             "printer_status": self.printer_status().code(),
             "stalled": stalled,
             "queued": store.data.queue.len(),
+            "paper": paper_json(&store.data.paper),
             "last_ticket": last,
             "version": env!("CARGO_PKG_VERSION"),
         })
@@ -201,6 +221,7 @@ impl App {
         let mut stalled = false;
         let mut busy = false;
         let at = Utc::now();
+        let paper_mm = (doc.height_dots() as f64 * 25.4 / 180.0).round() as u32;
         // Gardé jusqu'à l'historique : un envoi en suspens y est noté avant qu'on puisse le solder.
         let printer = self.printer.lock().unwrap_or_else(|e| e.into_inner());
         let (failure, queued) = match crate::output::render(&doc, ticket.cut) {
@@ -225,7 +246,7 @@ impl App {
                         stalled = true;
                         if let Some(done) = e.downcast_ref::<crate::output::Stalled>().and_then(|s| s.take()) {
                             *self.pending.lock().unwrap_or_else(|e| e.into_inner()) =
-                                Some(Pending { done, at: Some(at), label: label.to_owned(), since: at });
+                                Some(Pending { done, at: Some(at), label: label.to_owned(), since: at, paper_mm });
                         }
                         (None, None)
                     }
@@ -268,11 +289,15 @@ impl App {
                 .chain(stalled.then(|| crate::output::Stalled::message().to_owned()))
                 .collect(),
             blocks: ticket.blocks.iter().map(|b| b.name().to_owned()).collect(),
-            paper_mm: Some((doc.height_dots() as f64 * 25.4 / 180.0).round() as u32),
+            paper_mm: Some(paper_mm),
         });
         // Liste de courses imprimée avec `clear` : on retire ce qui y figurait (pas ce qui a été
         // ajouté pendant l'impression). Un ticket en attente ne vide rien : la liste peut encore servir.
         let printed_now = failure.is_none() && queued.is_none();
+        // En suspens : compté quand il sortira (voir `settle_pending`).
+        if printed_now && !stalled {
+            store.data.paper.consume(paper_mm);
+        }
         if printed_now && ticket.blocks.iter().any(|b| matches!(b, Block::Shopping { clear: true, .. })) {
             store.data.shopping.retain(|item| item.added > started);
         }
@@ -303,9 +328,10 @@ impl App {
         };
         let Some(done) = pending.take() else { return false };
         drop(pending);
-        if let Some(at) = done.at {
+        {
             let mut store = self.lock_store();
-            if let Some(entry) = store.data.history.iter_mut().find(|e| e.at == at && e.label == done.label) {
+            if let Some(entry) = store.data.history.iter_mut().find(|e| Some(e.at) == done.at && e.label == done.label)
+            {
                 entry.errors.retain(|m| m != crate::output::Stalled::message());
                 match &outcome {
                     Ok(()) => entry.printed_at = Some(Utc::now()),
@@ -314,6 +340,9 @@ impl App {
                         entry.errors.insert(0, reason.clone());
                     }
                 }
+            }
+            if outcome.is_ok() {
+                store.data.paper.consume(done.paper_mm);
             }
             if let Err(e) = store.save() {
                 eprintln!("{}", tr!("historique non enregistré : {e:#}", "history not saved: {e:#}"));
@@ -349,6 +378,8 @@ impl App {
             if self.pending.lock().unwrap_or_else(|e| e.into_inner()).is_some() {
                 break;
             }
+            // Sorti tout de suite (pas en suspens) : compté sur le rouleau.
+            let mut out_now = false;
             let outcome = if job.at < limit {
                 Err(tr!(
                     "abandonné : imprimante absente pendant plus de {} h",
@@ -361,13 +392,21 @@ impl App {
                 match crate::store::load_job(&job.id) {
                     None => Err(t("ticket en attente perdu", "queued ticket lost").to_owned()),
                     Some(bytes) => match printer.write(&bytes) {
-                        Ok(()) => Ok(()),
+                        Ok(()) => {
+                            out_now = true;
+                            Ok(())
+                        }
                         // Confié à l'imprimante, qui le sortira quand elle sera prête : les suivants
                         // attendent qu'il soit sorti.
                         Err(e) if e.is::<crate::output::Stalled>() => {
                             if let Some(done) = e.downcast_ref::<crate::output::Stalled>().and_then(|s| s.take()) {
-                                *self.pending.lock().unwrap_or_else(|e| e.into_inner()) =
-                                    Some(Pending { done, at: None, label: job.label.clone(), since: Utc::now() });
+                                *self.pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Pending {
+                                    done,
+                                    at: None,
+                                    label: job.label.clone(),
+                                    since: Utc::now(),
+                                    paper_mm: self.queued_paper_mm(&job.id),
+                                });
                             }
                             Ok(())
                         }
@@ -382,8 +421,10 @@ impl App {
             crate::store::remove_job(&job.id);
             let mut store = self.lock_store();
             store.data.queue.retain(|j| j.id != job.id);
+            let mut paper_mm = 0;
             if let Some(entry) = store.data.history.iter_mut().find(|e| e.queued.as_deref() == Some(&job.id)) {
                 entry.queued = None;
+                paper_mm = entry.paper_mm.unwrap_or(0);
                 match &outcome {
                     Ok(()) => {
                         entry.ok = entry.errors.is_empty();
@@ -391,6 +432,9 @@ impl App {
                     }
                     Err(reason) => entry.errors.insert(0, reason.clone()),
                 }
+            }
+            if out_now {
+                store.data.paper.consume(paper_mm);
             }
             if let Err(e) = store.save() {
                 eprintln!("{}", tr!("historique non enregistré : {e:#}", "history not saved: {e:#}"));
@@ -649,6 +693,25 @@ struct NewUser {
 #[derive(Deserialize)]
 struct NewPassword {
     password: String,
+}
+
+/// Rouleau neuf posé ; sans longueur, la même que le précédent.
+#[derive(Deserialize)]
+struct NewRoll {
+    #[serde(default)]
+    length_m: Option<u32>,
+}
+
+/// La jauge de papier, pour l'appli et les domotiques.
+fn paper_json(paper: &crate::store::Paper) -> Value {
+    json!({
+        "roll_mm": paper.roll_mm,
+        "used_mm": paper.used_mm,
+        "remaining_mm": paper.remaining_mm(),
+        "percent": paper.percent(),
+        "low": paper.low(),
+        "since": paper.since,
+    })
 }
 
 /// Blocs à retirer du catalogue (types : « sudoku », « weather »…).
@@ -1044,21 +1107,41 @@ fn handle(app: &App, request: &mut Request) -> Reply {
         },
         (Method::Get, ["api", "status"]) => {
             let claude = crate::claude::Claude::from_env();
-            let (queued, hidden_blocks) = {
+            let (queued, hidden_blocks, paper) = {
                 let store = app.lock_store();
-                (store.data.queue.len(), store.data.hidden_blocks.clone())
+                (store.data.queue.len(), store.data.hidden_blocks.clone(), paper_json(&store.data.paper))
             };
             Reply::ok(json!({
                 "printer": app.destination,
                 "printer_ready": app.printer_status() == Status::Ready,
                 "printer_status": app.printer_status().code(),
                 "queued": queued,
+                "paper": paper,
                 "hidden_blocks": hidden_blocks,
                 "claude": claude.as_ref().map(|c| c.model().to_owned()),
                 "claude_backend": claude.as_ref().map(|c| c.backend()),
                 "version": env!("CARGO_PKG_VERSION"),
                 "update": *app.latest.lock().unwrap_or_else(|e| e.into_inner()),
             }))
+        }
+        (Method::Post, ["api", "paper", "roll"]) => {
+            let input: NewRoll = try_reply!(json_body(request));
+            let roll_mm = input.length_m.map(|m| m.saturating_mul(1000));
+            if roll_mm.is_some_and(|mm| !crate::store::Paper::ROLL_RANGE_MM.contains(&mm)) {
+                return Reply::error(
+                    400,
+                    t("longueur de rouleau invalide (5 à 500 m)", "invalid roll length (5 to 500 m)"),
+                );
+            }
+            let mut store = app.lock_store();
+            store.data.paper.new_roll(roll_mm);
+            let paper = paper_json(&store.data.paper);
+            let roll_m = store.data.paper.roll_mm / 1000;
+            match store.save() {
+                Ok(()) => Reply::ok(json!({ "ok": true, "paper": paper }))
+                    .note(tr!("nouveau rouleau ({roll_m} m) posé par {by}", "new roll ({roll_m} m) put in by {by}")),
+                Err(e) => Reply::error(500, format!("{e:#}")),
+            }
         }
         (Method::Put, ["api", "settings", "hidden-blocks"]) => {
             let input: HiddenBlocks = try_reply!(json_body(request));

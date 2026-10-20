@@ -240,6 +240,71 @@ pub struct Data {
     /// tickets qui les utilisent déjà continuent de fonctionner.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub hidden_blocks: Vec<String>,
+    #[serde(default)]
+    pub paper: Paper,
+}
+
+/// Le rouleau en place, pour estimer le papier qui reste : l'imprimante ne dit « plus de papier »
+/// que trop tard. Longueurs en mm, comptées comme `HistoryEntry::paper_mm`.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Paper {
+    /// Longueur d'un rouleau neuf : réglée à la pose, ou mesurée sur un rouleau entier.
+    pub roll_mm: u32,
+    /// Papier sorti depuis la pose du rouleau.
+    pub used_mm: u32,
+    /// Pose du rouleau ; aucune tant qu'on n'en a pas vu poser un (le compte part alors d'un
+    /// rouleau supposé neuf, et ne sert pas à mesurer sa longueur).
+    pub since: Option<DateTime<Utc>>,
+}
+
+impl Default for Paper {
+    fn default() -> Self {
+        Paper { roll_mm: Paper::DEFAULT_ROLL_MM, used_mm: 0, since: None }
+    }
+}
+
+impl Paper {
+    /// Un rouleau de 70 mm de diamètre : environ 70 m.
+    pub const DEFAULT_ROLL_MM: u32 = 70_000;
+    /// En dessous, « papier presque fini ».
+    const LOW_PERCENT: u32 = 10;
+    /// Longueurs de rouleau plausibles, pour la saisie et pour la mesure.
+    pub const ROLL_RANGE_MM: std::ops::RangeInclusive<u32> = 5_000..=500_000;
+
+    pub fn remaining_mm(&self) -> u32 {
+        self.roll_mm.saturating_sub(self.used_mm)
+    }
+
+    pub fn percent(&self) -> u32 {
+        (u64::from(self.remaining_mm()) * 100 / u64::from(self.roll_mm.max(1))) as u32
+    }
+
+    pub fn low(&self) -> bool {
+        self.percent() < Self::LOW_PERCENT
+    }
+
+    /// Un ticket est sorti.
+    pub fn consume(&mut self, mm: u32) {
+        self.used_mm = self.used_mm.saturating_add(mm);
+    }
+
+    /// Un rouleau neuf est posé, d'une longueur donnée ou de la même que le précédent.
+    pub fn new_roll(&mut self, roll_mm: Option<u32>) {
+        if let Some(mm) = roll_mm {
+            self.roll_mm = mm;
+        }
+        self.used_mm = 0;
+        self.since = Some(Utc::now());
+    }
+
+    /// Le rouleau est arrivé au bout : s'il avait été posé neuf sous nos yeux, ce qu'il a donné
+    /// est sa vraie longueur, qui servira pour les suivants (le compte en tient les écarts :
+    /// avance avant la coupe, rouleaux plus courts qu'annoncé).
+    pub fn ran_out(&mut self) {
+        if self.since.is_some() && Self::ROLL_RANGE_MM.contains(&self.used_mm) {
+            self.roll_mm = self.used_mm;
+        }
+    }
 }
 
 /// Un ticket prêt, qui attend l'imprimante.
@@ -535,5 +600,36 @@ mod tests {
         s.days = vec![1, 2];
         s.last_run = None;
         assert!(s.due(at(8, 5), grace).is_none(), "pas le bon jour");
+    }
+
+    #[test]
+    fn paper_gauge_counts_down_and_warns_when_low() {
+        let mut paper = Paper::default();
+        assert_eq!((paper.remaining_mm(), paper.percent(), paper.low()), (70_000, 100, false));
+        paper.consume(63_500);
+        assert_eq!((paper.remaining_mm(), paper.percent(), paper.low()), (6_500, 9, true));
+        paper.consume(10_000);
+        assert_eq!((paper.remaining_mm(), paper.percent()), (0, 0), "jamais en dessous de zéro");
+        paper.new_roll(Some(80_000));
+        assert_eq!((paper.roll_mm, paper.used_mm, paper.low()), (80_000, 0, false));
+    }
+
+    #[test]
+    fn a_whole_roll_measures_the_roll_length() {
+        // Rouleau en place à l'installation : on ne sait pas d'où il part, pas de mesure.
+        let mut paper = Paper::default();
+        paper.consume(30_000);
+        paper.ran_out();
+        assert_eq!(paper.roll_mm, 70_000);
+        // Rouleau posé neuf, vidé jusqu'au bout : sa longueur devient la référence.
+        paper.new_roll(None);
+        paper.consume(64_200);
+        paper.ran_out();
+        assert_eq!(paper.roll_mm, 64_200);
+        // Mesure invraisemblable (compteur perdu, rouleau entamé) : ignorée.
+        paper.new_roll(None);
+        paper.consume(1_000);
+        paper.ran_out();
+        assert_eq!(paper.roll_mm, 64_200);
     }
 }

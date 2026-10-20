@@ -295,6 +295,8 @@ printr serve --listen 0.0.0.0:8080 --token $(openssl rand -hex 24)   # jeton : o
 | `POST /print` | Un ticket JSON | Imprime le ticket |
 | `POST /todo` | `{"title"?, "items"?: [...], "text"?: "une\nligne\npar\nélément"}` | Imprime la date et une liste à cocher |
 | `POST /api/shopping` | `{"text": "lait\npain"}` | Ajoute des articles à la liste de courses (un par ligne) |
+| `GET /api/status` | — | État de l'imprimante (`printer_status`), file d'attente, jauge de papier (`paper`), version |
+| `POST /api/paper/roll` | `{"length_m"?: 70}` | Un rouleau neuf est posé : remet la jauge à zéro (longueur en mètres, celle du rouleau précédent si absente) |
 
 Pour les scripts, les `POST` exigent l'en-tête `Authorization: Bearer <jeton>` (défini avec `--token`). Ajouter `?preview` renvoie
 l'aperçu texte sans imprimer. La réponse est `{"ok": true, "errors": [...]}`, où `errors` liste
@@ -363,7 +365,7 @@ PRINTR_MQTT_PREFIX=printr                                         # facultatif, 
 | `printr/todo` | vers Printr | `{"title"?, "items"}`, ou une chose par ligne |
 | `printr/shopping` | vers Printr | des articles pour la liste de courses, un par ligne |
 | `printr/result` | de Printr | l'issue de chaque message : `printed`, `queued`, `stalled`, `added` ou `error` |
-| `printr/status` | de Printr, retenu | `printer_ready`, `printer_status` (`ready`, `cover_open`, `paper_out`, `missing`), `stalled`, `queued`, `last_ticket`, `version` |
+| `printr/status` | de Printr, retenu | `printer_ready`, `printer_status` (`ready`, `cover_open`, `paper_out`, `missing`), `stalled`, `queued`, `paper` (jauge : `remaining_mm`, `percent`, `low`…), `last_ticket`, `version` |
 | `printr/availability` | de Printr, retenu | `online`, ou `offline` quand Printr disparaît |
 
 ```sh

@@ -2019,7 +2019,42 @@ function HiddenBlocksSheet({ onClose }) {
 }
 
 // Mon compte : la famille (ajouter, retirer), mon mot de passe, la déconnexion.
-function AccountSheet({ me, users, version, update, reloadUsers, onLogout, onClose }) {
+// Longueur de papier lisible : « 52 m », « 80 cm ».
+const metres = (mm) => (mm >= 1000 ? `${Math.round(mm / 1000)}\u00a0m` : `${Math.round(mm / 10)}\u00a0cm`);
+
+// La jauge de papier, estimée par Printr depuis la pose du rouleau, et le bouton pour en poser un neuf.
+function PaperCard({ paper }) {
+  const [open, setOpen] = useState(false);
+  const [length, setLength] = useState(String(Math.round(paper.roll_mm / 1000)));
+  const [busy, setBusy] = useState(false);
+  const save = async (e) => {
+    e.preventDefault(); setBusy(true);
+    try {
+      await api('POST', '/api/paper/roll', { length_m: Number(length) });
+      toast(T('Nouveau rouleau noté', 'New roll noted'), 'ok', '🧻');
+      bus.emit('printer'); setOpen(false);
+    } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
+  };
+  return html`<div class="setting-card paper-card">
+    <span class="big-emoji" aria-hidden="true">🧻</span>
+    <span class="grow"><strong>${T(`Environ ${metres(paper.remaining_mm)} restants`, `About ${metres(paper.remaining_mm)} left`)}</strong>
+      <span class="paper-gauge ${paper.low ? 'low' : ''}" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow=${paper.percent}
+        aria-label=${T('Papier restant', 'Paper left')}><span style=${`width:${paper.percent}%`}></span></span>
+      <span class="muted">${T(`${paper.percent}\u00a0% d’un rouleau de ${metres(paper.roll_mm)}`, `${paper.percent}% of a ${metres(paper.roll_mm)} roll`)}</span>
+      ${!open && html`<button type="button" class="btn secondary small" onClick=${() => setOpen(true)}>${T('Nouveau rouleau', 'New roll')}</button>`}</span>
+  </div>
+  ${open && html`<form class="family-add" onSubmit=${save}>
+    <label class="paper-length">${T('Longueur du rouleau', 'Roll length')}
+      <input class="input" type="number" min="5" max="500" inputmode="numeric" value=${length} onInput=${(e) => setLength(e.target.value)} /> m</label>
+    <button class="btn secondary" disabled=${busy || !(Number(length) >= 5 && Number(length) <= 500)}>${T('C’est posé', 'Done')}</button>
+  </form>
+  <p class="muted paper-hint">${T(
+    'Printr remet aussi la jauge à zéro tout seul quand l’imprimante passe de « plus de papier » à « prête », et cale la longueur sur ce qu’un rouleau entier a vraiment donné.',
+    'Printr also resets the gauge by itself when the printer goes from “out of paper” to “ready”, and adjusts the length to what a whole roll really gave.',
+  )}</p>`}`;
+}
+
+function AccountSheet({ me, users, version, update, paper, reloadUsers, onLogout, onClose }) {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [mine, setMine] = useState('');
@@ -2057,6 +2092,8 @@ function AccountSheet({ me, users, version, update, reloadUsers, onLogout, onClo
           `You're on ${version}. Read what's new, then update from your computer.`,
         )}</span></span>
       <${Icon} name="send" size=${18} /></a>`}
+
+    ${paper && html`<div class="section-title">${T('L’imprimante', 'The printer')}</div><${PaperCard} paper=${paper} />`}
 
     <div class="section-title">${T('La famille', 'The family')}</div>
     <div class="card family">${users.map((u) => html`<div class="family-row" key=${u.id}>
@@ -2107,7 +2144,7 @@ function App() {
   const [version, setVersion] = useState(null);
   const [update, setUpdate] = useState(null); // version plus récente publiée sur GitHub
   // L'imprimante est-elle là ? Et combien de tickets attendent son retour ? (vérifié toutes les 30 s)
-  const [printer, setPrinter] = useState({ ready: true, status: 'ready', queued: 0 });
+  const [printer, setPrinter] = useState({ ready: true, status: 'ready', queued: 0, paper: null });
   const [presets, setPresets] = useState(null);
   const [composer, setComposer] = useState(() => store.get('printr.draft', null) || emptyComposer());
   const [scrolled, setScrolled] = useState(false);
@@ -2131,7 +2168,7 @@ function App() {
       CATALOG.claude = !!s.claude;
       setPrinter((before) => {
         const status = s.printer_status || (s.printer_ready === false ? 'missing' : 'ready');
-        const now = { ready: status === 'ready', status, queued: s.queued || 0 };
+        const now = { ready: status === 'ready', status, queued: s.queued || 0, paper: s.paper || null };
         if (before.status !== now.status || before.queued !== now.queued) bus.emit('printer-changed');
         return now;
       });
@@ -2193,12 +2230,14 @@ function App() {
       ${!printer.ready && html`<div class="printer-banner" role="status"><span class="emoji">${printerState(printer.status).emoji}</span>
         <span>${printerState(printer.status).banner()}
         ${printer.queued > 0 && html` <strong>${T(`${printer.queued} en attente`, `${printer.queued} waiting`)}</strong>`}</span></div>`}
+      ${printer.ready && printer.paper?.low && html`<div class="printer-banner" role="status"><span class="emoji">🧻</span>
+        <span>${T(`Papier presque fini : environ ${metres(printer.paper.remaining_mm)} restants. Pense à prévoir un rouleau !`, `Paper almost out: about ${metres(printer.paper.remaining_mm)} left. Time to get a new roll!`)}</span></div>`}
       ${page}
     </main>
     <nav class="tabbar" aria-label=${T('Navigation', 'Navigation')}>
       ${NAV.map((n) => html`<a class="tab ${n.hash === route.hash ? 'active' : ''}" href=${n.hash}><${Icon} name=${n.icon} />${n.label}</a>`)}
     </nav>
-    ${menu && html`<${AccountSheet} me=${me} users=${users} version=${version} update=${update} reloadUsers=${loadUsers} onLogout=${logout} onClose=${() => setMenu(false)} />`}
+    ${menu && html`<${AccountSheet} me=${me} users=${users} version=${version} update=${update} paper=${printer.paper} reloadUsers=${loadUsers} onLogout=${logout} onClose=${() => setMenu(false)} />`}
     <${Toasts} />
   </div>`;
 }

@@ -298,6 +298,8 @@ printr serve --listen 0.0.0.0:8080 --token $(openssl rand -hex 24)   # token: op
 | `POST /print` | A JSON ticket | Prints the ticket |
 | `POST /todo` | `{"title"?, "items"?: [...], "text"?: "one\nline\nper\nitem"}` | Prints the date and a checklist |
 | `POST /api/shopping` | `{"text": "milk\nbread"}` | Adds items to the shopping list (one per line) |
+| `GET /api/status` | — | Printer state (`printer_status`), queue, paper gauge (`paper`), version |
+| `POST /api/paper/roll` | `{"length_m"?: 70}` | A new roll is in: resets the paper gauge (length in meters, same as the last roll if omitted) |
 
 For scripts, `POST` requests require the header `Authorization: Bearer <token>` (set with
 `--token`). Adding `?preview` returns the text preview without printing. The response is
@@ -365,7 +367,7 @@ PRINTR_MQTT_PREFIX=printr                                # optional, printr by d
 | `printr/todo` | to Printr | `{"title"?, "items"}`, or one item per line |
 | `printr/shopping` | to Printr | items for the shopping list, one per line |
 | `printr/result` | from Printr | the outcome of each message: `printed`, `queued`, `stalled`, `added` or `error` |
-| `printr/status` | from Printr, retained | `printer_ready`, `printer_status` (`ready`, `cover_open`, `paper_out`, `missing`), `stalled`, `queued`, `last_ticket`, `version` |
+| `printr/status` | from Printr, retained | `printer_ready`, `printer_status` (`ready`, `cover_open`, `paper_out`, `missing`), `stalled`, `queued`, `paper` (gauge: `remaining_mm`, `percent`, `low`…), `last_ticket`, `version` |
 | `printr/availability` | from Printr, retained | `online`, or `offline` when Printr goes away |
 
 ```sh
