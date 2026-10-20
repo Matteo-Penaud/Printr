@@ -144,7 +144,17 @@ enum Command {
         /// Fichier image (PNG, JPEG, GIF…)
         #[arg(value_name = "IMAGE")]
         path: PathBuf,
-        /// Seuil noir/blanc au lieu du tramage (logos, dessins au trait)
+        /// Tramage : floyd-steinberg (défaut, photos), atkinson (plus contrasté), bayer (trame régulière) ou none
+        #[arg(
+            long,
+            value_enum,
+            default_value_t = raster::Dither::FloydSteinberg,
+            value_name = "ALGO",
+            hide_possible_values = true,
+            hide_default_value = true
+        )]
+        dither: raster::Dither,
+        /// Seuil noir/blanc au lieu du tramage (logos, dessins au trait), comme `--dither none`
         #[arg(long)]
         no_dither: bool,
         /// Ne coupe pas le papier à la fin
@@ -282,7 +292,11 @@ fn in_english(command: clap::Command) -> clap::Command {
             "text" => ("Text to print", Some("TEXT")),
             "no_cut" => ("Doesn't cut the paper at the end", None),
             "path" => ("Image file (PNG, JPEG, GIF…)", None),
-            "no_dither" => ("Black/white threshold instead of dithering (logos, line art)", None),
+            "dither" => (
+                "Dithering: floyd-steinberg (default, photos), atkinson (more contrast), bayer (regular pattern) or none",
+                Some("ALGO"),
+            ),
+            "no_dither" => ("Black/white threshold instead of dithering (logos, line art), like `--dither none`", None),
             "name" => ("", Some("NAME")),
             _ => return None,
         })
@@ -413,9 +427,9 @@ fn run(cli: Cli) -> Result<()> {
             doc.text(&text, Style::default());
             (doc, !no_cut)
         }
-        Command::Image { path, no_dither, no_cut } => {
+        Command::Image { path, dither, no_dither, no_cut } => {
             let mut doc = Doc::new();
-            doc.image(raster::load(path, !no_dither)?);
+            doc.image(raster::load(path, if *no_dither { raster::Dither::None } else { *dither })?);
             (doc, !no_cut)
         }
     };
