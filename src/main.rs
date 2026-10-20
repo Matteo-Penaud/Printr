@@ -17,6 +17,7 @@ mod cp858;
 mod doc;
 mod draw;
 mod guard;
+mod hass;
 mod mqtt;
 mod net;
 mod output;

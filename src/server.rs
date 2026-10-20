@@ -153,6 +153,26 @@ impl App {
         shared().find(|p| p.id == wanted).or_else(|| shared().find(|p| p.name.to_lowercase() == wanted_lower)).cloned()
     }
 
+    /// Un rouleau neuf est posé (longueur en mm, ou celle du précédent) : la jauge repart de zéro.
+    pub fn new_roll(&self, roll_mm: Option<u32>) -> Result<Value> {
+        let mut store = self.lock_store();
+        store.data.paper.new_roll(roll_mm);
+        store.save()?;
+        Ok(paper_json(&store.data.paper))
+    }
+
+    /// Les tickets partagés, que les domotiques peuvent imprimer (un bouton chacun dans Home Assistant).
+    pub fn shared_presets(&self) -> Vec<crate::hass::PresetButton> {
+        let store = self.lock_store();
+        store
+            .data
+            .presets
+            .iter()
+            .filter(|p| p.shared)
+            .map(|p| crate::hass::PresetButton { id: p.id.clone(), name: p.name.clone() })
+            .collect()
+    }
+
     /// Longueur d'un ticket en attente, d'après son entrée d'historique.
     fn queued_paper_mm(&self, job: &str) -> u32 {
         let store = self.lock_store();
@@ -1133,13 +1153,12 @@ fn handle(app: &App, request: &mut Request) -> Reply {
                     t("longueur de rouleau invalide (5 à 500 m)", "invalid roll length (5 to 500 m)"),
                 );
             }
-            let mut store = app.lock_store();
-            store.data.paper.new_roll(roll_mm);
-            let paper = paper_json(&store.data.paper);
-            let roll_m = store.data.paper.roll_mm / 1000;
-            match store.save() {
-                Ok(()) => Reply::ok(json!({ "ok": true, "paper": paper }))
-                    .note(tr!("nouveau rouleau ({roll_m} m) posé par {by}", "new roll ({roll_m} m) put in by {by}")),
+            match app.new_roll(roll_mm) {
+                Ok(paper) => {
+                    let roll_m = paper["roll_mm"].as_u64().unwrap_or(0) / 1000;
+                    Reply::ok(json!({ "ok": true, "paper": paper }))
+                        .note(tr!("nouveau rouleau ({roll_m} m) posé par {by}", "new roll ({roll_m} m) put in by {by}"))
+                }
                 Err(e) => Reply::error(500, format!("{e:#}")),
             }
         }

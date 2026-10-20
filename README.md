@@ -39,7 +39,7 @@ the printer.
   search, coloring, shopping list, news from RSS feeds, photos…
 - **A web app for the family**: accounts, saved and shared tickets, live preview, scheduling, history.
 - **Never loses a ticket**: printer off, cover open or out of paper? The ticket waits, and the app says why.
-- **Plays well with the house**: HTTP API, MQTT, Node-RED.
+- **Plays well with the house**: Home Assistant (found automatically), MQTT, Node-RED, HTTP API.
 - **Lean**: almost everything is computed locally or comes from free APIs. Claude only writes what
   needs a pen, with small Claude Haiku calls, always cached.
 

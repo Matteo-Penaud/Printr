@@ -358,6 +358,7 @@ and read the state of the printer there. Set the broker in `/etc/printr.env`, th
 ```sh
 PRINTR_MQTT_URL=mqtt://user:password@192.168.1.10:1883   # mqtts:// for TLS
 PRINTR_MQTT_PREFIX=printr                                # optional, printr by default
+PRINTR_MQTT_DISCOVERY=homeassistant                      # optional: Home Assistant discovery prefix, or off
 ```
 
 | Topic | Direction | Message |
@@ -366,6 +367,7 @@ PRINTR_MQTT_PREFIX=printr                                # optional, printr by d
 | `printr/print/ticket` | to Printr | the name of a saved ticket (shared tickets only) |
 | `printr/todo` | to Printr | `{"title"?, "items"}`, or one item per line |
 | `printr/shopping` | to Printr | items for the shopping list, one per line |
+| `printr/paper/roll` | to Printr | a new roll is in (optional: its length in meters) |
 | `printr/result` | from Printr | the outcome of each message: `printed`, `queued`, `stalled`, `added` or `error` |
 | `printr/status` | from Printr, retained | `printer_ready`, `printer_status` (`ready`, `cover_open`, `paper_out`, `missing`), `stalled`, `queued`, `paper` (gauge: `remaining_mm`, `percent`, `low`…), `last_ticket`, `version` |
 | `printr/availability` | from Printr, retained | `online`, or `offline` when Printr goes away |
@@ -379,6 +381,20 @@ The same rules as the HTTP API apply: at most 60 blocks, the hourly quota (print
 the history), and the queue when the printer is away. MQTT has no token: **anyone allowed on the broker
 can print**, so restrict access on the broker (accounts, ACL). Messages sent while Printr is
 disconnected are not kept: a morning brief does not come out in the evening.
+
+### Home Assistant
+
+With the [MQTT integration](https://www.home-assistant.io/integrations/mqtt/) set up on the same broker,
+Printr shows up by itself in Home Assistant as a **Printr** device (MQTT discovery), nothing to configure:
+
+- **sensors**: printer status (`ready`, `cover_open`, `paper_out`, `missing`), problem, paper left (%
+  and meters), paper almost out, queued tickets, last ticket;
+- a **New roll** button, and a **Print a text** field;
+- **one button per shared ticket**, added, renamed or removed as the tickets change.
+
+So an automation can print a ticket when the doorbell rings, or warn the phone when the paper runs low.
+Discovery uses the `homeassistant` prefix; `PRINTR_MQTT_DISCOVERY` changes it (or turns it `off`).
+Two Printr on the same broker need different `PRINTR_MQTT_PREFIX` values: each one is its own device.
 
 ### TLS certificates
 

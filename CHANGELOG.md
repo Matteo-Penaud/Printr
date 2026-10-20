@@ -25,6 +25,11 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
   (`POST /api/paper/roll`); it also resets by itself when the printer goes from “out of paper” to
   “ready”, and a whole roll used up sets the real roll length. Published as `paper` in `/api/status` and
   on `printr/status`.
+- **Home Assistant discovery** over MQTT: Printr shows up by itself as a device, with sensors (printer
+  status, problem, paper left in % and meters, paper almost out, queued tickets, last ticket), a New
+  roll button, a Print a text field and one button per shared ticket, kept in sync as tickets change.
+  `PRINTR_MQTT_DISCOVERY` sets the discovery prefix (`homeassistant` by default) or turns it `off`.
+  New MQTT topic `printr/paper/roll`.
 
 ### Security
 - MQTT: switched from `rumqttc` to its maintained fork `rumqttc-v4-next` (still MQTT 3.1.1), which uses

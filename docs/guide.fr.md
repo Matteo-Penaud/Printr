@@ -356,6 +356,7 @@ lire l'état de l'imprimante. Renseigner le broker dans `/etc/printr.env`, puis 
 ```sh
 PRINTR_MQTT_URL=mqtt://utilisateur:motdepasse@192.168.1.10:1883   # mqtts:// pour TLS
 PRINTR_MQTT_PREFIX=printr                                         # facultatif, printr par défaut
+PRINTR_MQTT_DISCOVERY=homeassistant                               # facultatif : préfixe de découverte Home Assistant, ou off
 ```
 
 | Sujet | Sens | Message |
@@ -364,6 +365,7 @@ PRINTR_MQTT_PREFIX=printr                                         # facultatif, 
 | `printr/print/ticket` | vers Printr | le nom d'un ticket enregistré (tickets partagés seulement) |
 | `printr/todo` | vers Printr | `{"title"?, "items"}`, ou une chose par ligne |
 | `printr/shopping` | vers Printr | des articles pour la liste de courses, un par ligne |
+| `printr/paper/roll` | vers Printr | un rouleau neuf est posé (facultatif : sa longueur en mètres) |
 | `printr/result` | de Printr | l'issue de chaque message : `printed`, `queued`, `stalled`, `added` ou `error` |
 | `printr/status` | de Printr, retenu | `printer_ready`, `printer_status` (`ready`, `cover_open`, `paper_out`, `missing`), `stalled`, `queued`, `paper` (jauge : `remaining_mm`, `percent`, `low`…), `last_ticket`, `version` |
 | `printr/availability` | de Printr, retenu | `online`, ou `offline` quand Printr disparaît |
@@ -378,6 +380,22 @@ apparaissent « par MQTT » dans l'historique), et la file d'attente quand l'imp
 n'a pas de jeton : **tout client autorisé sur le broker peut imprimer**, c'est donc sur le broker qu'on
 restreint l'accès (comptes, ACL). Les messages envoyés pendant que Printr est déconnecté ne sont pas
 gardés : un brief du matin ne sort pas le soir.
+
+### Home Assistant
+
+Avec l'[intégration MQTT](https://www.home-assistant.io/integrations/mqtt/) branchée sur le même broker,
+Printr apparaît tout seul dans Home Assistant comme un appareil **Printr** (découverte MQTT), sans rien
+configurer :
+
+- des **capteurs** : état de l'imprimante (`ready`, `cover_open`, `paper_out`, `missing`), problème,
+  papier restant (% et mètres), papier presque fini, tickets en attente, dernier ticket ;
+- un bouton **Nouveau rouleau**, et un champ **Imprimer un texte** ;
+- **un bouton par ticket partagé**, ajouté, renommé ou retiré au fil des tickets.
+
+Une automatisation peut ainsi imprimer un ticket quand on sonne, ou prévenir le téléphone quand le
+papier baisse. La découverte utilise le préfixe `homeassistant` ; `PRINTR_MQTT_DISCOVERY` le change
+(ou la coupe avec `off`). Deux Printr sur un même broker doivent avoir des `PRINTR_MQTT_PREFIX`
+différents : chacun est son propre appareil.
 
 ### Certificats TLS
 

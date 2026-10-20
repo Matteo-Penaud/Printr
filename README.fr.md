@@ -41,7 +41,7 @@ sur un Raspberry Pi, qui parle ESC/POS directement à l'imprimante.
   planification, historique.
 - **Ne perd aucun ticket** : imprimante éteinte, capot ouvert ou plus de papier ? Le ticket attend, et
   l'appli dit pourquoi.
-- **S'intègre à la maison** : API HTTP, MQTT, Node-RED.
+- **S'intègre à la maison** : Home Assistant (découverte automatique), MQTT, Node-RED, API HTTP.
 - **Sobre** : presque tout est calculé localement ou vient d'API gratuites. Claude n'écrit que ce qui
   demande une plume, par de petits appels à Claude Haiku, toujours mis en cache.
 

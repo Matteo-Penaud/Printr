@@ -7,9 +7,12 @@
 //! - `printr/print/ticket` : le nom (ou l'identifiant) d'un ticket enregistré et partagé ;
 //! - `printr/todo` : une liste à faire (`{"title", "items"}`, ou une chose par ligne) ;
 //! - `printr/shopping` : des articles pour la liste de courses, un par ligne ;
+//! - `printr/paper/roll` : un rouleau neuf est posé (sa longueur en mètres, facultative) ;
 //! - `printr/result` (publié) : le résultat de chaque commande ;
 //! - `printr/status` (publié, retenu) : l'état de l'imprimante ;
 //! - `printr/availability` (publié, retenu) : `online`, ou `offline` (dernière volonté).
+//!
+//! Home Assistant découvre l'appareil tout seul : voir `hass`.
 //!
 //! N'importe quel client autorisé sur le broker peut imprimer : l'accès se règle sur le broker.
 //! Pas de session persistante : une commande publiée pendant une absence ne ressort pas des heures
@@ -83,9 +86,14 @@ fn parse_url(url: &str) -> Result<Broker> {
 
 /// Une commande reçue sur un sujet.
 enum Command {
-    Print { ticket: Ticket, label: &'static str },
+    Print {
+        ticket: Ticket,
+        label: &'static str,
+    },
     Preset(String),
     Shopping(Vec<String>),
+    /// Rouleau neuf, de cette longueur en mm (ou de la même que le précédent).
+    NewRoll(Option<u32>),
 }
 
 #[derive(Deserialize)]
@@ -100,11 +108,20 @@ fn decode(prefix: &str, topic: &str, payload: &[u8]) -> Result<Command> {
             anyhow::anyhow!("{}", t("message illisible (UTF-8 attendu)", "unreadable message (UTF-8 expected)"))
         })?
         .trim();
+    let command = topic.strip_prefix(prefix).and_then(|s| s.strip_prefix('/'));
+    // Un bouton suffit : le message peut être vide, ou n'importe quoi d'autre qu'une longueur.
+    if command == Some("paper/roll") {
+        let roll_mm = text.trim_matches('"').parse::<u32>().ok().map(|m| m.saturating_mul(1000));
+        if roll_mm.is_some_and(|mm| !crate::store::Paper::ROLL_RANGE_MM.contains(&mm)) {
+            bail!("{}", t("longueur de rouleau invalide (5 à 500 m)", "invalid roll length (5 to 500 m)"));
+        }
+        return Ok(Command::NewRoll(roll_mm));
+    }
     if text.is_empty() {
         bail!("{}", t("message vide", "empty message"));
     }
     let json = text.starts_with('{');
-    match topic.strip_prefix(prefix).and_then(|s| s.strip_prefix('/')) {
+    match command {
         Some("print") => {
             let ticket = if json {
                 serde_json::from_str(text).context(t("ticket JSON invalide", "invalid ticket JSON"))?
@@ -158,6 +175,20 @@ fn run(app: &App, command: Command) -> Value {
                 Err(e) => failure(format!("{e:#}")),
             }
         }
+        Command::NewRoll(roll_mm) => match app.new_roll(roll_mm) {
+            Ok(paper) => {
+                eprintln!(
+                    "{}",
+                    tr!(
+                        "nouveau rouleau ({} m), par MQTT",
+                        "new roll ({} m), over MQTT",
+                        paper["roll_mm"].as_u64().unwrap_or(0) / 1000
+                    )
+                );
+                json!({ "ok": true, "state": "new_roll", "paper": paper })
+            }
+            Err(e) => failure(format!("{e:#}")),
+        },
     }
 }
 
@@ -282,6 +313,15 @@ fn connect(app: Arc<App>, options: MqttOptions, prefix: String) {
         });
     }
 
+    // Home Assistant : configuration des entités, à chaque connexion et à son redémarrage.
+    let discovery = crate::hass::discovery_prefix().map(|discovery| {
+        let (events, received) = mpsc::channel::<Discover>();
+        let (app, client, prefix, discovery2) = (Arc::clone(&app), client.clone(), prefix.clone(), discovery.clone());
+        std::thread::spawn(move || discover(&app, &client, &prefix, &discovery2, &received));
+        (discovery, events)
+    });
+    let node = crate::hass::node_id(&prefix);
+
     // L'état, à chaque changement et au moins toutes les cinq minutes.
     {
         let (app, client, prefix) = (Arc::clone(&app), client.clone(), prefix.clone());
@@ -317,8 +357,13 @@ fn connect(app: Arc<App>, options: MqttOptions, prefix: String) {
                     tr!("MQTT connecté à {address} ({prefix}/…)", "MQTT connected to {address} ({prefix}/…)")
                 );
                 // Session neuve à chaque connexion : se réabonner, et redire qu'on est là.
-                for topic in ["print", "print/ticket", "todo", "shopping"] {
+                for topic in ["print", "print/ticket", "todo", "shopping", "paper/roll"] {
                     let _ = client.try_subscribe(format!("{prefix}/{topic}"), QoS::AtLeastOnce);
+                }
+                if let Some((discovery, events)) = &discovery {
+                    let _ = client.try_subscribe(format!("{discovery}/status"), QoS::AtLeastOnce);
+                    let _ = client.try_subscribe(format!("{discovery}/button/{node}/+/config"), QoS::AtLeastOnce);
+                    let _ = events.send(Discover::All);
                 }
                 let _ = client.try_publish(
                     format!("{prefix}/availability"),
@@ -332,7 +377,26 @@ fn connect(app: Arc<App>, options: MqttOptions, prefix: String) {
                 );
             }
             Ok(Event::Incoming(Packet::Publish(message))) => {
-                let _ = commands.send((String::from_utf8_lossy(&message.topic).into_owned(), message.payload.to_vec()));
+                let topic = String::from_utf8_lossy(&message.topic).into_owned();
+                match &discovery {
+                    // Home Assistant redémarre (message de naissance) : tout republier.
+                    Some((discovery, events)) if topic == format!("{discovery}/status") => {
+                        if message.payload.as_ref() == b"online" {
+                            let _ = events.send(Discover::All);
+                        }
+                    }
+                    // Bouton d'un ticket, retenu sur le broker : à retirer s'il n'est plus partagé.
+                    Some((discovery, events)) if topic.starts_with(&format!("{discovery}/")) => {
+                        if let Some(id) = crate::hass::preset_of_topic(discovery, &node, &topic)
+                            && !message.payload.is_empty()
+                        {
+                            let _ = events.send(Discover::Stale(id.to_owned()));
+                        }
+                    }
+                    _ => {
+                        let _ = commands.send((topic, message.payload.to_vec()));
+                    }
+                }
             }
             Ok(_) => {}
             Err(e) => {
@@ -345,6 +409,63 @@ fn connect(app: Arc<App>, options: MqttOptions, prefix: String) {
                 backoff = (backoff * 2).min(MAX_BACKOFF);
             }
         }
+    }
+}
+
+/// Ce que le fil de la découverte doit faire.
+enum Discover {
+    /// Tout publier (connexion, redémarrage de Home Assistant).
+    All,
+    /// Un bouton de ticket trouvé sur le broker (identifiant tel que dans le sujet).
+    Stale(String),
+}
+
+/// Publie la configuration des entités pour Home Assistant, puis suit les tickets partagés : un
+/// bouton par ticket, ajouté, renommé ou retiré au fil des modifications. Publications bloquantes :
+/// elles attendent que la connexion ait de la place, au lieu d'en perdre.
+fn discover(app: &App, client: &Client, prefix: &str, discovery: &str, events: &mpsc::Receiver<Discover>) {
+    use crate::hass::{config_topic, entities, node_id, preset_entity, preset_topic};
+    let node = node_id(prefix);
+    let retained = PublishOptions::at_least_once().retained();
+    let mut published: Vec<crate::hass::PresetButton> = Vec::new();
+    loop {
+        let event = match events.recv_timeout(STATUS_CHECK) {
+            Ok(event) => Some(event),
+            Err(mpsc::RecvTimeoutError::Timeout) => None,
+            Err(mpsc::RecvTimeoutError::Disconnected) => return,
+        };
+        let current = app.shared_presets();
+        match event {
+            Some(Discover::All) => {
+                for (component, object, config) in entities(prefix) {
+                    let _ =
+                        client.publish(config_topic(discovery, component, &node, object), config.to_string(), retained);
+                }
+                published.clear();
+            }
+            Some(Discover::Stale(id)) => {
+                if !current.iter().any(|p| node_id(&p.id) == id) {
+                    let _ =
+                        client.publish(config_topic(discovery, "button", &node, &format!("preset_{id}")), "", retained);
+                }
+                continue;
+            }
+            None => {}
+        }
+        if current == published {
+            continue;
+        }
+        for gone in published.iter().filter(|p| !current.iter().any(|c| c.id == p.id)) {
+            let _ = client.publish(preset_topic(discovery, &node, &gone.id), "", retained);
+        }
+        for preset in current.iter().filter(|p| !published.contains(p)) {
+            let _ = client.publish(
+                preset_topic(discovery, &node, &preset.id),
+                preset_entity(prefix, preset).to_string(),
+                retained,
+            );
+        }
+        published = current;
     }
 }
 
@@ -411,6 +532,10 @@ mod tests {
             decode("printr", "printr/shopping", br#"{"text":"Pain"}"#).unwrap(),
             Command::Shopping(items) if items == ["Pain"]
         ));
+        assert!(matches!(decode("printr", "printr/paper/roll", b"").unwrap(), Command::NewRoll(None)));
+        assert!(matches!(decode("printr", "printr/paper/roll", b"new").unwrap(), Command::NewRoll(None)));
+        assert!(matches!(decode("printr", "printr/paper/roll", b"80").unwrap(), Command::NewRoll(Some(80_000))));
+        assert!(decode("printr", "printr/paper/roll", b"9000").is_err());
         assert!(decode("printr", "printr/status", b"x").is_err());
         assert!(decode("printr", "autre/print", b"x").is_err());
     }
