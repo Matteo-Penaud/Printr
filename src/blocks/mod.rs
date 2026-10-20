@@ -33,6 +33,7 @@ mod sudoku;
 mod sun;
 mod train_tracks;
 mod weather;
+mod weather_icon;
 mod wifi;
 mod word;
 mod word_search;

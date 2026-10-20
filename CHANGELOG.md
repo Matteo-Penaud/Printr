@@ -31,6 +31,11 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
   `PRINTR_MQTT_DISCOVERY` sets the discovery prefix (`homeassistant` by default) or turns it `off`.
   New MQTT topic `printr/paper/roll`.
 
+### Changed
+- **Weather with pictograms**: sun, clouds, fog, drizzle, rain, snow and storm, drawn on the Pi (no image
+  to download). A large one for today, and the next days in columns: day, pictogram, high, low and
+  chance of rain (#7).
+
 ### Security
 - MQTT: switched from `rumqttc` to its maintained fork `rumqttc-v4-next` (still MQTT 3.1.1), which uses
   `rustls-webpki` 0.103. This fixes RUSTSEC-2026-0049, -0098, -0099 and -0104 (certificate revocation

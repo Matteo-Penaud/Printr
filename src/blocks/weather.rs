@@ -4,8 +4,9 @@ use anyhow::{Context, Result, bail};
 use chrono::NaiveDate;
 use serde::Deserialize;
 
+use super::weather_icon::{self, Sky};
 use crate::doc::{Doc, Style};
-use crate::i18n;
+use crate::{draw, i18n};
 
 #[derive(Deserialize)]
 struct GeoResults {
@@ -129,6 +130,7 @@ pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
 
     let mut doc = Doc::new();
     doc.header(&tr!("Météo · {}", "Weather · {}", place.name));
+    doc.image(centered(weather_icon::render(Sky::from_code(c.weather_code), TODAY_ICON)));
     doc.text(describe(c.weather_code), Style::default().bold().center());
     doc.text(
         &tr!("{:.0}°C (ressenti {:.0}°C)", "{:.0}°C (feels {:.0}°C)", c.temperature_2m, c.apparent_temperature),
@@ -154,20 +156,66 @@ pub fn build(agent: &ureq::Agent, location: &str, days: u8) -> Result<Doc> {
 
     if d.time.len() > 1 {
         doc.feed(1);
-        for i in 1..d.time.len() {
-            let date = d.time[i];
-            let line = format!(
-                "{:<9}{:<24.24}{:>3}/{:>3}° {:>4}",
-                format!("{} {}", i18n::weekday_short(date), date.format("%d")),
-                describe(d.weather_code[i]),
-                format!("{:.0}", d.temperature_2m_min[i]),
-                format!("{:.0}", d.temperature_2m_max[i]),
-                pct(d.precipitation_probability_max[i]),
-            );
-            doc.line(&line, Style::default().small());
-        }
+        let days: Vec<Day> = (1..d.time.len())
+            .map(|i| Day {
+                label: format!("{} {}", i18n::weekday_short(d.time[i]).trim_end_matches('.'), d.time[i].format("%d")),
+                sky: Sky::from_code(d.weather_code[i]),
+                min: d.temperature_2m_min[i],
+                max: d.temperature_2m_max[i],
+                rain: d.precipitation_probability_max[i],
+            })
+            .collect();
+        doc.image(forecast(&days));
     }
     Ok(doc)
+}
+
+/// Côté du pictogramme du jour, en points.
+const TODAY_ICON: u32 = 150;
+
+/// Un pictogramme au milieu d'une bande pleine largeur.
+fn centered(icon: image::GrayImage) -> image::GrayImage {
+    let mut img = draw::canvas(icon.height());
+    let x = (img.width() - icon.width()) / 2;
+    image::imageops::overlay(&mut img, &icon, i64::from(x), 0);
+    img
+}
+
+/// Un jour des prévisions.
+struct Day {
+    label: String,
+    sky: Sky,
+    min: f64,
+    max: f64,
+    rain: Option<f64>,
+}
+
+/// Les jours suivants en colonnes : jour, pictogramme, maximale (en gros), minimale, risque de pluie.
+fn forecast(days: &[Day]) -> image::GrayImage {
+    let width = i64::from(crate::raster::PRINT_WIDTH);
+    let column = width / days.len().max(1) as i64;
+    let icon = (column - 14).clamp(40, 72) as u32;
+    let (small, big) = (2, 3);
+    let line = draw::DIGIT_H * small;
+    let (y_icon, y_max) = (line + 6, line + 6 + i64::from(icon) + 6);
+    let y_min = y_max + draw::DIGIT_H * big + 6;
+    let y_rain = y_min + line + 4;
+    let mut img = draw::canvas((y_rain + line) as u32);
+    for (k, day) in days.iter().enumerate() {
+        let center = k as i64 * column + column / 2;
+        let mut put = |text: &str, y: i64, scale: i64| {
+            draw::text(&mut img, text, center - draw::text_width(text, scale) / 2, y, scale);
+        };
+        put(&day.label, 0, small);
+        put(&format!("{:.0}°", day.max), y_max, big);
+        put(&format!("{:.0}°", day.min), y_min, small);
+        if let Some(rain) = day.rain.filter(|r| *r >= 10.0) {
+            put(&format!("{rain:.0}%"), y_rain, small);
+        }
+        let pictogram = weather_icon::render(day.sky, icon);
+        image::imageops::overlay(&mut img, &pictogram, center - i64::from(icon) / 2, y_icon);
+    }
+    img
 }
 
 #[cfg(test)]
