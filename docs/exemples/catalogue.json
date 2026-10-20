@@ -462,6 +462,16 @@
     }
    },
    {
+    "id": "taches",
+    "emoji": "🧹",
+    "fr": "Tâches ménagères",
+    "en": "Chores",
+    "description": {
+     "fr": "Qui fait quoi cette semaine : les tâches tournent toutes seules entre les membres de la famille.",
+     "en": "Who does what this week: chores rotate by themselves between the family members."
+    }
+   },
+   {
     "id": "wifi",
     "emoji": "📶",
     "fr": "Wi-Fi invités",

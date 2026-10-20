@@ -6,6 +6,7 @@ mod anagram;
 mod arrow_word;
 pub mod barnum;
 mod bins;
+mod chores;
 mod cipher;
 mod coloring;
 mod coupon;
@@ -402,6 +403,16 @@ pub enum Block {
         #[serde(default)]
         always: bool,
     },
+    /// Tâches ménagères tournantes : chaque jour ou chaque semaine, elles passent à la personne suivante.
+    #[serde(alias = "taches")]
+    Chores {
+        #[serde(alias = "taches")]
+        tasks: Vec<String>,
+        #[serde(alias = "qui")]
+        people: Vec<String>,
+        #[serde(default, alias = "rotation")]
+        period: chores::Period,
+    },
     /// Agenda du jour depuis des calendriers ICS.
     Agenda {
         calendars: Vec<String>,
@@ -602,6 +613,7 @@ impl Block {
             Block::Coupon { .. } => i18n::t("bon à offrir", "gift coupon"),
             Block::Wifi { .. } => "Wi-Fi",
             Block::Bins { .. } => i18n::t("poubelles", "trash day"),
+            Block::Chores { .. } => i18n::t("tâches ménagères", "chores"),
             Block::Agenda { .. } => i18n::t("agenda", "calendar"),
             Block::MonthlyReport { .. } => i18n::t("bilan du mois", "monthly report"),
             Block::Coloring { .. } => i18n::t("coloriage", "coloring page"),
@@ -696,6 +708,7 @@ impl Block {
             )),
             Block::Recipe { url, .. } => Some(url.split("://").nth(1).unwrap_or(url).chars().take(32).collect()),
             Block::RecipeClaude { dish, servings, .. } => Some(format!("{dish}, {servings}")),
+            Block::Chores { people, period, .. } => Some(format!("{}, {}", people.join(", "), period.label())),
             Block::RecipeFromIngredients { ingredients, .. } => {
                 Some(ingredients.replace('\n', ", ").chars().take(32).collect())
             }
@@ -868,6 +881,7 @@ impl Block {
                 doc = wifi::build(ssid, password.as_deref(), *security, *hidden, *show_password)?;
             }
             Block::Bins { collections, when, always } => doc = bins::build(collections, *when, *always, ctx.today)?,
+            Block::Chores { tasks, people, period } => doc = chores::build(tasks, people, *period, ctx.today)?,
             Block::Agenda { calendars, days, title } => doc = agenda::build(ctx, calendars, *days, title.as_deref())?,
             Block::MonthlyReport { month } => doc = monthly::build(month.as_deref(), ctx.today)?,
             Block::Coloring { seed } => doc = coloring::build(*seed),

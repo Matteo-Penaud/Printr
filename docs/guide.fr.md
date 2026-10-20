@@ -120,6 +120,7 @@ Un paramètre inconnu est une erreur, pour repérer les fautes de frappe.
 | `shopping` (ou `courses`) | `title`, `clear` (false) | La liste de courses partagée de l'appli ; avec `clear`, le serveur la vide une fois imprimée |
 | `agenda` | `calendars` (liens ICS ou `webcal://`, ou fichiers), `days` (1, max 7), `title` | Rendez-vous du jour, répétitions et fuseaux horaires compris |
 | `bins` (ou `poubelles`) | `collections` (`name`, `days`, `every`, `from`), `when` (`veille`/`jour`), `always` | « Ce soir, on sort le bac jaune » ; rien n'est imprimé les soirs sans ramassage, sauf avec `always` |
+| `chores` (ou `taches`) | `tasks`, `people`, `period` (`week`/`day`, ou `semaine`/`jour`) | Qui fait quoi : les tâches tournent entre les personnes chaque semaine (ou chaque jour), d'après la date |
 | `wifi` | `ssid`, `password`, `security` (`wpa`/`wep`/`none`), `hidden`, `show_password` (true) | QR code qui connecte directement au réseau |
 | `monthly_report` (ou `bilan`) | `month` (`AAAA-MM`, mois en cours par défaut) | Bilan façon ticket de caisse, tiré de l'historique de l'appli |
 

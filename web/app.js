@@ -636,6 +636,16 @@ const BLOCKS = [
     summary: (b) => (b.collections || []).map((c) => c.name).filter(Boolean).join(', '),
   },
   {
+    type: 'chores', label: T('Tâches ménagères', 'Chores'), emoji: '🧹', group: G.org, desc: T('Qui fait quoi, à tour de rôle', 'Who does what, taking turns'),
+    defaults: { tasks: [T('Vider le lave-vaisselle', 'Empty the dishwasher'), T('Mettre la table', 'Set the table'), T('Sortir les poubelles', 'Take out the trash')], people: [], period: 'week' },
+    fields: [
+      { key: 'tasks', label: T('Tâches', 'Chores'), kind: 'list', placeholder: T('Arroser les plantes…', 'Water the plants…'), add: T('Ajouter une tâche', 'Add a chore') },
+      { key: 'people', label: T('Qui les fait', 'Who does them'), kind: 'list', placeholder: T('Prénom', 'Name'), add: T('Ajouter quelqu’un', 'Add someone') },
+      { key: 'period', label: T('On change', 'Rotate'), kind: 'segmented', options: [['day', T('Chaque jour', 'Daily')], ['week', T('Chaque semaine', 'Weekly')]] },
+    ],
+    summary: (b) => ((b.people || []).filter(Boolean).length ? `${b.people.filter(Boolean).join(', ')} · ${b.period === 'day' ? T('chaque jour', 'daily') : T('chaque semaine', 'weekly')}` : T('Personne', 'Nobody')),
+  },
+  {
     type: 'wifi', label: T('Wi-Fi invités', 'Guest Wi-Fi'), emoji: '📶', group: G.org, desc: T('Un QR code pour se connecter', 'A QR code to connect'),
     defaults: { ssid: '', password: '', security: 'wpa', show_password: true },
     fields: [
@@ -661,7 +671,7 @@ const ALIASES = {
   anagramme: 'anagram', logimage: 'nonogram', picross: 'nonogram', message_code: 'cipher', courses: 'shopping',
   bon: 'coupon', poubelles: 'bins', bilan: 'monthly_report', mots_fleches: 'arrow_word', fleches: 'arrow_word',
   mots_croises: 'crossword', croises: 'crossword', recette: 'recipe', recette_claude: 'recipe_claude', recette_ingredients: 'recipe_from_ingredients', ciel: 'sky',
-  coloriage: 'coloring',
+  coloriage: 'coloring', taches: 'chores',
 };
 for (const [alias, type] of Object.entries(ALIASES)) BLOCK[alias] = BLOCK[type];
 // Ancien nom accepté par le serveur.
@@ -1296,12 +1306,13 @@ const EXAMPLE = {
   word_search: 'mots_meles', train_tracks: 'voie_ferree', arrow_word: 'mots_fleches', crossword: 'mots_croises', nonogram: 'logimage',
   petit_bac: 'petit_bac', mental_math: 'calcul_mental', anagram: 'mot_mystere', cipher: 'message_code',
   coloring: 'coloriage', coupon: 'bon', news: 'actualites', on_this_day: 'ephemeride', crypto: 'crypto', todo: 'a_faire',
-  shopping: 'courses', recipe: 'recette', recipe_claude: 'recette_claude', recipe_from_ingredients: 'recette_ingredients', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
+  chores: 'taches', shopping: 'courses', recipe: 'recette', recipe_claude: 'recette_claude', recipe_from_ingredients: 'recette_ingredients', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
 };
 const exampleUrl = (type) => EXAMPLE[type] && `/exemples/${EN ? 'en/' : ''}${EXAMPLE[type]}.png`;
 
 // Mots-clés de recherche, dans les deux langues, en plus du nom et de la description.
 const KEYWORDS = {
+  chores: 'taches menageres chores menage housework corvees rotation famille family planning',
   title: 'titre title gros big', text: 'texte text paragraphe paragraph message', date: 'date jour day calendrier',
   separator: 'separateur separator ligne line trait', feed: 'espace space blanc vide blank', cut: 'coupe cut couper ciseaux scissors morceau piece',
   image: 'image photo picture', qr: 'qr code lien link url', picto: 'pictogramme pictogram coeur heart etoile star dessin drawing',
@@ -1332,7 +1343,7 @@ const TOGETHER = ['riddle', 'workout', 'petit_bac', 'anagram'];
 const OFFLINE = [
   'title', 'text', 'date', 'separator', 'feed', 'image', 'qr', 'picto', 'barnum', 'saint', 'quote', 'moon', 'holidays', 'countdown',
   'riddle', 'workout', 'sudoku', 'word_search', 'train_tracks', 'maze', 'nonogram', 'petit_bac', 'mental_math', 'anagram', 'cipher',
-  'coloring', 'coupon', 'todo', 'shopping', 'bins', 'wifi', 'monthly_report',
+  'coloring', 'coupon', 'todo', 'shopping', 'bins', 'wifi', 'monthly_report', 'chores',
 ];
 const FILTERS = [
   { id: 'kids', emoji: '🧒', label: T('Pour les enfants', 'For kids'), words: 'enfants enfant kids children', test: (b) => KIDS.includes(b.type) },
