@@ -38,6 +38,8 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
 - **Chess** (`chess`): the Lichess daily puzzle, the board drawn from the side to play with the
   last move framed, and the answer in algebraic notation, upside down. Pieces from Noto Sans Symbols 2
   (SIL Open Font License).
+- **Birthdays** (`birthdays`): "Happy birthday Leo!" with the age on the day, then a countdown to the
+  next ones; one person per line, the year optional.
 
 ### Changed
 - **Weather with pictograms**: sun, clouds, fog, drizzle, rain, snow and storm, drawn on the Pi (no image

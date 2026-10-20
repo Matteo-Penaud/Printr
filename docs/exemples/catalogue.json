@@ -220,6 +220,16 @@
      "fr": "« J-12 avant les vacances ».",
      "en": "“12 days to go before the holidays”."
     }
+   },
+   {
+    "id": "anniversaires",
+    "emoji": "🎂",
+    "fr": "Anniversaires",
+    "en": "Birthdays",
+    "description": {
+     "fr": "« Aujourd'hui, Léo a 12 ans ! » en grand le jour J, et le compte à rebours des suivants.",
+     "en": "\"Happy birthday Leo!\" in big letters on the day, and a countdown to the next ones."
+    }
    }
   ]
  },

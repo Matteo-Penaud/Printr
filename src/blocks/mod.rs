@@ -6,6 +6,7 @@ mod anagram;
 mod arrow_word;
 pub mod barnum;
 mod bins;
+mod birthdays;
 mod chess;
 mod chores;
 mod cipher;
@@ -407,6 +408,16 @@ pub enum Block {
         #[serde(default)]
         always: bool,
     },
+    /// Anniversaires : celui du jour en grand, puis le compte à rebours des suivants.
+    #[serde(alias = "anniversaires")]
+    Birthdays {
+        /// Une personne par ligne : « Léo, 12/03/2014 » (année facultative, pour l'âge).
+        #[serde(alias = "liste")]
+        list: String,
+        /// Combien des suivants annoncer.
+        #[serde(default = "three", alias = "suivants")]
+        upcoming: u8,
+    },
     /// Problème d'échecs du jour (Lichess) : l'échiquier, et la solution à l'envers.
     #[serde(alias = "echecs")]
     Chess {
@@ -625,6 +636,7 @@ impl Block {
             Block::Bins { .. } => i18n::t("poubelles", "trash day"),
             Block::Chores { .. } => i18n::t("tâches ménagères", "chores"),
             Block::Chess { .. } => i18n::t("échecs", "chess"),
+            Block::Birthdays { .. } => i18n::t("anniversaires", "birthdays"),
             Block::Agenda { .. } => i18n::t("agenda", "calendar"),
             Block::MonthlyReport { .. } => i18n::t("bilan du mois", "monthly report"),
             Block::Coloring { .. } => i18n::t("coloriage", "coloring page"),
@@ -894,6 +906,7 @@ impl Block {
             Block::Bins { collections, when, always } => doc = bins::build(collections, *when, *always, ctx.today)?,
             Block::Chores { tasks, people, period } => doc = chores::build(tasks, people, *period, ctx.today)?,
             Block::Chess { solution } => doc = chess::build(ctx, *solution)?,
+            Block::Birthdays { list, upcoming } => doc = birthdays::build(list, *upcoming, ctx.today)?,
             Block::Agenda { calendars, days, title } => doc = agenda::build(ctx, calendars, *days, title.as_deref())?,
             Block::MonthlyReport { month } => doc = monthly::build(month.as_deref(), ctx.today)?,
             Block::Coloring { seed } => doc = coloring::build(*seed),
