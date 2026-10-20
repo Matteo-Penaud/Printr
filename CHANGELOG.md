@@ -47,6 +47,8 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
   lists and name constraints, only relevant with `mqtts://`) and drops the unmaintained `rustls-pemfile`
   (RUSTSEC-2025-0134). The temporary exceptions in `deny.toml` are gone. Nothing changes in the
   configuration (#10).
+- `rustls-webpki` 0.103.16 and `webpki-roots` 1.0.10: distrusted emSign certificates are no longer
+  accepted (RUSTSEC-2026-0381, RUSTSEC-2026-0382).
 
 ## [1.9.0] “Jenson” - 2026-10-19
 
