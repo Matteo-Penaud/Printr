@@ -1852,7 +1852,7 @@ function TicketConfigSheet({ ticket, label, onClose }) {
   </${Sheet}>`;
 }
 
-function Composer({ initial, onSaved }) {
+function Composer({ initial, onSaved, admin }) {
   const [state, setState] = useState(initial);
   // Catalogue ouvert : `{ at }` = position d'insertion (à la fin si absente).
   const [catalog, setCatalog] = useState(null);
@@ -1944,8 +1944,8 @@ function Composer({ initial, onSaved }) {
           <${Switch} label=${T('Couper le papier à la fin', 'Cut the paper at the end')} checked=${state.cut} onChange=${(cut) => setState((s) => ({ ...s, cut }))} />
           <div class="spacing-row"><span class="label">${T('Espace entre les blocs', 'Space between blocks')}</span>
             <${Segmented} options=${[[0, T('Aucun', 'None')], [1, T('1 ligne', '1 line')], [2, T('2 lignes', '2 lines')]]} value=${Number(state.spacing)} onChange=${(spacing) => setState((s) => ({ ...s, spacing }))} /></div>
-          <button class="btn ghost small show-config" disabled=${!state.blocks.length} onClick=${() => setConfigSheet(true)}>
-            <${Icon} name="file-edit" size=${16} /> ${T('Afficher la configuration du ticket', 'Show the ticket configuration')}</button>
+          ${admin && html`<button class="btn ghost small show-config" disabled=${!state.blocks.length} onClick=${() => setConfigSheet(true)}>
+            <${Icon} name="file-edit" size=${16} /> ${T('Afficher la configuration du ticket', 'Show the ticket configuration')}</button>`}
         </div>
         <div class="actionbar">
           <button class="btn ghost preview-fab" aria-label=${T('Aperçu', 'Preview')} onClick=${() => setMobilePreview(true)}><${Icon} name="eye" /><span class="lbl">${T('Aperçu', 'Preview')}</span></button>
@@ -2394,7 +2394,7 @@ function App() {
     : route.title;
 
   let page;
-  if (route.hash === '#/compose') page = html`<${Composer} initial=${composer} onSaved=${loadPresets} />`;
+  if (route.hash === '#/compose') page = html`<${Composer} initial=${composer} onSaved=${loadPresets} admin=${me.admin} />`;
   else if (route.hash === '#/message') page = html`<${Message} me=${me} onSaved=${loadPresets} />`;
   else if (route.hash === '#/history') page = html`<${History} users=${users} me=${me} />`;
   else if (route.hash === '#/courses') page = html`<${Shopping} users=${users} />`;

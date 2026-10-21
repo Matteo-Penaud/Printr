@@ -415,7 +415,7 @@ papier baisse. La découverte utilise le préfixe `homeassistant` ; `PRINTR_MQTT
 différents : chacun est son propre appareil.
 
 **Un ticket de l'appli dans une automatisation** : dans le composeur, « Afficher la configuration du
-ticket » donne le ticket en YAML, prêt à coller dans une automatisation ou un script (édition en
+ticket » (administrateur seulement) donne le ticket en YAML, prêt à coller dans une automatisation ou un script (édition en
 YAML), ou en JSON pour l'API HTTP, MQTT et `printr print`. En YAML, deux formes : l'action
 `mqtt.publish` qui publie le ticket sur `printr/print`, proposée quand Printr est relié à MQTT, ou
 l'action `printr.print_ticket` de l'[intégration Printr](https://github.com/Matteo-Penaud/printr-ha-integration).
