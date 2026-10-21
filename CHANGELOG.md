@@ -5,9 +5,12 @@ each one is a `vX.Y.Z` tag on GitHub, which the server checks to tell the admin 
 
 Each minor version is named after a pioneer of printing, in alphabetical order (patch releases keep the
 name): Aldus Manutius, Giambattista Bodoni, William Caslon, the Didot family, Robert Estienne,
-Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas Jenson…
+Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas Jenson, Friedrich
+Koenig…
 
 ## [Unreleased]
+
+## [1.10.0] “Koenig” - 2026-10-21
 
 ### Added
 - Image block: choose the **dithering algorithm** — Floyd–Steinberg (default, smooth gradients for photos),
@@ -51,6 +54,8 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
   chance of rain (#7).
 - Weather: **what to wear** option (`outfit`), worked out from today's forecast without AI: layers for
   the morning and the afternoon, umbrella or raincoat when it's windy, boots in the snow, sun protection.
+- The README is now a short overview; the full documentation moved to the guide (`docs/guide.md` and
+  `docs/guide.fr.md`, rendered on the site), with a new **Supported printers** section.
 
 ### Fixed
 - The live preview of the composer stopped as soon as a block was added with an empty required field
@@ -262,7 +267,8 @@ First release.
 - One-command installation on a Raspberry Pi, no sudo needed afterwards.
 - Windows development with a dev container and a printing relay.
 
-[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/XNinety9/Printr/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/XNinety9/Printr/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/XNinety9/Printr/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/XNinety9/Printr/compare/v1.6.1...v1.7.0
