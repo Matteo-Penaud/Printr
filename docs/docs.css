@@ -102,11 +102,24 @@ html[lang="fr"] .bilingual .en, html[lang="en"] .bilingual .fr { display: none !
 .bloc { display: grid; grid-template-columns: minmax(0, 1fr) 532px; gap: 28px; align-items: start;
         padding: 26px 0; border-bottom: 1px solid var(--line); }
 .bloc:last-of-type { border-bottom: 0; }
-.bloc h3 { margin: 0 0 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+article.doc .bloc h3 { margin: 0 0 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .bloc h3 .emoji { font-size: 1.3em; }
 .bloc p { margin: 0 0 12px; }
 .claude { font-family: var(--mono); font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
           color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 999px; padding: 2px 8px; }
+/* Le ticket en JSON et ses valeurs possibles : une seule carte. */
+.bloc-spec { border: 1px solid var(--line); border-radius: 12px; background: var(--bg-card); font-size: .9rem; overflow: hidden; }
+.bloc-json, .bloc-choices { padding: 12px 14px; }
+article.doc .bloc-spec pre { margin: 0; padding: 0; font-size: .8rem; line-height: 1.5; background: none; border: 0; box-shadow: none; }
+.bloc-choices { border-top: 1px solid var(--line); }
+.bloc-choices dl { margin: 0; }
+.bloc-choices dt { margin: 6px 0 1px; font-weight: 600; }
+.bloc-choices dt:first-child { margin-top: 0; }
+.bloc-choices dd { margin: 0 0 0 14px; line-height: 1.6; color: var(--fg-dim); }
+.bloc-choices dd span { white-space: nowrap; }
+article.doc .bloc-choices code { font-size: .88em; background: none; border: 0; padding: 0; color: var(--fg); }
+.bloc-choices .default { font-size: .9em; }
+.bloc-choices .sep { color: var(--accent); margin: 0 3px; }
 .bloc details summary { cursor: pointer; color: var(--fg-dim); font-size: .92rem; }
 .bloc details summary:hover { color: var(--fg); }
 .bloc details pre { margin-top: 10px; font-size: .82rem; }

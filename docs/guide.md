@@ -48,6 +48,14 @@ printr image --dither atkinson photo.jpg  # other dithering: atkinson (more cont
 printr image --no-dither logo.png   # plain black-and-white threshold, for logos and line drawings
 ```
 
+The printer only prints black dots: dithering turns the greys of a photo into patterns of dots. The
+same photo with each algorithm (`--dither`, or `dither_algorithm` in a JSON ticket, also in the app):
+
+<p align="center"><img src="exemples/en/tramages.png" alt="The same coffee photo printed with Floyd–Steinberg, Atkinson, Bayer and without dithering" width="256"></p>
+
+Floyd–Steinberg suits most photos; Atkinson gives more contrast and cleaner flat areas, Bayer a regular
+pattern without grain; no dithering is for logos and line drawings.
+
 Destination, your choice:
 
 | Option | Destination |

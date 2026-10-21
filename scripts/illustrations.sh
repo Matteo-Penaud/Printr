@@ -93,6 +93,8 @@ for group in catalogue:
         if not (skip and block.get("claude")):
             print(block["id"])
 ' "$NO_CLAUDE")
+  # Hors catalogue : la démonstration des tramages, montrée dans le guide.
+  blocks+=(tramages)
   if [ "$NO_CLAUDE" = 1 ]; then
     printf '  %ssans Claude : les exemples des blocs Claude gardent leur image actuelle%s\n' "$D" "$R"
   fi

@@ -46,6 +46,15 @@ printr image --dither atkinson photo.jpg  # autres tramages : atkinson (plus con
 printr image --no-dither logo.png   # simple seuil noir/blanc, pour logos et dessins au trait
 ```
 
+L'imprimante ne fait que des points noirs : le tramage traduit les gris d'une photo en motifs de points.
+La même photo avec chaque algorithme (`--dither`, ou `dither_algorithm` dans un ticket JSON, aussi dans
+l'appli) :
+
+<p align="center"><img src="exemples/tramages.png" alt="La même photo de café imprimée avec Floyd–Steinberg, Atkinson, Bayer et sans tramage" width="256"></p>
+
+Floyd–Steinberg convient à la plupart des photos ; Atkinson donne plus de contraste et des aplats plus
+nets, Bayer une trame régulière sans grain ; sans tramage, c'est pour les logos et les dessins au trait.
+
 Destination, au choix :
 
 | Option | Destination |
