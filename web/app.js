@@ -1812,30 +1812,43 @@ async function copyText(text, area) {
   return document.execCommand('copy');
 }
 
-// Le ticket composé, en action YAML pour Home Assistant (automatisation, script) : par
-// l'intégration Printr, ou par MQTT quand le serveur y est relié.
-function HomeAssistantSheet({ ticket, label, onClose }) {
+// Configuration du ticket composé, à copier : en YAML, l'action Home Assistant (intégration Printr,
+// ou MQTT quand le serveur y est relié) ; en JSON, le ticket tel que le prennent l'API, MQTT et
+// `printr print`. Le dernier format choisi est gardé.
+function TicketConfigSheet({ ticket, label, onClose }) {
+  const [format, setFormatState] = useState(() => store.get('printr.config.format', 'yaml'));
+  const setFormat = (f) => { setFormatState(f); store.set('printr.config.format', f); };
   const [via, setVia] = useState('integration');
-  const mqtt = via === 'mqtt' && SERVER.mqtt;
-  const yaml = useMemo(() => (mqtt ? mqttYaml(ticket, mqtt) : haYaml(ticket, label)), [ticket, label, mqtt]);
+  const mqtt = format === 'yaml' && via === 'mqtt' && SERVER.mqtt;
+  const text = useMemo(() => {
+    if (format === 'json') return `${JSON.stringify(ticket, null, 2)}\n`;
+    return mqtt ? mqttYaml(ticket, mqtt) : haYaml(ticket, label);
+  }, [format, ticket, label, mqtt]);
   const area = useRef(null);
   const copy = async () => {
-    if (await copyText(yaml, area.current)) return toast(T('Copié : à coller dans Home Assistant', 'Copied: paste it into Home Assistant'), 'ok', '📋');
+    if (await copyText(text, area.current)) return toast(T('Configuration copiée', 'Configuration copied'), 'ok', '📋');
     area.current.select();
     toast(T('Copie impossible : le texte est sélectionné, copie-le à la main', 'Could not copy: the text is selected, copy it by hand'), 'error');
   };
-  return html`<${Sheet} title="Home Assistant" wide onClose=${onClose} footer=${html`
-    <button class="btn secondary" onClick=${onClose}>${T('Fermer', 'Close')}</button>
-    <button class="btn primary grow" onClick=${copy}><${Icon} name="copy" /> ${T('Copier', 'Copy')}</button>`}>
-    ${SERVER.mqtt && html`<${Segmented} options=${[['integration', T('Intégration Printr', 'Printr integration')], ['mqtt', 'MQTT']]}
-      value=${via} onChange=${setVia} />`}
-    <p class="muted">${mqtt
+  const help = format === 'json'
+    ? T('Le ticket en JSON, tel que le prennent l’API HTTP (/print), MQTT (printr/print) et printr print ticket.json.',
+      'The ticket as JSON, as taken by the HTTP API (/print), MQTT (printr/print) and printr print ticket.json.')
+    : `${mqtt
       ? T(`L’action mqtt.publish de Home Assistant, qui publie le ticket sur ${mqtt}/print : rien d’autre à installer que l’intégration MQTT.`,
         `Home Assistant’s mqtt.publish action, publishing the ticket on ${mqtt}/print: nothing to install but the MQTT integration.`)
-      : T('L’action printr.print_ticket de l’intégration Printr pour Home Assistant.', 'The printr.print_ticket action of the Printr integration for Home Assistant.')}
-      ${' '}${T('À coller dans une automatisation ou un script, en édition YAML.', 'Paste it into an automation or a script, in YAML mode.')}</p>
-    <textarea class="input yaml" ref=${area} readonly spellcheck=${false} aria-label="YAML"
-      rows=${Math.min(18, yaml.split('\n').length)} value=${yaml}></textarea>
+      : T('L’action printr.print_ticket de l’intégration Printr pour Home Assistant.', 'The printr.print_ticket action of the Printr integration for Home Assistant.')
+    } ${T('À coller dans une automatisation ou un script, en édition YAML.', 'Paste it into an automation or a script, in YAML mode.')}`;
+  return html`<${Sheet} title=${T('Configuration du ticket', 'Ticket configuration')} wide onClose=${onClose} footer=${html`
+    <button class="btn secondary" onClick=${onClose}>${T('Fermer', 'Close')}</button>
+    <button class="btn primary grow" onClick=${copy}><${Icon} name="copy" /> ${T('Copier', 'Copy')}</button>`}>
+    <div class="config-switches">
+      <${Segmented} options=${[['yaml', 'YAML'], ['json', 'JSON']]} value=${format} onChange=${setFormat} />
+      ${format === 'yaml' && SERVER.mqtt && html`<${Segmented} options=${[['integration', T('Intégration Printr', 'Printr integration')], ['mqtt', 'MQTT']]}
+        value=${via} onChange=${setVia} />`}
+    </div>
+    <p class="muted">${help}</p>
+    <textarea class="input code" ref=${area} readonly spellcheck=${false} aria-label=${format.toUpperCase()}
+      rows=${Math.min(18, text.split('\n').length)} value=${text}></textarea>
   </${Sheet}>`;
 }
 
@@ -1844,7 +1857,7 @@ function Composer({ initial, onSaved }) {
   // Catalogue ouvert : `{ at }` = position d'insertion (à la fin si absente).
   const [catalog, setCatalog] = useState(null);
   const [saveSheet, setSaveSheet] = useState(null);
-  const [haSheet, setHaSheet] = useState(false);
+  const [configSheet, setConfigSheet] = useState(false);
   const [mobilePreview, setMobilePreview] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1931,8 +1944,8 @@ function Composer({ initial, onSaved }) {
           <${Switch} label=${T('Couper le papier à la fin', 'Cut the paper at the end')} checked=${state.cut} onChange=${(cut) => setState((s) => ({ ...s, cut }))} />
           <div class="spacing-row"><span class="label">${T('Espace entre les blocs', 'Space between blocks')}</span>
             <${Segmented} options=${[[0, T('Aucun', 'None')], [1, T('1 ligne', '1 line')], [2, T('2 lignes', '2 lines')]]} value=${Number(state.spacing)} onChange=${(spacing) => setState((s) => ({ ...s, spacing }))} /></div>
-          <button class="btn ghost small show-yaml" disabled=${!state.blocks.length} onClick=${() => setHaSheet(true)}>
-            <${Icon} name="file-edit" size=${16} /> ${T('Afficher le YAML', 'Show YAML')}</button>
+          <button class="btn ghost small show-config" disabled=${!state.blocks.length} onClick=${() => setConfigSheet(true)}>
+            <${Icon} name="file-edit" size=${16} /> ${T('Afficher la configuration du ticket', 'Show the ticket configuration')}</button>
         </div>
         <div class="actionbar">
           <button class="btn ghost preview-fab" aria-label=${T('Aperçu', 'Preview')} onClick=${() => setMobilePreview(true)}><${Icon} name="eye" /><span class="lbl">${T('Aperçu', 'Preview')}</span></button>
@@ -1943,7 +1956,7 @@ function Composer({ initial, onSaved }) {
       <aside class="preview-col"><${Paper} preview=${preview} loading=${loading} /><${PaperMeta} preview=${preview} /></aside>
     </div>
     ${catalog && html`<${Catalog} onPick=${(type) => add(type, catalog.at)} onClose=${() => setCatalog(null)} />`}
-    ${haSheet && html`<${HomeAssistantSheet} ticket=${ticket} label=${state.name} onClose=${() => setHaSheet(false)} />`}
+    ${configSheet && html`<${TicketConfigSheet} ticket=${ticket} label=${state.name} onClose=${() => setConfigSheet(false)} />`}
     ${saveSheet && html`<${SaveSheet} state=${state} focusSchedule=${saveSheet.focusSchedule} onSave=${persist} onClose=${() => setSaveSheet(null)} />`}
     ${mobilePreview && html`<${Sheet} title=${T('Aperçu', 'Preview')} onClose=${() => setMobilePreview(false)} footer=${html`
       <button class="btn primary grow" disabled=${printing} onClick=${print}>${printing ? html`<${Spinner} />` : html`<${Icon} name="printer" />`} ${T('Imprimer', 'Print')}</button>`}>
