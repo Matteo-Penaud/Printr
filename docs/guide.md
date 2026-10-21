@@ -684,6 +684,46 @@ cargo build --release                                        # this machine
 sudo deploy/install.sh --binary path/to/printr
 ```
 
+### In a container (Docker)
+
+If the machine already runs its services in containers (Home Assistant, WireGuard…), Printr can join
+them. [`deploy/Dockerfile`](../deploy/Dockerfile) and [`deploy/compose.yaml`](../deploy/compose.yaml)
+wrap the `printr` binary placed next to them, with Barnum, under an unprivileged user and the same
+safeguards as the systemd service. In a release archive, the binary is already there; from the
+repository, copy the one built for the machine into `deploy/`.
+
+On the host, once: the USB printer's udev rule and the `usblp` module, as `install.sh` would do:
+
+```sh
+sudo cp 70-tm-t88v.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+echo usblp | sudo tee /etc/modules-load.d/usblp.conf && sudo modprobe usblp
+```
+
+Then, in the archive folder (or `deploy/`):
+
+```sh
+cp printr.env.example printr.env           # settings: Claude key, MQTT, language…
+docker compose up -d --build
+docker compose exec printr printr user add Name
+docker compose logs -f                     # follow the prints
+```
+
+- The app answers on port 8080; if another service uses it ("address already in use"), put
+  `PRINTR_PORT=8090` in a `.env` file next to `compose.yaml`.
+- The container sees the host's `/dev` as `/host/dev` and prints to `/host/dev/tm88`, the udev rule's
+  link; apart from basic devices (`/dev/null`…), the printer is the only one it can open. Off at
+  startup, turned back on or plugged in again, it is found as outside a container, and tickets wait
+  for it. If the host's `lp` group is not 7 (`getent group lp`), set `PRINTR_LP_GID` in the same
+  `.env` file.
+- Accounts, history and photos live in the `printr_data` volume, the cache in `printr_cache`: they
+  survive updates. To update, replace the binary, then `docker compose up -d --build`.
+- Schedules time zone: `Europe/Paris` by default, `TZ=…` for another one.
+- MQTT: with Mosquitto on the same machine, `PRINTR_MQTT_URL` points to the host's address (not
+  `localhost`, which is the container itself). A `PRINTR_MQTT_CA` certificate must also be mounted
+  into the container.
+- The Claude Code CLI is not in the image: in a container, Claude blocks go through
+  `ANTHROPIC_API_KEY`.
+
 ## License
 
 Printr is licensed under the [Apache License 2.0](../LICENSE): you can reuse, modify and redistribute it,

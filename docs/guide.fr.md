@@ -688,6 +688,48 @@ sudo deploy/install.sh --binary chemin/vers/printr
 ```
 
 
+### En conteneur (Docker)
+
+Si la machine fait déjà tourner ses services en conteneurs (Home Assistant, WireGuard…), Printr peut
+les rejoindre. [`deploy/Dockerfile`](../deploy/Dockerfile) et [`deploy/compose.yaml`](../deploy/compose.yaml)
+emballent le binaire `printr` posé à côté d'eux, avec Barnum, sous un utilisateur sans privilège et
+les mêmes garde-fous que le service systemd. Dans une archive de release, le binaire est déjà là ;
+depuis le dépôt, copier dans `deploy/` celui compilé pour la machine.
+
+Sur l'hôte, une seule fois : la règle udev de l'imprimante USB et le module `usblp`, comme le ferait
+`install.sh` :
+
+```sh
+sudo cp 70-tm-t88v.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+echo usblp | sudo tee /etc/modules-load.d/usblp.conf && sudo modprobe usblp
+```
+
+Puis, dans le dossier de l'archive (ou `deploy/`) :
+
+```sh
+cp printr.env.example printr.env           # configuration : clé Claude, MQTT, langue…
+docker compose up -d --build
+docker compose exec printr printr user add Prénom
+docker compose logs -f                     # suivre les impressions
+```
+
+- L'interface répond sur le port 8080 ; si un autre service l'occupe (« address already in use »),
+  mettre `PRINTR_PORT=8090` dans un fichier `.env` à côté de `compose.yaml`.
+- Le conteneur voit le `/dev` de l'hôte sous `/host/dev` et imprime sur `/host/dev/tm88`, le lien de
+  la règle udev ; en dehors des périphériques de base (`/dev/null`…), il ne peut ouvrir que
+  l'imprimante. Éteinte au démarrage, rallumée ou rebranchée, elle est retrouvée comme hors
+  conteneur, et les tickets attendent son retour. Si le groupe `lp` de l'hôte n'est pas le 7
+  (`getent group lp`), le donner dans `PRINTR_LP_GID`, dans le même fichier `.env`.
+- Comptes, historique et photos vivent dans le volume `printr_data`, le cache dans `printr_cache` :
+  ils survivent aux mises à jour. Pour mettre à jour, remplacer le binaire puis
+  `docker compose up -d --build`.
+- Fuseau horaire des planifications : `Europe/Paris` par défaut, `TZ=…` pour un autre.
+- MQTT : avec Mosquitto sur la même machine, `PRINTR_MQTT_URL` pointe vers l'adresse de l'hôte (pas
+  `localhost`, qui désigne le conteneur). Un certificat `PRINTR_MQTT_CA` se monte en plus dans le
+  conteneur.
+- La CLI Claude Code n'est pas dans l'image : en conteneur, les blocs Claude passent par
+  `ANTHROPIC_API_KEY`.
+
 ## Licence
 
 Printr est distribué sous [licence Apache 2.0](../LICENSE) : vous pouvez le réutiliser, le modifier et le
