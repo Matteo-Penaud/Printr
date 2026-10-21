@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import struct
+import unicodedata
 from pathlib import Path
 
 import markdown
@@ -218,7 +219,9 @@ BLOCKS_TEMPLATE = """<!DOCTYPE html>
   <article class="doc">
     <h1><span class="fr">Les {count} blocs</span><span class="en">The {count} blocks</span></h1>
     <p class="fr">Chaque ticket ci-dessous sort de l'émulateur de la TM-T88V, au point près, à partir de l'exemple JSON indiqué (données fictives). Dans l'appli, on les ajoute et on les règle sans écrire de JSON. Les blocs marqués Claude font rédiger leur texte par Claude, à l'impression seulement.</p>
+    <p class="fr">À côté de chaque ticket : son JSON, à envoyer tel quel à l'API, et en dessous les valeurs que chaque champ à choix accepte. Les noms anglais marchent aussi.</p>
     <p class="en">Each ticket below comes out of the TM-T88V emulator, dot for dot, from the JSON example shown (made-up data), with <code>PRINTR_LANG=en</code>. In the app, blocks are added and tuned without writing any JSON. Blocks marked Claude have their text written by Claude, at print time only.</p>
+    <p class="en">Next to each ticket: its JSON, ready to send to the API as is, and below it the values each choice field accepts. The French names work too.</p>
     {content}
     <p class="caption"><span class="fr">Page générée depuis</span><span class="en">Generated from</span> <a href="{repo}/tree/{branch}/docs/exemples">docs/exemples</a>.</p>
   </article>
@@ -240,9 +243,153 @@ def both(fr: str, en: str) -> str:
     return f'<span class="fr">{html.escape(fr)}</span><span class="en">{html.escape(en)}</span>'
 
 
+SRC = ROOT / "src"
+
+
+def _rename(name: str, rule: str | None) -> str:
+    """Nom JSON d'une variante d'après `rename_all` (serde)."""
+    words = re.findall(r"[A-Z][a-z0-9]*", name) or [name]
+    if rule == "kebab-case":
+        return "-".join(w.lower() for w in words)
+    if rule == "lowercase":
+        return name.lower()
+    if rule == "snake_case":
+        return "_".join(w.lower() for w in words)
+    return name
+
+
+def _enum_body(text: str, start: int) -> str:
+    """Le corps entre accolades qui commence à `start`."""
+    depth, i = 0, text.index("{", start)
+    for j in range(i, len(text)):
+        depth += {"{": 1, "}": -1}.get(text[j], 0)
+        if depth == 0:
+            return text[i + 1:j]
+    raise ValueError("accolade non fermée")
+
+
+def _variants(body: str, rule: str | None) -> list[dict]:
+    """Les variantes d'un enum : nom JSON, alias, valeur par défaut, champs (pour `Block`)."""
+    out, attrs, depth = [], [], 0
+    for line in body.split("\n"):
+        t = line.strip()
+        if depth == 0:
+            if t.startswith("#["):
+                attrs.append(t)
+            elif m := re.match(r"([A-Z]\w*)\s*(\{|\(|,|$)", t):
+                attr = " ".join(attrs)
+                rename = re.search(r'rename = "([^"]+)"', attr)
+                out.append({
+                    "json": rename.group(1) if rename else _rename(m.group(1), rule),
+                    "aliases": re.findall(r'alias = "([^"]+)"', attr),
+                    "default": "#[default]" in attr,
+                    "fields": [],
+                })
+                attrs = []
+        elif depth == 1 and out:
+            if t.startswith("#["):
+                attrs.append(t)
+            elif m := re.match(r"(?:pub )?(\w+): (.+),$", t):
+                out[-1]["fields"].append({"name": m.group(1), "type": m.group(2), "attrs": " ".join(attrs)})
+                attrs = []
+            elif t and not t.startswith("//"):
+                attrs = []
+        depth += t.count("{") - t.count("}")
+    return out
+
+
+def rust_enums() -> dict[str, list[dict]]:
+    """Les enums désérialisables du code, par chemin (`sudoku::Difficulty`) et par nom seul."""
+    enums: dict[str, list[dict]] = {}
+    for path in SRC.rglob("*.rs"):
+        text = path.read_text()
+        for m in re.finditer(r"((?:#\[[^\n]*\]\s*)+)pub enum (\w+)", text):
+            if "Deserialize" not in m.group(1):
+                continue
+            rule = re.search(r'rename_all = "([^"]+)"', m.group(1))
+            variants = _variants(_enum_body(text, m.end()), rule.group(1) if rule else None)
+            enums[f"{path.stem}::{m.group(2)}"] = variants
+            enums.setdefault(m.group(2), variants)
+    return enums
+
+
+def block_choices() -> dict[str, list[tuple[str, str, list[dict]]]]:
+    """Pour chaque nom de bloc (type et alias), ses champs à valeurs imposées et leurs valeurs."""
+    enums = rust_enums()
+    out: dict[str, list[tuple[str, str, list[dict]]]] = {}
+    for block in enums["mod::Block"]:
+        choices = []
+        for field in block["fields"]:
+            kind = re.sub(r"^(?:Option|Vec)<(.+)>$", r"\1", field["type"]).split("::")
+            values = enums.get("::".join(kind[-2:])) or enums.get(kind[-1])
+            if values and not any(v["fields"] for v in values):
+                choices.append((field["name"], kind[-1], values))
+        for name in [block["json"], *block["aliases"]]:
+            out[name] = choices
+    return out
+
+
+def example_type(bid: str, choices: dict) -> str:
+    """Le type du bloc présenté par l'exemple `bid` : celui qui porte ce nom, sinon le premier bloc
+    qui n'est pas un simple texte ou titre de décor."""
+    types = [b["type"] for b in json.loads((SITE / "exemples" / f"{bid}.json").read_text())["blocks"]]
+    # Le même bloc sous un autre nom (type ou alias) : `block_choices` leur donne la même liste.
+    same = next((t for t in types if bid in choices and choices.get(t) is choices[bid]), None)
+    return same or next((t for t in types if t not in ("text", "title")), types[0])
+
+
+# Enums dont les noms JSON sont en français (les alias donnent l'anglais) ; ailleurs, l'inverse.
+FRENCH_FIRST = {"When", "Theme", "Cipher", "Kind", "Zone"}
+# Enums dont les alias sont des synonymes (« plus », « fois ») plutôt que des traductions : le nom
+# français est donné ici quand il diffère, sinon c'est le même mot qu'en anglais (« addition »).
+FRENCH_NAMES = {"Operation": {"subtraction": "soustraction"}}
+
+
+def _plain(word: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", word.lower()) if unicodedata.category(c) != "Mn")
+
+
+def translations(enum: str, value: dict) -> tuple[str, str]:
+    """(nom français, nom anglais) d'une valeur : son nom JSON, et dans l'autre langue le premier
+    alias qui en est vraiment une traduction (pas un pluriel, une variante accentuée ou « wpa2 »)."""
+    name = value["json"]
+    if enum in FRENCH_NAMES:
+        return FRENCH_NAMES[enum].get(name, name), name
+
+    def variant(a: str) -> bool:
+        """Même mot au pluriel, au singulier ou accentué (« additions », « reseau », « césar »)."""
+        x, y = sorted((_plain(a), _plain(name)), key=len)
+        return y.startswith(x) and len(y) - len(x) <= 1
+
+    other = next((a for a in value["aliases"] if re.fullmatch(r"[a-zà-ÿ_-]{2,}", a) and not variant(a)), name)
+    return (name, other) if enum in FRENCH_FIRST else (other, name)
+
+
+def choices_html(choices: list[tuple[str, str, list[dict]]]) -> str:
+    """Un champ par ligne, puis ses valeurs dans la langue de la page : « facile • moyen (par défaut) »."""
+    if not choices:
+        return ""
+    rows = []
+    for name, enum, values in choices:
+        shown = []
+        for v in values:
+            fr, en = translations(enum, v)
+            label = (
+                f"<code>{html.escape(fr)}</code>"
+                if fr == en
+                else f'<code class="fr">{html.escape(fr)}</code><code class="en">{html.escape(en)}</code>'
+            )
+            default = f' <span class="default">({both("par défaut", "default")})</span>' if v["default"] else ""
+            shown.append(f"<span>{label}{default}</span>")
+        rows.append(f"<dt><code>{html.escape(name)}</code></dt><dd>{' <b class=\"sep\">•</b> '.join(shown)}</dd>")
+    return f'<div class="bloc-choices"><dl>{"".join(rows)}</dl></div>'
+
+
+
 def render_blocks() -> str:
     """Une fiche par bloc : son ticket imprimé, sa description et l'exemple JSON qui l'a produit."""
     catalogue = json.loads(CATALOGUE.read_text())
+    choices = block_choices()
     slug = slugify(case="lower")
     toc, content, count = [], [], 0
     for group in catalogue:
@@ -272,7 +419,10 @@ def render_blocks() -> str:
   <div class="bloc-text">
     <h3 id="{bid}"><span class="emoji">{b["emoji"]}</span> {both(b["fr"], b["en"])}{badge}<a class="headerlink" href="#{bid}">#</a></h3>
     <p>{both(b["description"]["fr"], b["description"]["en"])}</p>
-    <details><summary>{both("Le ticket en JSON", "Ticket JSON")}</summary><pre>{"".join(codes)}</pre></details>
+    <div class="bloc-spec">
+      <div class="bloc-json"><pre>{"".join(codes)}</pre></div>
+      {choices_html(choices.get(example_type(bid, choices), []))}
+    </div>
   </div>
   {"".join(tickets)}
 </section>""")
