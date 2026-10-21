@@ -52,6 +52,10 @@ Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas J
 - Weather: **what to wear** option (`outfit`), worked out from today's forecast without AI: layers for
   the morning and the afternoon, umbrella or raincoat when it's windy, boots in the snow, sun protection.
 
+### Fixed
+- The live preview of the composer stopped as soon as a block was added with an empty required field
+  (Claude recipe, recipe, calendar…): the whole ticket was refused. Now only that block shows an error.
+
 ### Security
 - MQTT: switched from `rumqttc` to its maintained fork `rumqttc-v4-next` (still MQTT 3.1.1), which uses
   `rustls-webpki` 0.103. This fixes RUSTSEC-2026-0049, -0098, -0099 and -0104 (certificate revocation

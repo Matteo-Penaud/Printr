@@ -434,6 +434,7 @@ pub enum Block {
     /// Rappel des poubelles à sortir.
     #[serde(alias = "poubelles")]
     Bins {
+        #[serde(default)]
         collections: Vec<bins::Collection>,
         #[serde(default)]
         when: bins::When,
@@ -445,7 +446,7 @@ pub enum Block {
     #[serde(alias = "histoire")]
     Story {
         /// Les prénoms : « Léo, Camille ».
-        #[serde(alias = "enfants")]
+        #[serde(default, alias = "enfants")]
         children: String,
         /// Un thème facultatif : « les dragons », « l'espace »…
         #[serde(default, alias = "theme")]
@@ -457,7 +458,7 @@ pub enum Block {
     #[serde(alias = "anniversaires")]
     Birthdays {
         /// Une personne par ligne : « Léo, 12/03/2014 » (année facultative, pour l'âge).
-        #[serde(alias = "liste")]
+        #[serde(default, alias = "liste")]
         list: String,
         /// Combien des suivants annoncer.
         #[serde(default = "three", alias = "suivants")]
@@ -472,15 +473,16 @@ pub enum Block {
     /// Tâches ménagères tournantes : chaque jour ou chaque semaine, elles passent à la personne suivante.
     #[serde(alias = "taches")]
     Chores {
-        #[serde(alias = "taches")]
+        #[serde(default, alias = "taches")]
         tasks: Vec<String>,
-        #[serde(alias = "qui")]
+        #[serde(default, alias = "qui")]
         people: Vec<String>,
         #[serde(default, alias = "rotation")]
         period: chores::Period,
     },
     /// Agenda du jour depuis des calendriers ICS.
     Agenda {
+        #[serde(default)]
         calendars: Vec<String>,
         #[serde(default = "one")]
         days: u8,
@@ -523,6 +525,7 @@ pub enum Block {
     /// Recette lue sur une page web (données schema.org) : ingrédients à cocher, étapes.
     #[serde(alias = "recette")]
     Recipe {
+        #[serde(default)]
         url: String,
         /// Imprimer les étapes (sinon, seulement les ingrédients : liste de courses).
         #[serde(default = "yes")]
@@ -534,7 +537,7 @@ pub enum Block {
     /// Recette d'un plat, rédigée par Claude (Haiku par défaut) à l'impression.
     #[serde(alias = "recette_claude")]
     RecipeClaude {
-        #[serde(alias = "plat")]
+        #[serde(default, alias = "plat")]
         dish: String,
         #[serde(default = "four")]
         servings: u8,
@@ -545,6 +548,7 @@ pub enum Block {
     #[serde(alias = "recette_ingredients", alias = "quest_ce_quon_mange")]
     RecipeFromIngredients {
         /// Un par ligne, ou séparés par des virgules.
+        #[serde(default)]
         ingredients: String,
         #[serde(default = "four")]
         servings: u8,
@@ -1220,5 +1224,23 @@ mod tests {
             })
             .collect();
         assert_eq!(titles, ["premier", "dernier"]);
+    }
+
+    /// Un bloc tout juste ajouté dans l'appli arrive sans ses champs vides : le ticket doit se lire
+    /// quand même, et seul ce bloc est en erreur (l'aperçu du reste s'affiche).
+    #[test]
+    fn freshly_added_empty_blocks_do_not_break_the_ticket() {
+        let t: Ticket = serde_json::from_str(
+            r#"{"blocks": [
+                {"type": "story"}, {"type": "birthdays"}, {"type": "chores"},
+                {"type": "recipe_from_ingredients"}, {"type": "recipe_claude"}, {"type": "recipe"},
+                {"type": "agenda"}, {"type": "bins"},
+                {"type": "text", "text": "toujours là"}
+            ]}"#,
+        )
+        .expect("le ticket se lit");
+        let (doc, reports) = t.build(&Ctx::new(false).for_preview(), &mut Silent);
+        assert_eq!(reports.iter().filter(|r| r.error.is_some()).count(), 8);
+        assert!(doc.preview(false).contains("toujours là"));
     }
 }
