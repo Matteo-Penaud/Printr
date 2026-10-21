@@ -59,15 +59,89 @@ impl Target {
         }
     }
 
-    /// L'imprimante est-elle là ? USB : le périphérique existe (udev le crée quand l'imprimante est
-    /// branchée et allumée) ; réseau : elle accepte une connexion ; fichier : toujours.
-    pub fn available(&self) -> bool {
+    /// L'état de l'imprimante. USB : le périphérique existe (udev le crée quand l'imprimante est
+    /// branchée et allumée), et le pilote lit l'état du port (papier, erreur) par une requête de
+    /// contrôle, sans rien envoyer à l'imprimante : rien ne peut rester en attente et bloquer la
+    /// liaison, contrairement aux requêtes ESC/POS (`DLE EOT`), auxquelles elle ne répond plus
+    /// capot ouvert. Réseau : elle accepte une connexion ; fichier : toujours prête.
+    /// `None` : inconnu pour l'instant (périphérique occupé par un envoi en cours).
+    pub fn status(&self) -> Option<Status> {
         match self {
-            Target::Device(path) => path.exists(),
-            Target::Tcp(addr) => connect(addr, Duration::from_millis(1500)).is_ok(),
-            Target::Dump(_) => true,
+            Target::Device(path) => device_status(path),
+            Target::Tcp(addr) => {
+                Some(if connect(addr, Duration::from_millis(1500)).is_ok() { Status::Ready } else { Status::Missing })
+            }
+            Target::Dump(_) => Some(Status::Ready),
         }
     }
+}
+
+/// Ce que l'imprimante peut faire en ce moment.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Status {
+    Ready,
+    /// En erreur sans manquer de papier : en pratique, le capot ouvert (TM-T88V).
+    CoverOpen,
+    PaperOut,
+    /// Éteinte, débranchée ou injoignable.
+    Missing,
+}
+
+impl Status {
+    /// Le code publié dans l'API et sur MQTT.
+    pub fn code(self) -> &'static str {
+        match self {
+            Status::Ready => "ready",
+            Status::CoverOpen => "cover_open",
+            Status::PaperOut => "paper_out",
+            Status::Missing => "missing",
+        }
+    }
+
+    pub fn message(self) -> &'static str {
+        match self {
+            Status::Ready => t("imprimante prête", "printer ready"),
+            Status::CoverOpen => t("capot ouvert", "cover open"),
+            Status::PaperOut => t("plus de papier", "out of paper"),
+            Status::Missing => t("imprimante absente", "printer missing"),
+        }
+    }
+}
+
+/// État du port d'une imprimante USB (ioctl `LPGETSTATUS` du pilote usblp), lu sur la TM-T88V :
+/// 0x18 prête, 0x10 capot ouvert (erreur), 0x30 plus de papier (et erreur).
+#[cfg(target_os = "linux")]
+fn device_status(path: &Path) -> Option<Status> {
+    use std::os::fd::AsRawFd;
+    use std::os::unix::fs::OpenOptionsExt;
+    const LPGETSTATUS: libc::c_ulong = 0x060b;
+    const PAPER_OUT: libc::c_int = 0x20;
+    const NO_ERROR: libc::c_int = 0x08;
+    let file = match OpenOptions::new().write(true).custom_flags(libc::O_NONBLOCK).open(path) {
+        Ok(file) => file,
+        // usblp n'accepte qu'une ouverture à la fois : un envoi est en cours.
+        Err(e) if e.raw_os_error() == Some(libc::EBUSY) => return None,
+        // Là mais pas ouvrable (droits) : l'envoi le dira.
+        Err(_) => return Some(if path.exists() { Status::Ready } else { Status::Missing }),
+    };
+    let mut port: libc::c_int = 0;
+    // SAFETY: LPGETSTATUS écrit un int à l'adresse donnée, valide le temps de l'appel.
+    if unsafe { libc::ioctl(file.as_raw_fd(), LPGETSTATUS as _, &mut port) } != 0 {
+        // Pas une imprimante USB (fichier, tube) : on ne sait rien de plus.
+        return Some(Status::Ready);
+    }
+    Some(if port & PAPER_OUT != 0 {
+        Status::PaperOut
+    } else if port & NO_ERROR == 0 {
+        Status::CoverOpen
+    } else {
+        Status::Ready
+    })
+}
+
+#[cfg(not(target_os = "linux"))]
+fn device_status(path: &Path) -> Option<Status> {
+    Some(if path.exists() { Status::Ready } else { Status::Missing })
 }
 
 /// Au-delà, une écriture est considérée comme bloquée (imprimante allumée mais en défaut).
@@ -246,7 +320,12 @@ mod tests {
 
     #[test]
     fn missing_device_is_not_available() {
-        assert!(!Target::Device("/nonexistent/printr-test".into()).available());
-        assert!(Target::Dump("/tmp/x".into()).available());
+        assert_eq!(Target::Device("/nonexistent/printr-test".into()).status(), Some(Status::Missing));
+        assert_eq!(Target::Dump("/tmp/x".into()).status(), Some(Status::Ready));
+        // Un fichier ordinaire n'a pas d'état de port : prêt.
+        let path = std::env::temp_dir().join(format!("printr-status-{}", std::process::id()));
+        std::fs::write(&path, b"").unwrap();
+        assert_eq!(Target::Device(path.clone()).status(), Some(Status::Ready));
+        let _ = std::fs::remove_file(path);
     }
 }

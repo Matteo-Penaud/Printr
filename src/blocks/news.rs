@@ -233,7 +233,7 @@ fn fetch(agent: &ureq::Agent, url: &str, index: usize) -> Result<Vec<Article>> {
 
 pub fn build(ctx: &Ctx, title: &str, feeds: &[String], options: &Options) -> Result<Doc> {
     if feeds.is_empty() {
-        bail!("{}", t("aucun flux RSS (`feeds`)", "no RSS feed (`feeds`)"));
+        bail!("{}", t("aucun flux RSS", "no RSS feed"));
     }
     // Les flux sont téléchargés en parallèle ; un flux en panne n'empêche pas les autres.
     let results: Vec<Result<Vec<Article>>> = std::thread::scope(|s| {

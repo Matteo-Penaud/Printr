@@ -21,7 +21,7 @@ use tiny_http::{Header, Method, Request, Response, Server};
 use crate::blocks::{Block, Ctx, Silent, Ticket};
 use crate::guard::{self, LoginGuard};
 use crate::i18n::t;
-use crate::output::Target;
+use crate::output::{Status, Target};
 use crate::store::{self, HistoryEntry, Preset, Schedule, Store, User};
 use crate::ui;
 
@@ -47,8 +47,8 @@ pub struct App {
     max_per_hour: usize,
     /// Version plus récente publiée sur GitHub, trouvée par la vérification quotidienne.
     latest: Arc<Mutex<Option<crate::update::Available>>>,
-    /// L'imprimante répondait à la dernière vérification (voir `watch_printer`).
-    printer_ready: std::sync::atomic::AtomicBool,
+    /// L'état de l'imprimante à la dernière vérification (voir `watch_printer`).
+    printer_status: Mutex<Status>,
     /// Envoi resté en suspens chez l'imprimante (capot, papier) : tant qu'il n'est pas sorti, les
     /// tickets suivants attendent dans la file au lieu de s'y mêler.
     pending: Mutex<Option<Pending>>,
@@ -71,6 +71,8 @@ struct Pending {
     at: Option<DateTime<Utc>>,
     label: String,
     since: DateTime<Utc>,
+    /// Longueur du ticket, comptée sur le rouleau quand il sort.
+    paper_mm: u32,
 }
 
 /// Résultat d'une impression, renvoyé à l'interface.
@@ -79,6 +81,8 @@ pub struct Printed {
     pub failure: Option<String>,
     /// Imprimante absente : le ticket attend son retour (la raison, pour le journal).
     pub queued: Option<String>,
+    /// Pourquoi l'imprimante n'a pas pris le ticket (absente, capot ouvert, plus de papier).
+    pub printer: Status,
     /// L'imprimante ne prend plus rien (capot, papier) : le ticket, envoyé ou mis en file derrière un
     /// envoi en suspens, sortira quand elle sera prête.
     pub stalled: bool,
@@ -149,15 +153,69 @@ impl App {
         shared().find(|p| p.id == wanted).or_else(|| shared().find(|p| p.name.to_lowercase() == wanted_lower)).cloned()
     }
 
+    /// Un rouleau neuf est posé (longueur en mm, ou celle du précédent) : la jauge repart de zéro.
+    pub fn new_roll(&self, roll_mm: Option<u32>) -> Result<Value> {
+        let mut store = self.lock_store();
+        store.data.paper.new_roll(roll_mm);
+        store.save()?;
+        Ok(paper_json(&store.data.paper))
+    }
+
+    /// Les tickets partagés, que les domotiques peuvent imprimer (un bouton chacun dans Home Assistant).
+    pub fn shared_presets(&self) -> Vec<crate::hass::PresetButton> {
+        let store = self.lock_store();
+        store
+            .data
+            .presets
+            .iter()
+            .filter(|p| p.shared)
+            .map(|p| crate::hass::PresetButton { id: p.id.clone(), name: p.name.clone() })
+            .collect()
+    }
+
+    /// Longueur d'un ticket en attente, d'après son entrée d'historique.
+    fn queued_paper_mm(&self, job: &str) -> u32 {
+        let store = self.lock_store();
+        store.data.history.iter().find(|e| e.queued.as_deref() == Some(job)).and_then(|e| e.paper_mm).unwrap_or(0)
+    }
+
+    pub fn printer_status(&self) -> Status {
+        *self.printer_status.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Note le nouvel état de l'imprimante, et le dit dans le journal quand il change.
+    fn set_printer_status(&self, status: Status) {
+        let was = std::mem::replace(&mut *self.printer_status.lock().unwrap_or_else(|e| e.into_inner()), status);
+        if status != was {
+            match status {
+                Status::Ready | Status::Missing => eprintln!("{}", status.message()),
+                _ => eprintln!("{}", tr!("imprimante : {}", "printer: {}", status.message())),
+            }
+        }
+        // Plus de papier, puis prête : on a remis un rouleau, neuf a priori.
+        if was == Status::PaperOut && status == Status::Ready {
+            let mut store = self.lock_store();
+            store.data.paper.ran_out();
+            store.data.paper.new_roll(None);
+            let roll_m = store.data.paper.roll_mm / 1000;
+            if let Err(e) = store.save() {
+                eprintln!("{}", tr!("rouleau non enregistré : {e:#}", "roll not saved: {e:#}"));
+            }
+            eprintln!("{}", tr!("nouveau rouleau ({roll_m} m)", "new roll ({roll_m} m)"));
+        }
+    }
+
     /// L'état publié pour les domotiques (MQTT) : imprimante, file d'attente, dernier ticket.
     pub fn state(&self) -> Value {
         let stalled = self.pending.lock().unwrap_or_else(|e| e.into_inner()).is_some();
         let store = self.lock_store();
         let last = store.data.history.last().map(|e| json!({ "label": e.label, "by": e.by, "at": e.at, "ok": e.ok }));
         json!({
-            "printer_ready": self.printer_ready.load(std::sync::atomic::Ordering::Relaxed),
+            "printer_ready": self.printer_status() == Status::Ready,
+            "printer_status": self.printer_status().code(),
             "stalled": stalled,
             "queued": store.data.queue.len(),
+            "paper": paper_json(&store.data.paper),
             "last_ticket": last,
             "version": env!("CARGO_PKG_VERSION"),
         })
@@ -183,14 +241,24 @@ impl App {
         let mut stalled = false;
         let mut busy = false;
         let at = Utc::now();
+        let paper_mm = (doc.height_dots() as f64 * 25.4 / 180.0).round() as u32;
         // Gardé jusqu'à l'historique : un envoi en suspens y est noté avant qu'on puisse le solder.
         let printer = self.printer.lock().unwrap_or_else(|e| e.into_inner());
         let (failure, queued) = match crate::output::render(&doc, ticket.cut) {
             Err(e) => (Some(format!("{e:#}")), None),
             Ok(bytes) => {
-                // Un ticket précédent encore en suspens : celui-ci attend son tour dans la file.
+                // Un ticket précédent encore en suspens : celui-ci attend son tour dans la file. Plus de
+                // papier ou capot ouvert : il attend aussi, plutôt que de rester en suspens.
                 busy = self.settle_pending();
-                let sent = if busy { Err(anyhow::anyhow!("{}", busy_reason())) } else { printer.write(&bytes) };
+                let status = if busy { None } else { printer.status() };
+                if let Some(status) = status {
+                    self.set_printer_status(status);
+                }
+                let sent = match status {
+                    _ if busy => Err(anyhow::anyhow!("{}", busy_reason())),
+                    Some(status) if status != Status::Ready => Err(anyhow::anyhow!("{}", status.message())),
+                    _ => printer.write(&bytes),
+                };
                 match sent {
                     Ok(()) => (None, None),
                     // En suspens chez l'imprimante : il sortira tout seul, ne pas le remettre en file.
@@ -198,13 +266,13 @@ impl App {
                         stalled = true;
                         if let Some(done) = e.downcast_ref::<crate::output::Stalled>().and_then(|s| s.take()) {
                             *self.pending.lock().unwrap_or_else(|e| e.into_inner()) =
-                                Some(Pending { done, at: Some(at), label: label.to_owned(), since: at });
+                                Some(Pending { done, at: Some(at), label: label.to_owned(), since: at, paper_mm });
                         }
                         (None, None)
                     }
                     Err(e) => {
-                        if !busy {
-                            self.printer_ready.store(false, std::sync::atomic::Ordering::Relaxed);
+                        if !busy && self.printer_status() == Status::Ready {
+                            self.set_printer_status(Status::Missing);
                         }
                         let id = crate::store::new_id(8);
                         match crate::store::save_job(&id, &bytes) {
@@ -241,11 +309,15 @@ impl App {
                 .chain(stalled.then(|| crate::output::Stalled::message().to_owned()))
                 .collect(),
             blocks: ticket.blocks.iter().map(|b| b.name().to_owned()).collect(),
-            paper_mm: Some((doc.height_dots() as f64 * 25.4 / 180.0).round() as u32),
+            paper_mm: Some(paper_mm),
         });
         // Liste de courses imprimée avec `clear` : on retire ce qui y figurait (pas ce qui a été
         // ajouté pendant l'impression). Un ticket en attente ne vide rien : la liste peut encore servir.
         let printed_now = failure.is_none() && queued.is_none();
+        // En suspens : compté quand il sortira (voir `settle_pending`).
+        if printed_now && !stalled {
+            store.data.paper.consume(paper_mm);
+        }
         if printed_now && ticket.blocks.iter().any(|b| matches!(b, Block::Shopping { clear: true, .. })) {
             store.data.shopping.retain(|item| item.added > started);
         }
@@ -255,7 +327,13 @@ impl App {
         drop(store);
         drop(printer);
         // Mis en file derrière un ticket en suspens : l'appli dit pourquoi (capot, papier).
-        Printed { errors, failure, queued: queued.map(|(_, reason)| reason), stalled: stalled || busy }
+        Printed {
+            errors,
+            failure,
+            queued: queued.map(|(_, reason)| reason),
+            printer: self.printer_status(),
+            stalled: stalled || busy,
+        }
     }
 
     /// Un envoi en suspens est-il enfin sorti (ou en échec) ? Met son entrée d'historique à jour.
@@ -270,9 +348,10 @@ impl App {
         };
         let Some(done) = pending.take() else { return false };
         drop(pending);
-        if let Some(at) = done.at {
+        {
             let mut store = self.lock_store();
-            if let Some(entry) = store.data.history.iter_mut().find(|e| e.at == at && e.label == done.label) {
+            if let Some(entry) = store.data.history.iter_mut().find(|e| Some(e.at) == done.at && e.label == done.label)
+            {
                 entry.errors.retain(|m| m != crate::output::Stalled::message());
                 match &outcome {
                     Ok(()) => entry.printed_at = Some(Utc::now()),
@@ -281,6 +360,9 @@ impl App {
                         entry.errors.insert(0, reason.clone());
                     }
                 }
+            }
+            if outcome.is_ok() {
+                store.data.paper.consume(done.paper_mm);
             }
             if let Err(e) = store.save() {
                 eprintln!("{}", tr!("historique non enregistré : {e:#}", "history not saved: {e:#}"));
@@ -301,18 +383,10 @@ impl App {
     /// trop anciens sont abandonnés et notés comme tels dans l'historique.
     fn watch_printer(&self) {
         let printer = self.printer.lock().unwrap_or_else(|e| e.into_inner());
-        let ready = printer.available();
-        let was = self.printer_ready.swap(ready, std::sync::atomic::Ordering::Relaxed);
-        if ready != was {
-            eprintln!(
-                "{}",
-                if ready {
-                    t("imprimante de retour", "printer is back")
-                } else {
-                    t("imprimante absente", "printer missing")
-                }
-            );
-        }
+        // Inconnu (envoi en cours) : on garde le dernier état.
+        let status = printer.status().unwrap_or_else(|| self.printer_status());
+        self.set_printer_status(status);
+        let ready = status == Status::Ready;
         // Un envoi encore en suspens : la file attend qu'il soit sorti.
         if self.settle_pending() {
             return;
@@ -324,6 +398,8 @@ impl App {
             if self.pending.lock().unwrap_or_else(|e| e.into_inner()).is_some() {
                 break;
             }
+            // Sorti tout de suite (pas en suspens) : compté sur le rouleau.
+            let mut out_now = false;
             let outcome = if job.at < limit {
                 Err(tr!(
                     "abandonné : imprimante absente pendant plus de {} h",
@@ -336,19 +412,27 @@ impl App {
                 match crate::store::load_job(&job.id) {
                     None => Err(t("ticket en attente perdu", "queued ticket lost").to_owned()),
                     Some(bytes) => match printer.write(&bytes) {
-                        Ok(()) => Ok(()),
+                        Ok(()) => {
+                            out_now = true;
+                            Ok(())
+                        }
                         // Confié à l'imprimante, qui le sortira quand elle sera prête : les suivants
                         // attendent qu'il soit sorti.
                         Err(e) if e.is::<crate::output::Stalled>() => {
                             if let Some(done) = e.downcast_ref::<crate::output::Stalled>().and_then(|s| s.take()) {
-                                *self.pending.lock().unwrap_or_else(|e| e.into_inner()) =
-                                    Some(Pending { done, at: None, label: job.label.clone(), since: Utc::now() });
+                                *self.pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Pending {
+                                    done,
+                                    at: None,
+                                    label: job.label.clone(),
+                                    since: Utc::now(),
+                                    paper_mm: self.queued_paper_mm(&job.id),
+                                });
                             }
                             Ok(())
                         }
                         // Toujours absente : on réessaiera au prochain tour.
                         Err(_) => {
-                            self.printer_ready.store(false, std::sync::atomic::Ordering::Relaxed);
+                            self.set_printer_status(Status::Missing);
                             break;
                         }
                     },
@@ -357,8 +441,10 @@ impl App {
             crate::store::remove_job(&job.id);
             let mut store = self.lock_store();
             store.data.queue.retain(|j| j.id != job.id);
+            let mut paper_mm = 0;
             if let Some(entry) = store.data.history.iter_mut().find(|e| e.queued.as_deref() == Some(&job.id)) {
                 entry.queued = None;
+                paper_mm = entry.paper_mm.unwrap_or(0);
                 match &outcome {
                     Ok(()) => {
                         entry.ok = entry.errors.is_empty();
@@ -366,6 +452,9 @@ impl App {
                     }
                     Err(reason) => entry.errors.insert(0, reason.clone()),
                 }
+            }
+            if out_now {
+                store.data.paper.consume(paper_mm);
             }
             if let Err(e) = store.save() {
                 eprintln!("{}", tr!("historique non enregistré : {e:#}", "history not saved: {e:#}"));
@@ -624,6 +713,25 @@ struct NewUser {
 #[derive(Deserialize)]
 struct NewPassword {
     password: String,
+}
+
+/// Rouleau neuf posé ; sans longueur, la même que le précédent.
+#[derive(Deserialize)]
+struct NewRoll {
+    #[serde(default)]
+    length_m: Option<u32>,
+}
+
+/// La jauge de papier, pour l'appli et les domotiques.
+fn paper_json(paper: &crate::store::Paper) -> Value {
+    json!({
+        "roll_mm": paper.roll_mm,
+        "used_mm": paper.used_mm,
+        "remaining_mm": paper.remaining_mm(),
+        "percent": paper.percent(),
+        "low": paper.low(),
+        "since": paper.since,
+    })
 }
 
 /// Blocs à retirer du catalogue (types : « sudoku », « weather »…).
@@ -1019,20 +1127,40 @@ fn handle(app: &App, request: &mut Request) -> Reply {
         },
         (Method::Get, ["api", "status"]) => {
             let claude = crate::claude::Claude::from_env();
-            let (queued, hidden_blocks) = {
+            let (queued, hidden_blocks, paper) = {
                 let store = app.lock_store();
-                (store.data.queue.len(), store.data.hidden_blocks.clone())
+                (store.data.queue.len(), store.data.hidden_blocks.clone(), paper_json(&store.data.paper))
             };
             Reply::ok(json!({
                 "printer": app.destination,
-                "printer_ready": app.printer_ready.load(std::sync::atomic::Ordering::Relaxed),
+                "printer_ready": app.printer_status() == Status::Ready,
+                "printer_status": app.printer_status().code(),
                 "queued": queued,
+                "paper": paper,
                 "hidden_blocks": hidden_blocks,
                 "claude": claude.as_ref().map(|c| c.model().to_owned()),
                 "claude_backend": claude.as_ref().map(|c| c.backend()),
                 "version": env!("CARGO_PKG_VERSION"),
                 "update": *app.latest.lock().unwrap_or_else(|e| e.into_inner()),
             }))
+        }
+        (Method::Post, ["api", "paper", "roll"]) => {
+            let input: NewRoll = try_reply!(json_body(request));
+            let roll_mm = input.length_m.map(|m| m.saturating_mul(1000));
+            if roll_mm.is_some_and(|mm| !crate::store::Paper::ROLL_RANGE_MM.contains(&mm)) {
+                return Reply::error(
+                    400,
+                    t("longueur de rouleau invalide (5 à 500 m)", "invalid roll length (5 to 500 m)"),
+                );
+            }
+            match app.new_roll(roll_mm) {
+                Ok(paper) => {
+                    let roll_m = paper["roll_mm"].as_u64().unwrap_or(0) / 1000;
+                    Reply::ok(json!({ "ok": true, "paper": paper }))
+                        .note(tr!("nouveau rouleau ({roll_m} m) posé par {by}", "new roll ({roll_m} m) put in by {by}"))
+                }
+                Err(e) => Reply::error(500, format!("{e:#}")),
+            }
         }
         (Method::Put, ["api", "settings", "hidden-blocks"]) => {
             let input: HiddenBlocks = try_reply!(json_body(request));
@@ -1312,9 +1440,14 @@ fn printed_reply(printed: Printed, label: &str) -> Reply {
             .note(tr!("« {label} » en suspens (capot, papier ?)", "\"{label}\" stalled (cover, paper?)"));
     }
     if let Some(reason) = printed.queued {
-        return Reply::ok(json!({ "ok": true, "queued": true, "errors": printed.errors }))
-            .with_status(202)
-            .note(tr!("« {label} » en attente ({reason})", "\"{label}\" queued ({reason})"));
+        return Reply::ok(json!({
+            "ok": true,
+            "queued": true,
+            "printer_status": printed.printer.code(),
+            "errors": printed.errors,
+        }))
+        .with_status(202)
+        .note(tr!("« {label} » en attente ({reason})", "\"{label}\" queued ({reason})"));
     }
     match printed.failure {
         None => {
@@ -1348,7 +1481,7 @@ pub fn serve(listen: &str, token: Option<String>, target: Target) -> Result<()> 
             .and_then(|v| v.trim().parse().ok())
             .unwrap_or(DEFAULT_MAX_PER_HOUR),
         latest: Arc::new(Mutex::new(None)),
-        printer_ready: std::sync::atomic::AtomicBool::new(true),
+        printer_status: Mutex::new(Status::Ready),
         pending: Mutex::new(None),
         queue_hours: std::env::var("PRINTR_QUEUE_HOURS").ok().and_then(|v| v.trim().parse().ok()).unwrap_or(12),
     });

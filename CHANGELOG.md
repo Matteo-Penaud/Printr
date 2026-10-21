@@ -5,15 +5,70 @@ each one is a `vX.Y.Z` tag on GitHub, which the server checks to tell the admin 
 
 Each minor version is named after a pioneer of printing, in alphabetical order (patch releases keep the
 name): Aldus Manutius, Giambattista Bodoni, William Caslon, the Didot family, Robert Estienne,
-Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas Jenson…
+Pierre-Simon Fournier, Johannes Gutenberg, Richard Hoe, Frederic Ives, Nicolas Jenson, Friedrich
+Koenig…
 
 ## [Unreleased]
+
+## [1.10.0] “Koenig” - 2026-10-21
 
 ### Added
 - Image block: choose the **dithering algorithm** — Floyd–Steinberg (default, smooth gradients for photos),
   Atkinson (more contrast, cleaner flat areas) or Bayer (a regular pattern without grain). In the web app,
   under the Dithering switch; in JSON, `dither_algorithm`; on the command line, `printr image --dither`.
   Existing tickets keep Floyd–Steinberg (#12).
+- **Cover open and out of paper**, read from the printer itself (USB port status, a control request that
+  cannot block the link, unlike ESC/POS status queries). The web app says which one it is (banner,
+  sidebar, message after printing), tickets sent meanwhile wait in the queue right away instead of
+  stalling for 30 s, and come out once when the printer is ready again. Also published as
+  `printer_status` (`ready`, `cover_open`, `paper_out`, `missing`) in `/api/status`, on `printr/status`
+  and in MQTT results. Tested on the TM-T88V.
+- **Paper gauge**: Printr counts the paper used since the roll was put in (70 m by default) and warns
+  with a banner when less than 10% is left. The gauge is under *My account*, with a **New roll** button
+  (`POST /api/paper/roll`); it also resets by itself when the printer goes from “out of paper” to
+  “ready”, and a whole roll used up sets the real roll length. Published as `paper` in `/api/status` and
+  on `printr/status`.
+- **Home Assistant discovery** over MQTT: Printr shows up by itself as a device, with sensors (printer
+  status, problem, paper left in % and meters, paper almost out, queued tickets, last ticket), a New
+  roll button, a Print a text field and one button per shared ticket, kept in sync as tickets change.
+  `PRINTR_MQTT_DISCOVERY` sets the discovery prefix (`homeassistant` by default) or turns it `off`.
+  New MQTT topic `printr/paper/roll`.
+
+- **What's for dinner?** (`recipe_from_ingredients`): list the ingredients at hand, Claude writes a
+  recipe that uses them, with pantry basics only, and an optional wish ("quick", "vegetarian"…).
+- **Chores** (`chores`): who does what, chores rotating between people every week (or day), worked
+  out from the date.
+- **Chess** (`chess`): the Lichess daily puzzle, the board drawn from the side to play with the
+  last move framed, and the answer in algebraic notation, upside down. Pieces from Noto Sans Symbols 2
+  (SIL Open Font License).
+- **Birthdays** (`birthdays`): "Happy birthday Leo!" with the age on the day, then a countdown to the
+  next ones; one person per line, the year optional.
+- **Bedtime story** (`story`): Claude makes up a gentle tale where the children are the heroes, on an
+  optional theme, short or long; a new story every day, never the same title twice.
+- Three new puzzles, generated on the Pi with a unique solution and the same number system as the
+  sudoku: **Kakuro** (`kakuro`), **Takuzu** (`takuzu`, binairo) and **Hashi** (`hashi`, bridges).
+
+### Changed
+- **Weather with pictograms**: sun, clouds, fog, drizzle, rain, snow and storm, drawn on the Pi (no image
+  to download). A large one for today, and the next days in columns: day, pictogram, high, low and
+  chance of rain (#7).
+- Weather: **what to wear** option (`outfit`), worked out from today's forecast without AI: layers for
+  the morning and the afternoon, umbrella or raincoat when it's windy, boots in the snow, sun protection.
+- The README is now a short overview; the full documentation moved to the guide (`docs/guide.md` and
+  `docs/guide.fr.md`, rendered on the site), with a new **Supported printers** section.
+
+### Fixed
+- The live preview of the composer stopped as soon as a block was added with an empty required field
+  (Claude recipe, recipe, calendar…): the whole ticket was refused. Now only that block shows an error.
+
+### Security
+- MQTT: switched from `rumqttc` to its maintained fork `rumqttc-v4-next` (still MQTT 3.1.1), which uses
+  `rustls-webpki` 0.103. This fixes RUSTSEC-2026-0049, -0098, -0099 and -0104 (certificate revocation
+  lists and name constraints, only relevant with `mqtts://`) and drops the unmaintained `rustls-pemfile`
+  (RUSTSEC-2025-0134). The temporary exceptions in `deny.toml` are gone. Nothing changes in the
+  configuration (#10).
+- `rustls-webpki` 0.103.16 and `webpki-roots` 1.0.10: distrusted emSign certificates are no longer
+  accepted (RUSTSEC-2026-0381, RUSTSEC-2026-0382).
 
 ## [1.9.0] “Jenson” - 2026-10-19
 
@@ -212,7 +267,8 @@ First release.
 - One-command installation on a Raspberry Pi, no sudo needed afterwards.
 - Windows development with a dev container and a printing relay.
 
-[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/XNinety9/Printr/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/XNinety9/Printr/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/XNinety9/Printr/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/XNinety9/Printr/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/XNinety9/Printr/compare/v1.6.1...v1.7.0

@@ -44,10 +44,32 @@ const toast = (message, kind = 'ok', emoji) => bus.emit('toast', { message, kind
 
 // Réponse d'une impression : imprimé, imprimé avec des blocs en erreur, ou en attente de
 // l'imprimante (absente : le ticket sortira à son retour).
+// Ce que l'imprimante peut faire, selon `printer_status` : libellé court, bandeau, et message quand
+// un ticket attend à cause d'elle.
+const PRINTER_STATES = {
+  ready: { emoji: '✅', label: () => T('Imprimante prête', 'Printer ready') },
+  missing: {
+    emoji: '🔌', label: () => T('Imprimante déconnectée', 'Printer disconnected'),
+    banner: () => T('Imprimante déconnectée : les tickets attendront son retour.', 'Printer disconnected: tickets will wait for it to come back.'),
+    queued: () => T('Imprimante absente : le ticket sortira dès son retour.', 'Printer missing: the ticket will come out as soon as it is back.'),
+  },
+  cover_open: {
+    emoji: '📂', label: () => T('Capot ouvert', 'Cover open'),
+    banner: () => T('Le capot de l’imprimante est ouvert : les tickets attendront qu’il soit refermé.', 'The printer cover is open: tickets will wait until it is closed.'),
+    queued: () => T('Capot ouvert : le ticket sortira dès qu’il sera refermé.', 'Cover open: the ticket will come out as soon as it is closed.'),
+  },
+  paper_out: {
+    emoji: '🧻', label: () => T('Plus de papier', 'Out of paper'),
+    banner: () => T('L’imprimante n’a plus de papier : les tickets attendront un nouveau rouleau.', 'The printer is out of paper: tickets will wait for a new roll.'),
+    queued: () => T('Plus de papier : le ticket sortira dès qu’un rouleau sera remis.', 'Out of paper: the ticket will come out as soon as a roll is put back.'),
+  },
+};
+const printerState = (code) => PRINTER_STATES[code] || PRINTER_STATES.missing;
+
 function printedToast(r, message = T('Imprimé !', 'Printed!'), emoji = '🧾') {
   bus.emit('printer');
   if (r?.stalled) return toast(T('L’imprimante ne prend plus rien (capot, papier ?) : le ticket sortira quand elle sera prête.', 'The printer is not taking anything (cover, paper?): the ticket will come out when it is ready.'), 'warn', '⏳');
-  if (r?.queued) return toast(T('Imprimante absente : le ticket sortira dès son retour.', 'Printer missing: the ticket will come out as soon as it is back.'), 'warn', '⏳');
+  if (r?.queued) return toast(printerState(r.printer_status).queued(), 'warn', '⏳');
   if (r?.errors?.length) return toast(T(`Imprimé, avec ${r.errors.length} bloc(s) en erreur`, `Printed, with ${r.errors.length} block(s) in error`), 'error', '⚠️');
   return toast(message, 'ok', emoji);
 }
@@ -276,10 +298,11 @@ const BLOCKS = [
   },
   {
     type: 'weather', label: T('Météo', 'Weather'), emoji: '🌤️', group: G.daily, desc: T('Le temps du jour et des suivants', "Today's weather and the days ahead"),
-    defaults: { location: 'Lyon', days: 1 },
+    defaults: { location: 'Lyon', days: 1, outfit: false },
     fields: [
       { key: 'location', label: T('Ville', 'City'), kind: 'text', placeholder: T('Lyon, ou « 45.76,4.83 »', 'Lyon, or "45.76,4.83"') },
       { key: 'days', label: T('Prévisions', 'Forecast'), kind: 'segmented', options: [[1, T("Aujourd'hui", 'Today')], [3, T('3 jours', '3 days')], [5, T('5 jours', '5 days')], [7, T('7 jours', '7 days')]] },
+      { key: 'outfit', label: T('Comment s’habiller', 'What to wear'), kind: 'toggle', help: T('« Manteau et bonnet, prends un parapluie » : d’après les prévisions du jour.', '“Coat and hat, take an umbrella”: from today’s forecast.') },
     ],
     summary: (b) => b.location,
   },
@@ -340,6 +363,15 @@ const BLOCKS = [
       { key: 'date', label: T('Date', 'Date'), kind: 'date' },
     ],
     summary: (b) => `${b.label} · ${b.date}`,
+  },
+  {
+    type: 'birthdays', label: T('Anniversaires', 'Birthdays'), emoji: '🎂', group: G.daily, desc: T('« Aujourd’hui, Léo a 12 ans ! », et les suivants', '“Today, Leo turns 12!”, and the next ones'),
+    defaults: { list: '', upcoming: 3 },
+    fields: [
+      { key: 'list', label: T('Les anniversaires', 'Birthdays'), kind: 'textarea', placeholder: T('Léo, 12/03/2014\nCamille, 14/11', 'Leo, 03/12/2014\nCamille, 11/14'), help: T('Une personne par ligne, la date à la fin (jour/mois, l’année pour l’âge).', 'One person per line, the date last (month/day, the year for the age).') },
+      { key: 'upcoming', label: T('Combien des suivants', 'How many next ones'), kind: 'number', min: 1, max: 10 },
+    ],
+    summary: (b) => (b.list || '').split('\n').map((l) => l.split(/[,:]/)[0].trim()).filter(Boolean).slice(0, 4).join(', ') || T('Personne', 'Nobody'),
   },
   {
     type: 'riddle', label: T('Énigme', 'Riddle'), emoji: '🧩', group: G.challenges, desc: T('125 énigmes, réponse à l’envers', 'Riddles, charades, logic, the answer upside down'),
@@ -437,6 +469,36 @@ const BLOCKS = [
     ],
   },
   {
+    type: 'kakuro', label: 'Kakuro', emoji: '➕', group: G.grids, desc: T('Des sommes à composer, chiffres de 1 à 9', 'Sums to build from digits 1 to 9'),
+    defaults: { difficulty: 'moyen' },
+    fields: [
+      { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
+      { key: 'seed', label: T('Numéro de grille', 'Grid number'), kind: 'number', optional: true, help: T('Laisse vide pour une nouvelle grille.', 'Leave empty for a new grid.') },
+      { key: 'solution', label: T('Imprimer la solution de cette grille', "Print this grid's solution"), kind: 'toggle' },
+    ],
+    summary: (b) => label(LEVELS, b.difficulty),
+  },
+  {
+    type: 'takuzu', label: 'Takuzu', emoji: '0️⃣', group: G.grids, desc: T('Des 0 et des 1, jamais trois pareils', '0s and 1s, never three alike'),
+    defaults: { difficulty: 'moyen' },
+    fields: [
+      { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
+      { key: 'seed', label: T('Numéro de grille', 'Grid number'), kind: 'number', optional: true, help: T('Laisse vide pour une nouvelle grille.', 'Leave empty for a new grid.') },
+      { key: 'solution', label: T('Imprimer la solution de cette grille', "Print this grid's solution"), kind: 'toggle' },
+    ],
+    summary: (b) => label(LEVELS, b.difficulty),
+  },
+  {
+    type: 'hashi', label: 'Hashi', emoji: '🌉', group: G.grids, desc: T('Relier les îles par des ponts', 'Connect the islands with bridges'),
+    defaults: { difficulty: 'moyen' },
+    fields: [
+      { key: 'difficulty', label: T('Difficulté', 'Difficulty'), kind: 'segmented', options: LEVELS },
+      { key: 'seed', label: T('Numéro de grille', 'Grid number'), kind: 'number', optional: true, help: T('Laisse vide pour une nouvelle grille.', 'Leave empty for a new grid.') },
+      { key: 'solution', label: T('Imprimer la solution de cette grille', "Print this grid's solution"), kind: 'toggle' },
+    ],
+    summary: (b) => label(LEVELS, b.difficulty),
+  },
+  {
     type: 'petit_bac', label: T('Petit bac', 'Categories'), emoji: '✏️', group: G.words, desc: T('Une lettre, des catégories, à jouer en famille', 'One letter, some categories, to play as a family'),
     defaults: { players: 1, count: 6, categories: [] },
     fields: [
@@ -490,6 +552,14 @@ const BLOCKS = [
     summary: (b) => ({ cesar: T('César', 'Caesar'), morse: 'Morse', nombres: T('Nombres', 'Numbers') })[b.cipher] || '',
   },
   {
+    type: 'chess', label: T('Échecs', 'Chess'), emoji: '♟️', group: G.challenges, desc: T('Le problème du jour de Lichess, solution à l’envers', 'Lichess daily puzzle, answer upside down'),
+    defaults: { solution: true },
+    fields: [
+      { key: 'solution', label: T('Imprimer la solution (à l’envers)', 'Print the answer (upside down)'), kind: 'toggle' },
+    ],
+    summary: () => T('Problème du jour', 'Daily puzzle'),
+  },
+  {
     type: 'coloring', label: T('Coloriage', 'Coloring'), emoji: '🎨', group: G.challenges, desc: T('Un mandala à colorier, toujours différent', 'A mandala to color, always different'),
     defaults: {},
     fields: [{ key: 'seed', label: T('Numéro du mandala', 'Mandala number'), kind: 'number', optional: true, help: T('Laisse vide pour un nouveau mandala.', 'Leave empty for a new mandala.') }],
@@ -505,6 +575,16 @@ const BLOCKS = [
       { key: 'count', label: T('Nombre de bons', 'Number of vouchers'), kind: 'number', min: 1, max: 6 },
     ],
     summary: (b) => b.text || T('Idée au hasard', 'Random idea'),
+  },
+  {
+    type: 'story', label: T('Histoire du soir', 'Bedtime story'), emoji: '🌙', group: G.gift, desc: T('Un conte où les enfants sont les héros', 'A tale where the kids are the heroes'), ai: true,
+    defaults: { children: '', theme: '', length: 'short' },
+    fields: [
+      { key: 'children', label: T('Les héros', 'The heroes'), kind: 'text', placeholder: T('Léo, Camille', 'Leo, Camille') },
+      { key: 'theme', label: T('Un thème ? (facultatif)', 'A theme? (optional)'), kind: 'text', placeholder: T('Les dragons, l’espace, la mer…', 'Dragons, space, the sea…') },
+      { key: 'length', label: T('Longueur', 'Length'), kind: 'segmented', options: [['short', T('Courte', 'Short')], ['long', T('Longue', 'Long')]] },
+    ],
+    summary: (b) => b.children || T('Aucun héros', 'No heroes'),
   },
   {
     type: 'news', label: T('Actualités', 'News'), emoji: '📰', group: G.info, desc: T('Revue de presse depuis tes flux RSS', 'Press review from your RSS feeds'),
@@ -566,6 +646,17 @@ const BLOCKS = [
     summary: (b) => (b.dish ? T(`${b.dish} · ${b.servings} pers.`, `${b.dish} · serves ${b.servings}`) : T('Aucun plat', 'No dish')),
   },
   {
+    type: 'recipe_from_ingredients', label: T('Qu’est-ce qu’on mange ?', 'What’s for dinner?'), emoji: '🥕', group: G.org, desc: T('Les ingrédients qu’on a, Claude trouve la recette', 'What’s in the fridge, Claude finds the recipe'), ai: true,
+    defaults: { ingredients: '', servings: 4, wish: '', steps: true },
+    fields: [
+      { key: 'ingredients', label: T('Ingrédients sous la main', 'Ingredients at hand'), kind: 'textarea', placeholder: T('Courgettes, feta, riz…', 'Zucchini, feta, rice…'), help: T('Un par ligne ou séparés par des virgules. Les basiques du placard (sel, huile, beurre, œufs…) sont déjà comptés.', 'One per line or separated by commas. Pantry basics (salt, oil, butter, eggs…) are already counted.') },
+      { key: 'servings', label: T('Pour combien de personnes', 'Servings'), kind: 'number', min: 1, max: 20 },
+      { key: 'wish', label: T('Une envie ? (facultatif)', 'Any wish? (optional)'), kind: 'text', placeholder: T('Rapide, végétarien, pour un pique-nique…', 'Quick, vegetarian, for a picnic…') },
+      { key: 'steps', label: T('Imprimer les étapes', 'Print the steps'), kind: 'toggle', help: T('Sinon, seulement les ingrédients.', 'Otherwise, only the ingredients.') },
+    ],
+    summary: (b) => (b.ingredients || '').split(/[\n,;]/).map((x) => x.trim()).filter(Boolean).slice(0, 4).join(', ') || T('Aucun ingrédient', 'No ingredients'),
+  },
+  {
     type: 'shopping', label: T('Liste de courses', 'Shopping list'), emoji: '🛒', group: G.org, desc: T('La liste partagée de l’appli', "The app's shared list"),
     defaults: { title: T('Liste de courses', 'Shopping list'), clear: true },
     fields: [
@@ -603,6 +694,16 @@ const BLOCKS = [
     summary: (b) => (b.collections || []).map((c) => c.name).filter(Boolean).join(', '),
   },
   {
+    type: 'chores', label: T('Tâches ménagères', 'Chores'), emoji: '🧹', group: G.org, desc: T('Qui fait quoi, à tour de rôle', 'Who does what, taking turns'),
+    defaults: { tasks: [T('Vider le lave-vaisselle', 'Empty the dishwasher'), T('Mettre la table', 'Set the table'), T('Sortir les poubelles', 'Take out the trash')], people: [], period: 'week' },
+    fields: [
+      { key: 'tasks', label: T('Tâches', 'Chores'), kind: 'list', placeholder: T('Arroser les plantes…', 'Water the plants…'), add: T('Ajouter une tâche', 'Add a chore') },
+      { key: 'people', label: T('Qui les fait', 'Who does them'), kind: 'list', placeholder: T('Prénom', 'Name'), add: T('Ajouter quelqu’un', 'Add someone') },
+      { key: 'period', label: T('On change', 'Rotate'), kind: 'segmented', options: [['day', T('Chaque jour', 'Daily')], ['week', T('Chaque semaine', 'Weekly')]] },
+    ],
+    summary: (b) => ((b.people || []).filter(Boolean).length ? `${b.people.filter(Boolean).join(', ')} · ${b.period === 'day' ? T('chaque jour', 'daily') : T('chaque semaine', 'weekly')}` : T('Personne', 'Nobody')),
+  },
+  {
     type: 'wifi', label: T('Wi-Fi invités', 'Guest Wi-Fi'), emoji: '📶', group: G.org, desc: T('Un QR code pour se connecter', 'A QR code to connect'),
     defaults: { ssid: '', password: '', security: 'wpa', show_password: true },
     fields: [
@@ -627,8 +728,8 @@ const ALIASES = {
   rails: 'train_tracks', defi_sportif: 'workout', enigme: 'riddle', calcul_mental: 'mental_math', mot_mystere: 'anagram',
   anagramme: 'anagram', logimage: 'nonogram', picross: 'nonogram', message_code: 'cipher', courses: 'shopping',
   bon: 'coupon', poubelles: 'bins', bilan: 'monthly_report', mots_fleches: 'arrow_word', fleches: 'arrow_word',
-  mots_croises: 'crossword', croises: 'crossword', recette: 'recipe', recette_claude: 'recipe_claude', ciel: 'sky',
-  coloriage: 'coloring',
+  mots_croises: 'crossword', croises: 'crossword', recette: 'recipe', recette_claude: 'recipe_claude', recette_ingredients: 'recipe_from_ingredients', ciel: 'sky',
+  coloriage: 'coloring', taches: 'chores', echecs: 'chess', anniversaires: 'birthdays', histoire: 'story', binairo: 'takuzu', ponts: 'hashi',
 };
 for (const [alias, type] of Object.entries(ALIASES)) BLOCK[alias] = BLOCK[type];
 // Ancien nom accepté par le serveur.
@@ -1256,6 +1357,12 @@ function Home({ me, presets, reload, openComposer }) {
 
 // Ticket d'exemple de chaque bloc (celui du site, intégré au binaire), montré au clic sur l'œil.
 const EXAMPLE = {
+  hashi: 'hashi',
+  takuzu: 'takuzu',
+  kakuro: 'kakuro',
+  story: 'histoire',
+  birthdays: 'anniversaires',
+  chess: 'echecs',
   title: 'titre', text: 'texte', date: 'date', separator: 'separateur', feed: 'espace', cut: 'coupe', image: 'image', qr: 'qr',
   picto: 'pictogramme', weather: 'meteo', barnum: 'horoscope', horoscope: 'horoscope_claude', word_of_the_day: 'mot_du_jour',
   saint: 'saint', quote: 'citation', moon: 'lune', sun: 'soleil', sky: 'ciel', air_quality: 'air', holidays: 'jours_feries',
@@ -1263,12 +1370,19 @@ const EXAMPLE = {
   word_search: 'mots_meles', train_tracks: 'voie_ferree', arrow_word: 'mots_fleches', crossword: 'mots_croises', nonogram: 'logimage',
   petit_bac: 'petit_bac', mental_math: 'calcul_mental', anagram: 'mot_mystere', cipher: 'message_code',
   coloring: 'coloriage', coupon: 'bon', news: 'actualites', on_this_day: 'ephemeride', crypto: 'crypto', todo: 'a_faire',
-  shopping: 'courses', recipe: 'recette', recipe_claude: 'recette_claude', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
+  chores: 'taches', shopping: 'courses', recipe: 'recette', recipe_claude: 'recette_claude', recipe_from_ingredients: 'recette_ingredients', agenda: 'agenda', bins: 'poubelles', wifi: 'wifi', monthly_report: 'bilan',
 };
 const exampleUrl = (type) => EXAMPLE[type] && `/exemples/${EN ? 'en/' : ''}${EXAMPLE[type]}.png`;
 
 // Mots-clés de recherche, dans les deux langues, en plus du nom et de la description.
 const KEYWORDS = {
+  hashi: 'hashi ponts bridges iles islands relier connect logique logic casse-tete puzzle',
+  takuzu: 'takuzu binairo binaire binary 0 1 zero un one grille grid logique logic casse-tete puzzle',
+  kakuro: 'kakuro sommes sums chiffres digits mots croises crossword nombres numbers casse-tete puzzle',
+  story: 'histoire story conte tale soir bedtime dodo sleep enfants kids children claude ia ai',
+  birthdays: 'anniversaires birthdays age fete party famille family compte a rebours countdown',
+  chess: 'echecs chess probleme puzzle lichess mat checkmate echiquier board strategie',
+  chores: 'taches menageres chores menage housework corvees rotation famille family planning',
   title: 'titre title gros big', text: 'texte text paragraphe paragraph message', date: 'date jour day calendrier',
   separator: 'separateur separator ligne line trait', feed: 'espace space blanc vide blank', cut: 'coupe cut couper ciseaux scissors morceau piece',
   image: 'image photo picture', qr: 'qr code lien link url', picto: 'pictogramme pictogram coeur heart etoile star dessin drawing',
@@ -1287,18 +1401,19 @@ const KEYWORDS = {
   coloring: 'coloriage coloring mandala dessin', coupon: 'bon cadeau coupon gift offrir',
   news: 'actualites news rss presse journal', on_this_day: 'ephemeride histoire history wikipedia', crypto: 'crypto bitcoin ethereum',
   todo: 'faire todo liste list taches tasks',
-  recipe: 'recette recipe cuisine cooking ingredients plat dish site', recipe_claude: 'recette recipe cuisine cooking ingredients plat dish claude ia ai', shopping: 'courses shopping liste list', agenda: 'agenda calendar calendrier evenements ics',
+  recipe: 'recette recipe cuisine cooking ingredients plat dish site', recipe_claude: 'recette recipe cuisine cooking ingredients plat dish claude ia ai',
+  recipe_from_ingredients: 'recette recipe cuisine cooking ingredients frigo fridge restes leftovers manger dinner diner repas meal claude ia ai', shopping: 'courses shopping liste list', agenda: 'agenda calendar calendrier evenements ics',
   bins: 'poubelles bins trash dechets recyclage', wifi: 'wifi invites guests reseau network', monthly_report: 'bilan mois monthly report statistiques stats',
 };
 
 // Étiquettes des blocs, pour les filtres du catalogue et la recherche (« Claude » vient de `ai`).
-const KIDS = ['picto', 'riddle', 'workout', 'word_search', 'maze', 'nonogram', 'petit_bac', 'mental_math', 'anagram', 'cipher', 'coloring'];
+const KIDS = ['story', 'picto', 'riddle', 'workout', 'word_search', 'maze', 'nonogram', 'petit_bac', 'mental_math', 'anagram', 'cipher', 'coloring'];
 const TOGETHER = ['riddle', 'workout', 'petit_bac', 'anagram'];
 // Ni réseau ni Claude : tout est calculé sur place, gratuitement.
 const OFFLINE = [
   'title', 'text', 'date', 'separator', 'feed', 'image', 'qr', 'picto', 'barnum', 'saint', 'quote', 'moon', 'holidays', 'countdown',
   'riddle', 'workout', 'sudoku', 'word_search', 'train_tracks', 'maze', 'nonogram', 'petit_bac', 'mental_math', 'anagram', 'cipher',
-  'coloring', 'coupon', 'todo', 'shopping', 'bins', 'wifi', 'monthly_report',
+  'coloring', 'coupon', 'todo', 'shopping', 'bins', 'wifi', 'monthly_report', 'chores', 'birthdays', 'kakuro', 'takuzu', 'hashi',
 ];
 const FILTERS = [
   { id: 'kids', emoji: '🧒', label: T('Pour les enfants', 'For kids'), words: 'enfants enfant kids children', test: (b) => KIDS.includes(b.type) },
@@ -1313,7 +1428,7 @@ const GROUP_ORDER = Object.values(G);
 // Claude disponible ou non.
 const CATALOG = { hidden: [], claude: true };
 // Sans Claude, ces blocs n'impriment rien d'utile ; les grilles, elles, gardent leurs définitions en cache.
-const NEEDS_CLAUDE = ['horoscope', 'word_of_the_day', 'recipe_claude'];
+const NEEDS_CLAUDE = ['story', 'horoscope', 'word_of_the_day', 'recipe_claude', 'recipe_from_ingredients'];
 const offered = (b) => !CATALOG.hidden.includes(b.type) && (CATALOG.claude || !NEEDS_CLAUDE.includes(b.type));
 
 // Sans accents ni majuscules : « meteo » trouve « Météo ».
@@ -1997,7 +2112,42 @@ function HiddenBlocksSheet({ onClose }) {
 }
 
 // Mon compte : la famille (ajouter, retirer), mon mot de passe, la déconnexion.
-function AccountSheet({ me, users, version, update, reloadUsers, onLogout, onClose }) {
+// Longueur de papier lisible : « 52 m », « 80 cm ».
+const metres = (mm) => (mm >= 1000 ? `${Math.round(mm / 1000)}\u00a0m` : `${Math.round(mm / 10)}\u00a0cm`);
+
+// La jauge de papier, estimée par Printr depuis la pose du rouleau, et le bouton pour en poser un neuf.
+function PaperCard({ paper }) {
+  const [open, setOpen] = useState(false);
+  const [length, setLength] = useState(String(Math.round(paper.roll_mm / 1000)));
+  const [busy, setBusy] = useState(false);
+  const save = async (e) => {
+    e.preventDefault(); setBusy(true);
+    try {
+      await api('POST', '/api/paper/roll', { length_m: Number(length) });
+      toast(T('Nouveau rouleau noté', 'New roll noted'), 'ok', '🧻');
+      bus.emit('printer'); setOpen(false);
+    } catch (err) { toast(err.message, 'error'); } finally { setBusy(false); }
+  };
+  return html`<div class="setting-card paper-card">
+    <span class="big-emoji" aria-hidden="true">🧻</span>
+    <span class="grow"><strong>${T(`Environ ${metres(paper.remaining_mm)} restants`, `About ${metres(paper.remaining_mm)} left`)}</strong>
+      <span class="paper-gauge ${paper.low ? 'low' : ''}" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow=${paper.percent}
+        aria-label=${T('Papier restant', 'Paper left')}><span style=${`width:${paper.percent}%`}></span></span>
+      <span class="muted">${T(`${paper.percent}\u00a0% d’un rouleau de ${metres(paper.roll_mm)}`, `${paper.percent}% of a ${metres(paper.roll_mm)} roll`)}</span>
+      ${!open && html`<button type="button" class="btn secondary small" onClick=${() => setOpen(true)}>${T('Nouveau rouleau', 'New roll')}</button>`}</span>
+  </div>
+  ${open && html`<form class="family-add" onSubmit=${save}>
+    <label class="paper-length">${T('Longueur du rouleau', 'Roll length')}
+      <input class="input" type="number" min="5" max="500" inputmode="numeric" value=${length} onInput=${(e) => setLength(e.target.value)} /> m</label>
+    <button class="btn secondary" disabled=${busy || !(Number(length) >= 5 && Number(length) <= 500)}>${T('C’est posé', 'Done')}</button>
+  </form>
+  <p class="muted paper-hint">${T(
+    'Printr remet aussi la jauge à zéro tout seul quand l’imprimante passe de « plus de papier » à « prête », et cale la longueur sur ce qu’un rouleau entier a vraiment donné.',
+    'Printr also resets the gauge by itself when the printer goes from “out of paper” to “ready”, and adjusts the length to what a whole roll really gave.',
+  )}</p>`}`;
+}
+
+function AccountSheet({ me, users, version, update, paper, reloadUsers, onLogout, onClose }) {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [mine, setMine] = useState('');
@@ -2035,6 +2185,8 @@ function AccountSheet({ me, users, version, update, reloadUsers, onLogout, onClo
           `You're on ${version}. Read what's new, then update from your computer.`,
         )}</span></span>
       <${Icon} name="send" size=${18} /></a>`}
+
+    ${paper && html`<div class="section-title">${T('L’imprimante', 'The printer')}</div><${PaperCard} paper=${paper} />`}
 
     <div class="section-title">${T('La famille', 'The family')}</div>
     <div class="card family">${users.map((u) => html`<div class="family-row" key=${u.id}>
@@ -2085,7 +2237,7 @@ function App() {
   const [version, setVersion] = useState(null);
   const [update, setUpdate] = useState(null); // version plus récente publiée sur GitHub
   // L'imprimante est-elle là ? Et combien de tickets attendent son retour ? (vérifié toutes les 30 s)
-  const [printer, setPrinter] = useState({ ready: true, queued: 0 });
+  const [printer, setPrinter] = useState({ ready: true, status: 'ready', queued: 0, paper: null });
   const [presets, setPresets] = useState(null);
   const [composer, setComposer] = useState(() => store.get('printr.draft', null) || emptyComposer());
   const [scrolled, setScrolled] = useState(false);
@@ -2108,8 +2260,9 @@ function App() {
       CATALOG.hidden = s.hidden_blocks || [];
       CATALOG.claude = !!s.claude;
       setPrinter((before) => {
-        const now = { ready: s.printer_ready !== false, queued: s.queued || 0 };
-        if (before.ready !== now.ready || before.queued !== now.queued) bus.emit('printer-changed');
+        const status = s.printer_status || (s.printer_ready === false ? 'missing' : 'ready');
+        const now = { ready: status === 'ready', status, queued: s.queued || 0, paper: s.paper || null };
+        if (before.status !== now.status || before.queued !== now.queued) bus.emit('printer-changed');
         return now;
       });
     }).catch(() => {});
@@ -2152,7 +2305,7 @@ function App() {
         onClick=${n.hash === '#/compose' ? (e) => { if (route.hash !== '#/compose') { e.preventDefault(); openComposer(store.get('printr.draft', null) || emptyComposer()); } } : undefined}>
         <${Icon} name=${n.icon} />${n.label}</a>`)}
       <div class="spacer"></div>
-      <div class="printer-state ${printer.ready ? 'ok' : 'off'}">${printer.ready ? T('Imprimante prête', 'Printer ready') : T('Imprimante déconnectée', 'Printer disconnected')}</div>
+      <div class="printer-state ${printer.ready ? 'ok' : 'off'}">${printerState(printer.status).label()}</div>
       ${version && html`<div class="version">printr ${version}${me.admin && update && html` · <a href=${update.url} target="_blank" rel="noopener">${T(`${update.version} disponible`, `${update.version} available`)}</a>`}</div>`}
       <div class="account-row">
         <button type="button" class="navlink account" onClick=${() => setMenu(true)}><${Avatar} user=${me} />
@@ -2167,15 +2320,17 @@ function App() {
         ${route.hash === '#/compose' && composer.id && html`<button class="btn ghost small" onClick=${() => openComposer(emptyComposer())}><${Icon} name="plus" size=${16} /> ${T('Nouveau', 'New')}</button>`}
         <button class="me" aria-label=${T('Mon compte', 'My account')} title=${T('Mon compte', 'My account')} onClick=${() => setMenu(true)}><${Avatar} user=${me} /><span>${T('Mon compte', 'My account')}</span></button>
       </header>
-      ${!printer.ready && html`<div class="printer-banner" role="status"><span class="emoji">🔌</span>
-        <span>${T('Imprimante déconnectée : les tickets attendront son retour.', 'Printer disconnected: tickets will wait for it to come back.')}
+      ${!printer.ready && html`<div class="printer-banner" role="status"><span class="emoji">${printerState(printer.status).emoji}</span>
+        <span>${printerState(printer.status).banner()}
         ${printer.queued > 0 && html` <strong>${T(`${printer.queued} en attente`, `${printer.queued} waiting`)}</strong>`}</span></div>`}
+      ${printer.ready && printer.paper?.low && html`<div class="printer-banner" role="status"><span class="emoji">🧻</span>
+        <span>${T(`Papier presque fini : environ ${metres(printer.paper.remaining_mm)} restants. Pense à prévoir un rouleau !`, `Paper almost out: about ${metres(printer.paper.remaining_mm)} left. Time to get a new roll!`)}</span></div>`}
       ${page}
     </main>
     <nav class="tabbar" aria-label=${T('Navigation', 'Navigation')}>
       ${NAV.map((n) => html`<a class="tab ${n.hash === route.hash ? 'active' : ''}" href=${n.hash}><${Icon} name=${n.icon} />${n.label}</a>`)}
     </nav>
-    ${menu && html`<${AccountSheet} me=${me} users=${users} version=${version} update=${update} reloadUsers=${loadUsers} onLogout=${logout} onClose=${() => setMenu(false)} />`}
+    ${menu && html`<${AccountSheet} me=${me} users=${users} version=${version} update=${update} paper=${printer.paper} reloadUsers=${loadUsers} onLogout=${logout} onClose=${() => setMenu(false)} />`}
     <${Toasts} />
   </div>`;
 }

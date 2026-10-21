@@ -1,5 +1,5 @@
 """Construit le site dans _site/ : la page d'accueil (docs/) et les pages de documentation,
-rendues depuis le README et le guide de contribution du dépôt pour ne jamais s'en écarter.
+rendues depuis le guide (docs/guide.md) et le guide de contribution du dépôt pour ne jamais s'en écarter.
 
     uvx --with markdown --with pymdown-extensions python docs/build.py && python3 -m http.server -d _site
 """
@@ -23,9 +23,9 @@ BRANCH = "master"
 
 # (page produite, langue, titre, source, page jumelle dans l'autre langue)
 PAGES = [
-    ("guide.html", "fr", "Guide", ROOT / "README.fr.md", "guide.en.html"),
+    ("guide.html", "fr", "Guide", SITE / "guide.fr.md", "guide.en.html"),
     ("contribuer.html", "fr", "Contribuer", ROOT / "CONTRIBUTING.fr.md", "contributing.html"),
-    ("guide.en.html", "en", "Guide", ROOT / "README.md", "guide.html"),
+    ("guide.en.html", "en", "Guide", SITE / "guide.md", "guide.html"),
     ("contributing.html", "en", "Contributing", ROOT / "CONTRIBUTING.md", "contribuer.html"),
 ]
 # Page des blocs (bilingue), générée depuis le catalogue et les exemples de docs/exemples/.
@@ -47,7 +47,7 @@ WORDS = {
            "switch_label": "Version française"},
 }
 # Ce qui, dans docs/, ne sert qu'à fabriquer le site ou ses illustrations.
-SKIP = shutil.ignore_patterns("build.py", "demo", "*.sh", "*.py", "catalogue.json", "__pycache__")
+SKIP = shutil.ignore_patterns("build.py", "demo", "*.sh", "*.py", "*.md", "catalogue.json", "__pycache__")
 
 TEMPLATE = """<!DOCTYPE html>
 <html lang="{lang}">
@@ -96,8 +96,9 @@ TEMPLATE = """<!DOCTYPE html>
 
 
 def readme_body(text: str) -> str:
-    """Le README sans son logo, sa devise, ses badges et ses liens d'en-tête : le site les a."""
-    return re.sub(r"\A(?:\s*<p align=\"center\">.*?</p>)+\s*", "", text, flags=re.S)
+    """Le guide sans ses liens d'en-tête ni son titre : la page du site a les siens."""
+    text = re.sub(r"\A(?:\s*<p align=\"center\">.*?</p>)+\s*", "", text, flags=re.S)
+    return re.sub(r"\A# .*\n", "", text)
 
 
 def rewrite_links(body: str, source: Path) -> str:

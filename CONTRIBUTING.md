@@ -232,7 +232,7 @@ With `PRINTR_WEB_DIR=web`, simply reload the page to see your block in the catal
 - its entry in `docs/exemples/catalogue.json` (group, emoji, name and description, in French and
   in English): `docs/build.py` builds the site's blocks page from it, and refuses to build if the
   example or its PNG is missing;
-- a line in the blocks table of the `README.md` (parameters and default values);
+- a line in the blocks table of the guide, `docs/guide.md` (and `docs/guide.fr.md`) (parameters and default values);
 - a chip in the catalog of `docs/index.html`, in French and in English, pointing to its entry:
   `<a class="chip" href="blocs.html#mon_bloc">`.
 
@@ -283,11 +283,11 @@ sample response (see `barnum.rs`).
 - **Before each version**, `scripts/illustrations.sh` remakes every illustration in both languages
   (block examples, app screenshots, showcase tickets, link preview image), then builds the site;
   `--sans-claude` avoids any Claude call (Claude blocks keep their current image).
-- The screenshots for the site and the README are regenerated with `docs/demo/photo-session.sh`,
+- The screenshots for the site and the docs are regenerated with `docs/demo/photo-session.sh`,
   always with fictional data. Never put real personal data in them.
 - The logo variants are regenerated with `uv run --with pillow python docs/brand/make-assets.py`.
 - The site is built with `docs/build.py`: the home page (`docs/index.html`) and the documentation,
-  rendered from `README.md` and `CONTRIBUTING.md`. A change to these files therefore also updates
+  rendered from `docs/guide.md` and `CONTRIBUTING.md`. A change to these files therefore also updates
   the site. Local preview:
   `uvx --with markdown --with pymdown-extensions python docs/build.py && python3 -m http.server -d _site`.
 

@@ -30,3 +30,11 @@ Données téléchargées à l'exécution, non incluses dans ce dépôt :
   New, B., Pallier, C., Brysbaert, M., Ferrand, L. (2004). Lexique 2 : A New
   French Lexical Database. Behavior Research Methods, Instruments, &
   Computers, 36(3), 516-524.
+
+----
+
+Printr includes chess piece glyphs from Noto Sans Symbols 2 (chess block),
+rendered to src/blocks/chess-pieces.png from a subset in assets/fonts/:
+
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/symbols)
+Licensed under the SIL Open Font License, Version 1.1 (assets/fonts/OFL.txt).

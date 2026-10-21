@@ -1,13 +1,13 @@
 name: Site
 
-# Construit le site (docs/, plus la documentation rendue depuis README.md et CONTRIBUTING.md)
+# Construit le site (docs/, plus la documentation rendue depuis docs/guide*.md et CONTRIBUTING*.md)
 # sur les pull requests, et le publie sur GitHub Pages depuis master.
 on:
   push:
     branches: [master]
-    paths: ["docs/**", "README.md", "CONTRIBUTING.md", ".github/workflows/pages.yml"]
+    paths: ["docs/**", "CONTRIBUTING.md", "CONTRIBUTING.fr.md", ".github/workflows/pages.yml"]
   pull_request:
-    paths: ["docs/**", "README.md", "CONTRIBUTING.md", ".github/workflows/pages.yml"]
+    paths: ["docs/**", "CONTRIBUTING.md", "CONTRIBUTING.fr.md", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:

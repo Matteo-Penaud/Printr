@@ -730,6 +730,16 @@ select.input { appearance: none; padding-right: 38px;
 .setting-card .grow { display: grid; gap: 2px; }
 .setting-card .muted { font-size: 13px; }
 .setting-card svg { color: var(--muted); flex-shrink: 0; }
+/* Jauge de papier : estimée depuis la pose du rouleau. */
+.paper-card { cursor: default; }
+.paper-card:hover { border-color: var(--line); }
+.paper-card .btn { justify-self: start; margin-top: 6px; }
+.paper-gauge { display: block; height: 8px; margin: 4px 0 2px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.paper-gauge > span { display: block; height: 100%; border-radius: inherit; background: var(--ok); }
+.paper-gauge.low > span { background: var(--warn); }
+.paper-length { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.paper-length .input { width: 90px; }
+.paper-hint { font-size: 13px; margin: 6px 2px 0; }
 .block-toggles { display: flex; flex-wrap: wrap; gap: 6px; }
 .block-toggles button {
   height: 34px; padding: 0 12px; border: 1.5px solid var(--line-strong); border-radius: 999px;

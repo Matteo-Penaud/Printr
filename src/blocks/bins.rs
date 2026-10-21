@@ -101,7 +101,7 @@ pub fn build(collections: &[Collection], when: When, always: bool, today: NaiveD
     anyhow::ensure!(
         !collections.is_empty(),
         "{}",
-        i18n::t("indiquer au moins un ramassage (`collections`)", "give at least one collection (`collections`)")
+        i18n::t("indiquer au moins un ramassage", "give at least one collection")
     );
     let day = if when == When::Veille { today + Duration::days(1) } else { today };
     let due: Vec<&Collection> = collections.iter().filter(|c| c.collects_on(day)).collect();

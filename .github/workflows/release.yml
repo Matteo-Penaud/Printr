@@ -67,7 +67,7 @@ jobs:
           mkdir -p "dist/$name"
           cp "target/${{ matrix.target }}/release/printr" "dist/$name/"
           cp deploy/* "dist/$name/"
-          for f in README.md README.fr.md CHANGELOG.md; do [ -f "$f" ] && cp "$f" "dist/$name/"; done
+          for f in README.md README.fr.md docs/guide.md docs/guide.fr.md CHANGELOG.md; do [ -f "$f" ] && cp "$f" "dist/$name/"; done
           cp _main/LICENSE _main/NOTICE "dist/$name/"
           tar -C dist -czf "dist/$name.tar.gz" "$name"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

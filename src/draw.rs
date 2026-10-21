@@ -136,6 +136,52 @@ pub fn letter(img: &mut GrayImage, c: u8, x: i64, y: i64, scale: i64, ink: Luma<
     }
 }
 
+/// Signes en 5×7, pour les étiquettes dessinées (météo) : - / % ° . :
+#[rustfmt::skip]
+const SIGNS: [(char, [&str; 7]); 6] = [
+    ('-', [".....", ".....", ".....", ".###.", ".....", ".....", "....."]),
+    ('/', ["....#", "....#", "...#.", "..#..", ".#...", "#....", "#...."]),
+    ('%', ["##..#", "##..#", "...#.", "..#..", ".#...", "#..##", "#..##"]),
+    ('°', [".##..", "#..#.", "#..#.", ".##..", ".....", ".....", "....."]),
+    ('.', [".....", ".....", ".....", ".....", ".....", ".##..", ".##.."]),
+    (':', [".....", ".##..", ".##..", ".....", ".##..", ".##..", "....."]),
+];
+
+/// Un caractère de `text` : lettre (accents ôtés), chiffre, signe ou espace.
+fn text_glyph(c: char) -> Option<&'static [&'static str; 7]> {
+    let c = match c.to_ascii_uppercase() {
+        'É' | 'È' | 'Ê' | 'Ë' | 'é' | 'è' | 'ê' | 'ë' => 'E',
+        'À' | 'Â' | 'à' | 'â' => 'A',
+        'Î' | 'Ï' | 'î' | 'ï' => 'I',
+        'Ô' | 'ô' => 'O',
+        'Û' | 'Ù' | 'Ü' | 'û' | 'ù' | 'ü' => 'U',
+        'Ç' | 'ç' => 'C',
+        c => c,
+    };
+    match c {
+        'A'..='Z' => Some(&LETTERS[(c as u8 - b'A') as usize]),
+        '0' => Some(&ZERO),
+        '1'..='9' => Some(&DIGITS[(c as u8 - b'1') as usize]),
+        _ => SIGNS.iter().find(|(s, _)| *s == c).map(|(_, rows)| rows),
+    }
+}
+
+/// Dessine un court texte en 5×7 (majuscules, chiffres, - / % ° . :), caractères séparés d'une
+/// colonne ; les autres caractères laissent un blanc.
+pub fn text(img: &mut GrayImage, s: &str, x: i64, y: i64, scale: i64) {
+    for (i, c) in s.chars().enumerate() {
+        if let Some(rows) = text_glyph(c) {
+            glyph(img, rows, x + i as i64 * (DIGIT_W + 1) * scale, y, scale, BLACK);
+        }
+    }
+}
+
+/// Largeur, en points, d'un texte dessiné par `text`.
+pub fn text_width(s: &str, scale: i64) -> i64 {
+    let len = s.chars().count() as i64;
+    (len * (DIGIT_W + 1) - 1).max(0) * scale
+}
+
 /// Une rangée de QR codes (deux au maximum par ligne), chacun centré dans sa colonne.
 /// Les QR codes natifs de l'imprimante ne se placent pas côte à côte : on les dessine en raster.
 pub fn qr_row(data: &[&str]) -> anyhow::Result<GrayImage> {

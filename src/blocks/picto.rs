@@ -105,7 +105,13 @@ impl Size {
 }
 
 pub fn build(shape: Shape, size: Size, count: u8) -> Doc {
-    let side = size.dots();
+    let mut doc = Doc::new();
+    doc.image(image(shape, size.dots(), count));
+    doc
+}
+
+/// Une rangée de `count` pictogrammes de `side` points, centrée sur la largeur du papier.
+pub fn image(shape: Shape, side: u32, count: u8) -> image::GrayImage {
     let count = (count.clamp(1, 7) as u32).min(512 / (side + 8)).max(1);
     let gap = 8;
     let total = count * side + (count - 1) * gap;
@@ -123,9 +129,7 @@ pub fn build(shape: Shape, size: Size, count: u8) -> Doc {
             }
         }
     }
-    let mut doc = Doc::new();
-    doc.image(img);
-    doc
+    img
 }
 
 #[cfg(test)]

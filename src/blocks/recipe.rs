@@ -6,7 +6,10 @@
 //! Variante « recette par Claude » : on donne le nom d'un plat, Claude (Haiku par défaut) rédige la
 //! recette ; jamais en aperçu, et une seule fois par plat et nombre de parts (cache).
 //!
-//! Une recette ne change pas : elle est gardée en cache, par adresse ou par plat.
+//! Variante « Qu'est-ce qu'on mange ? » : on donne les ingrédients qu'on a, Claude propose une recette
+//! qui s'en sert, avec seulement les basiques du placard en plus.
+//!
+//! Une recette ne change pas : elle est gardée en cache, par adresse, par plat ou par ingrédients.
 
 use std::hash::{Hash, Hasher};
 
@@ -273,6 +276,55 @@ fn ask_claude(claude: &crate::claude::Claude, dish: &str, servings: u8) -> Resul
             ),
         )
     };
+    written(claude, system, &prompt)
+}
+
+/// « Qu'est-ce qu'on mange ? » : une recette à partir des ingrédients qu'on a.
+fn ask_claude_ingredients(
+    claude: &crate::claude::Claude,
+    ingredients: &[String],
+    servings: u8,
+    wish: &str,
+) -> Result<Recipe> {
+    let list = ingredients.join(", ");
+    let (system, prompt) = if i18n::en() {
+        (
+            "You write family recipes for a ticket printed on a small thermal printer. Plain text only: \
+             no emoji, no markdown. You cook with what is at hand: the recipe is built on the given \
+             ingredients (not necessarily all of them), plus only pantry basics (salt, pepper, oil, butter, \
+             flour, sugar, eggs, milk, garlic, onion, common spices and herbs). Never an ingredient to buy. \
+             If the ingredients do not go together, use the ones that make a genuinely good dish. Real, \
+             reliable home cooking: exact quantities, short and clear steps.",
+            format!(
+                "What can I cook with: {list}? For {servings} people.{}\n- name: a simple, appetizing name for \
+                 the dish.\n- ingredients: one per item, quantity first (\"250 g flour\").\n- steps: 4 to 10 \
+                 steps, one sentence or two each.\n- prep_minutes, cook_minutes: realistic times.",
+                if wish.is_empty() { String::new() } else { format!(" Wish: {wish}.") }
+            ),
+        )
+    } else {
+        (
+            "Tu rédiges des recettes familiales pour un ticket imprimé sur une petite imprimante thermique. \
+             Texte brut uniquement : ni emoji, ni markdown ; les accents français s'impriment, utilise-les. \
+             Tu cuisines avec ce qu'il y a : la recette repose sur les ingrédients donnés (pas forcément \
+             tous), plus seulement les basiques du placard (sel, poivre, huile, beurre, farine, sucre, œufs, \
+             lait, ail, oignon, épices et herbes courantes). Jamais d'ingrédient à acheter. Si les ingrédients \
+             ne vont pas ensemble, garde ceux qui font un vrai bon plat. Cuisine maison, fiable et réaliste : \
+             quantités exactes, étapes courtes et claires.",
+            format!(
+                "Qu'est-ce que je peux cuisiner avec : {list} ? Pour {servings} personnes.{}\n- name : un nom \
+                 simple et appétissant pour le plat.\n- ingredients : un par élément, la quantité d'abord \
+                 (« 250 g de farine »).\n- steps : 4 à 10 étapes, une ou deux phrases chacune.\n\
+                 - prep_minutes, cook_minutes : des temps réalistes.",
+                if wish.is_empty() { String::new() } else { format!(" Envie : {wish}.") }
+            ),
+        )
+    };
+    written(claude, system, &prompt)
+}
+
+/// Demande la recette à Claude, au format `Written`.
+fn written(claude: &crate::claude::Claude, system: &str, prompt: &str) -> Result<Recipe> {
     let schema = serde_json::json!({
         "type": "object",
         "properties": {
@@ -286,7 +338,11 @@ fn ask_claude(claude: &crate::claude::Claude, dish: &str, servings: u8) -> Resul
         "required": ["name", "servings", "prep_minutes", "cook_minutes", "ingredients", "steps"],
         "additionalProperties": false,
     });
-    let w: Written = claude.generate(system, &prompt, schema, "low")?;
+    // Il arrive que la réponse revienne vide : on redemande une fois.
+    let mut w: Written = claude.generate(system, prompt, schema.clone(), "low")?;
+    if w.ingredients.is_empty() || w.steps.is_empty() {
+        w = claude.generate(system, prompt, schema, "low")?;
+    }
     anyhow::ensure!(
         !w.ingredients.is_empty() && !w.steps.is_empty(),
         "{}",
@@ -362,7 +418,7 @@ fn render(recipe: &Recipe, steps: bool) -> Doc {
 pub fn build_with_claude(ctx: &Ctx, dish: &str, servings: u8, steps: bool) -> Result<Doc> {
     let dish = dish.trim();
     if dish.is_empty() {
-        bail!("{}", i18n::t("indiquer le plat (`dish`)", "give the dish (`dish`)"));
+        bail!("{}", i18n::t("indiquer le plat", "give the dish"));
     }
     let servings = servings.clamp(1, 20);
     let key = format!("recette-claude-{}-{servings}-{}", dish.to_lowercase(), i18n::lang().code());
@@ -395,10 +451,69 @@ pub fn build_with_claude(ctx: &Ctx, dish: &str, servings: u8, steps: bool) -> Re
     Ok(doc)
 }
 
+/// Les ingrédients saisis : un par ligne ou séparés par des virgules, sans doublon.
+fn ingredient_list(text: &str) -> Vec<String> {
+    let mut items: Vec<String> = Vec::new();
+    for item in text.split(['\n', ',', ';']).map(str::trim).filter(|s| !s.is_empty()) {
+        let item: String = item.chars().take(60).collect();
+        if !items.iter().any(|i| i.to_lowercase() == item.to_lowercase()) && items.len() < 30 {
+            items.push(item);
+        }
+    }
+    items
+}
+
+/// « Qu'est-ce qu'on mange ? » : une recette rédigée par Claude avec les ingrédients qu'on a.
+pub fn build_from_ingredients(ctx: &Ctx, ingredients: &str, servings: u8, wish: &str, steps: bool) -> Result<Doc> {
+    let items = ingredient_list(ingredients);
+    if items.is_empty() {
+        bail!("{}", i18n::t("indiquer les ingrédients", "give the ingredients"));
+    }
+    let servings = servings.clamp(1, 20);
+    let wish: String = wish.trim().chars().take(80).collect();
+    let mut sorted: Vec<String> = items.iter().map(|i| i.to_lowercase()).collect();
+    sorted.sort();
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    (&sorted, wish.to_lowercase(), servings).hash(&mut hasher);
+    let key = format!("recette-ingredients-{:016x}-{}", hasher.finish(), i18n::lang().code());
+    let cache = ctx.cache.as_ref();
+    let cached: Option<Recipe> = cache.filter(|_| !ctx.refresh).and_then(|c| c.get(&key));
+    let from_cache = cached.is_some();
+    let recipe = match cached {
+        Some(r) => r,
+        None if ctx.preview => {
+            return Ok(super::ai_placeholder(
+                i18n::t("Qu'est-ce qu'on mange ?", "What's for dinner?"),
+                &tr!("Une recette avec : {}", "A recipe with: {}", items.join(", ")),
+            ));
+        }
+        None => {
+            let claude = ctx.claude.as_ref().context(crate::claude::missing())?;
+            let recipe = ask_claude_ingredients(claude, &items, servings, &wish)?;
+            if let Some(cache) = cache {
+                cache.put(&key, &recipe);
+            }
+            recipe
+        }
+    };
+    let mut doc = render(&recipe, steps);
+    doc.from_cache = from_cache;
+    doc.feed(1);
+    doc.text(
+        &tr!("Avec ce qu'il y avait : {}", "With what was at hand: {}", items.join(", ")),
+        Style::default().small(),
+    );
+    doc.text(
+        i18n::t("Recette rédigée par Claude", "Recipe written by Claude"),
+        Style::default().small().align(Align::Right),
+    );
+    Ok(doc)
+}
+
 pub fn build(ctx: &Ctx, url: &str, steps: bool, qr: bool) -> Result<Doc> {
     let url = url.trim();
     if url.is_empty() {
-        bail!("{}", i18n::t("indiquer l'adresse de la recette (`url`)", "give the recipe address (`url`)"));
+        bail!("{}", i18n::t("indiquer l'adresse de la recette", "give the recipe address"));
     }
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     url.hash(&mut hasher);
@@ -479,6 +594,15 @@ mod tests {
         let r = parse(page).unwrap();
         assert_eq!(r.steps, [Step::Text("Chauffer l'eau.".into()), Step::Text("Infuser 3 min.".into())]);
         assert!(parse("<html><p>Pas de recette ici</p></html>").is_none());
+    }
+
+    #[test]
+    fn ingredients_split_and_deduplicate() {
+        assert_eq!(
+            ingredient_list("courgettes, Feta\n riz ; feta,,\n"),
+            vec!["courgettes".to_owned(), "Feta".to_owned(), "riz".to_owned()]
+        );
+        assert!(ingredient_list(" , \n").is_empty());
     }
 
     #[test]
