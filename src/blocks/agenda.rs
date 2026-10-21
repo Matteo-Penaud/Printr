@@ -227,7 +227,7 @@ pub fn build(ctx: &Ctx, calendars: &[String], days: u8, title: Option<&str>) -> 
     anyhow::ensure!(
         !calendars.is_empty(),
         "{}",
-        i18n::t("indiquer au moins un calendrier (`calendars`)", "give at least one calendar (`calendars`)")
+        i18n::t("indiquer au moins un calendrier", "give at least one calendar")
     );
     let mut events = Vec::new();
     for source in calendars {

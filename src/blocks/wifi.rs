@@ -52,18 +52,14 @@ pub fn build(
     hidden: bool,
     show_password: bool,
 ) -> anyhow::Result<Doc> {
-    anyhow::ensure!(
-        !ssid.trim().is_empty(),
-        "{}",
-        i18n::t("indiquer le nom du réseau (`ssid`)", "give the network name (`ssid`)")
-    );
+    anyhow::ensure!(!ssid.trim().is_empty(), "{}", i18n::t("indiquer le nom du réseau", "give the network name"));
     let password = password.filter(|p| !p.is_empty());
     anyhow::ensure!(
         security == Security::None || password.is_some(),
         "{}",
         i18n::t(
-            "indiquer le mot de passe (`password`), ou `\"security\": \"none\"` pour un réseau ouvert",
-            "give the password (`password`), or `\"security\": \"none\"` for an open network"
+            "indiquer le mot de passe, ou choisir un réseau ouvert",
+            "give the password, or choose an open network"
         )
     );
 

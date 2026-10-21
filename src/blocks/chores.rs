@@ -60,10 +60,10 @@ fn clean(list: &[String]) -> Vec<String> {
 pub fn build(tasks: &[String], people: &[String], period: Period, today: NaiveDate) -> Result<Doc> {
     let (tasks, people) = (clean(tasks), clean(people));
     if tasks.is_empty() {
-        bail!("{}", i18n::t("indiquer les tâches (`tasks`)", "give the chores (`tasks`)"));
+        bail!("{}", i18n::t("indiquer les tâches", "give the chores"));
     }
     if people.is_empty() {
-        bail!("{}", i18n::t("indiquer qui les fait (`people`)", "give who does them (`people`)"));
+        bail!("{}", i18n::t("indiquer qui les fait", "give who does them"));
     }
     let mut doc = Doc::new();
     match period {

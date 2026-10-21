@@ -113,7 +113,7 @@ fn ask(claude: &Claude, children: &[String], theme: &str, length: Length, past: 
 pub fn build(ctx: &Ctx, children: &str, theme: &str, length: Length) -> Result<Doc> {
     let children = names(children);
     if children.is_empty() {
-        bail!("{}", i18n::t("indiquer les prénoms des enfants (`children`)", "give the children's names (`children`)"));
+        bail!("{}", i18n::t("indiquer les prénoms des enfants", "give the children's names"));
     }
     let theme: String = theme.trim().chars().take(80).collect();
     let key = format!(

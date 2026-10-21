@@ -418,7 +418,7 @@ fn render(recipe: &Recipe, steps: bool) -> Doc {
 pub fn build_with_claude(ctx: &Ctx, dish: &str, servings: u8, steps: bool) -> Result<Doc> {
     let dish = dish.trim();
     if dish.is_empty() {
-        bail!("{}", i18n::t("indiquer le plat (`dish`)", "give the dish (`dish`)"));
+        bail!("{}", i18n::t("indiquer le plat", "give the dish"));
     }
     let servings = servings.clamp(1, 20);
     let key = format!("recette-claude-{}-{servings}-{}", dish.to_lowercase(), i18n::lang().code());
@@ -467,7 +467,7 @@ fn ingredient_list(text: &str) -> Vec<String> {
 pub fn build_from_ingredients(ctx: &Ctx, ingredients: &str, servings: u8, wish: &str, steps: bool) -> Result<Doc> {
     let items = ingredient_list(ingredients);
     if items.is_empty() {
-        bail!("{}", i18n::t("indiquer les ingrédients (`ingredients`)", "give the ingredients (`ingredients`)"));
+        bail!("{}", i18n::t("indiquer les ingrédients", "give the ingredients"));
     }
     let servings = servings.clamp(1, 20);
     let wish: String = wish.trim().chars().take(80).collect();
@@ -513,7 +513,7 @@ pub fn build_from_ingredients(ctx: &Ctx, ingredients: &str, servings: u8, wish: 
 pub fn build(ctx: &Ctx, url: &str, steps: bool, qr: bool) -> Result<Doc> {
     let url = url.trim();
     if url.is_empty() {
-        bail!("{}", i18n::t("indiquer l'adresse de la recette (`url`)", "give the recipe address (`url`)"));
+        bail!("{}", i18n::t("indiquer l'adresse de la recette", "give the recipe address"));
     }
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     url.hash(&mut hasher);
