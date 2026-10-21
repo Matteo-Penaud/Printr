@@ -1,0 +1,49 @@
+# Printr en conteneur, à côté de Home Assistant & co : voir le README, « En conteneur ».
+#   cp printr.env.example printr.env               # puis le régler : clé Claude, MQTT…
+#   docker compose up -d --build
+#   docker compose exec printr printr user add Prénom
+#   docker compose logs -f                         # suivre les impressions
+name: printr
+
+services:
+  printr:
+    build: .
+    image: printr:local
+    container_name: printr
+    restart: unless-stopped
+    # Le serveur ne gère pas SIGTERM : un init le lui transmet, sans quoi l'arrêt prend 10 s.
+    init: true
+    env_file: printr.env
+    environment:
+      # Propres au conteneur, prioritaires sur printr.env (dont PRINTR_DEVICE=/dev/tm88 vaut pour l'hôte).
+      # Lien stable de la règle udev (70-tm-t88v.rules), vu à travers /host/dev.
+      PRINTR_DEVICE: /host/dev/tm88
+      PRINTR_LISTEN: 0.0.0.0:8080
+      TZ: ${TZ:-Europe/Paris}
+    ports:
+      - "${PRINTR_PORT:-8080}:8080"
+    volumes:
+      - data:/var/lib/printr
+      - cache:/var/cache/printr
+      # Imprimante USB : tout /dev de l'hôte, ni le seul périphérique (figé au démarrage) ni /dev/usb,
+      # que le noyau supprime quand l'imprimante s'éteint et recrée à neuf quand elle revient. Éteinte
+      # au lancement, rallumée ou rebranchée ensuite, l'imprimante est retrouvée, comme hors conteneur.
+      - /dev:/host/dev
+    device_cgroup_rules:
+      - "c 180:* rw" # usblp : hors périphériques de base (null, zero…), le seul ouvrable dans /host/dev
+    group_add:
+      - "${PRINTR_LP_GID:-7}" # groupe lp de l'hôte (getent group lp), propriétaire de /dev/usb/lp*
+    # Mêmes garde-fous que le service systemd (deploy/printr.service).
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 768m
+    pids_limit: 256
+
+volumes:
+  data:
+  cache:

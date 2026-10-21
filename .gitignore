@@ -1,3 +1,5 @@
 /target
 /emulator/receipts
 /_site
+/deploy/printr
+/deploy/printr.env

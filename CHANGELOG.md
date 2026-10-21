@@ -10,6 +10,13 @@ Koenig…
 
 ## [Unreleased]
 
+### Added
+- **Printr in a container**: `deploy/Dockerfile` and `deploy/compose.yaml` run the server next to Home
+  Assistant & co (`docker compose up -d --build`), with Barnum, an unprivileged user and the safeguards of
+  the systemd service. The container sees the host's `/dev` (opening only the printer), so a printer
+  turned off and on again, or plugged in after startup, is still found. Both files ship in the release
+  archives, next to the binary.
+
 ## [1.10.0] “Koenig” - 2026-10-21
 
 ### Added
