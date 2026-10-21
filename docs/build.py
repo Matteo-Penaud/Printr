@@ -303,7 +303,8 @@ def rust_enums() -> dict[str, list[dict]]:
     enums: dict[str, list[dict]] = {}
     for path in SRC.rglob("*.rs"):
         text = path.read_text()
-        for m in re.finditer(r"((?:#\[[^\n]*\]\s*)+)pub enum (\w+)", text):
+        # Les attributs, une ligne entière chacun (pas de retour arrière possible), puis l'enum.
+        for m in re.finditer(r"((?:^[ \t]*#\[[^\n]*\n)+)[ \t]*pub enum (\w+)", text, re.M):
             if "Deserialize" not in m.group(1):
                 continue
             rule = re.search(r'rename_all = "([^"]+)"', m.group(1))
